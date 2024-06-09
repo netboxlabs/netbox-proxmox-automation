@@ -1,0 +1,93 @@
+---
+- name: STOP VM TASKS
+  hosts: proxmox
+
+  tasks:
+  - name: Read Proxmox VM Configuration
+    include_vars:
+      file: vms.yml
+      name: proxmox_vm_cfg
+
+  - debug:
+      msg: "stuff is {{ proxmox_vm_cfg }}"
+
+  - name: Get status of VMs
+    community.general.proxmox_vm_info:
+      node: proxmox-ve
+      api_user: api_user@pve
+      api_token_id: api_user_token
+      api_token_secret: 2c864894-9534-471c-8b3f-5c80cd03ad14
+      api_host: 192.168.80.2
+      name: "{{ item.name }}"
+    with_items: "{{ proxmox_vm_cfg.vms }}"
+    register: fart_knocker
+
+  - set_fact:
+      fk2: "{{ fart_knocker.results }}"
+
+  - name: fk
+    debug:
+      msg: "{{ fart_knocker }} ||| {{ fk2 }}"
+
+  - name: Stop specified VMs
+    community.general.proxmox_kvm:
+      node: proxmox-ve
+      api_user: api_user@pve
+      api_token_id: api_user_token
+      api_token_secret: 2c864894-9534-471c-8b3f-5c80cd03ad14
+      api_host: 192.168.80.2
+      name: "{{ item.name }}"
+      state: stopped
+      force: true
+    with_items: "{{ fk2 }}"
+    when: fk2.proxmox_vms is defined and (fk2.proxmox_vms | length > 0)
+    register: stop_vms_job
+    async: 60
+    poll: 0
+
+  - name: stop vms job debug
+    debug:
+      msg: "DDDD {{ stop_vms_job }}"
+
+  - name: Wait for VM stop processes to finish
+    async_status:
+      #id: "{{ item.ansible_job_id }}"
+      jid: "{{ item.ansible_job_id }}" # ansible version > 2.8
+    register: _sjobs_alias_vc_0
+    until: _sjobs_alias_vc_0.finished
+    retries: 60
+    delay: 5
+    with_items: "{{ stop_vms_job.results }}"
+    when: not item.skipped
+    register: asshat2
+
+  - name: ass hat
+    debug:
+      msg: "asshat {{ asshat2 }}"
+
+  - name: Remove specified VMs
+    community.general.proxmox_kvm:
+      node: proxmox-ve
+      api_user: api_user@pve
+      api_token_id: api_user_token
+      api_token_secret: 2c864894-9534-471c-8b3f-5c80cd03ad14
+      api_host: 192.168.80.2
+      name: "{{ item.name }}"
+      state: absent
+    with_items: "{{ asshat2.results }}"
+    #when: not item.exists and fart_knocker.results is defined
+    when: not item.skipped
+    register: remove_vms_job
+    async: 60
+    poll: 0
+
+  - name: Wait for VM removal
+    async_status:
+      #id: "{{ item.ansible_job_id }}"
+      jid: "{{ item.ansible_job_id }}" # ansible version > 2.8
+    register: _rjobs_alias_vc_0
+    until: _rjobs_alias_vc_0.finished
+    retries: 30
+    delay: 5
+    with_items: "{{ remove_vms_job.results }}"
+    when: item.ansible_job_id is defined
