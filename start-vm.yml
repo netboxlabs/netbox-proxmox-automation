@@ -37,7 +37,7 @@
       state: present
       timeout: 120
     with_items: "{{ proxmox_vm_cfg.vms }}"
-    when: "{{ item.exists }}"
+    when: item.exists
     register: clone_vms_job
     async: 180
     poll: 0
@@ -69,7 +69,7 @@
         ipconfig0: "ip={{ item.ip }},gw={{ item.ip.split('.')[:3] | join('.') }}.{{ item.gw if item.gw is defined else gw_last_quad }}"
       update: true
     with_items: "{{ proxmox_vm_cfg.vms }}"
-    when: "{{ item.exists }}"
+    when: item.exists
     register: update_vms_settings_job
     async: 180
     poll: 0
@@ -81,7 +81,7 @@
     register: _ujobs_alias_vc_0
     until: _ujobs_alias_vc_0.finished
     retries: 60
-    delay: 5
+    delay: 10
     with_items: "{{ update_vms_settings_job.results }}"
     when: item.ansible_job_id is defined
 
@@ -96,7 +96,7 @@
       size: "{{ item.disk }}G"
       state: resized
     with_items: "{{ proxmox_vm_cfg.vms }}"
-    when: "{{ item.exists }}"
+    when: item.exists
     register: vm_update_disks_job
     async: 180
     poll: 0
@@ -108,7 +108,7 @@
     register: _ujobs_alias_vc_0
     until: _ujobs_alias_vc_0.finished
     retries: 60
-    delay: 5
+    delay: 10
     with_items: "{{ vm_update_disks_job.results }}"
     when: item.ansible_job_id is defined
 
@@ -122,7 +122,7 @@
       name: "{{ item.name }}"
       state: started
     with_items: "{{ proxmox_vm_cfg.vms }}"
-    when: "{{ item.exists }}"
+    when: item.exists
     register: start_vms_job
     async: 180
     poll: 0
@@ -134,13 +134,13 @@
     register: _sjobs_alias_vc_0
     until: _sjobs_alias_vc_0.finished
     retries: 60
-    delay: 5
+    delay: 10
     with_items: "{{ start_vms_job.results }}"
     when: item.ansible_job_id is defined
 
   - name: Wait for SSH on VMs to become available
     wait_for: host="{{ item.ip | regex_replace('/.*$', '') }}" port=22 delay=10 timeout=300
     with_items: "{{ proxmox_vm_cfg.vms }}"
-    when: "{{ item.exists }}"
+    when: item.exists
 
 

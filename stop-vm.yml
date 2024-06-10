@@ -13,8 +13,19 @@
       file: vms.yml
       name: proxmox_vm_cfg
 
-#  - debug:
-#      msg: "stuff is {{ proxmox_vm_cfg }}"
+  - name: Set arr for configured Proxmox VMs
+    set_fact:
+      cfg_vms: []
+
+  - name: Set arr for Proxmox VMs status
+    set_fact:
+      cfg_vms_status: []
+
+  - name: Collect configured VM names
+    set_fact:
+      cfg_vms: "{{ cfg_vms + [ item.name ] }}"
+    with_items: "{{ proxmox_vm_cfg.vms }}"
+    when: not item.exists
 
   - name: Get status of VMs
     community.general.proxmox_vm_info:
@@ -26,7 +37,15 @@
       name: "{{ item.name }}"
       type: qemu
     with_items: "{{ proxmox_vm_cfg.vms }}"
+    when: not item.exists
     register: vm_status
+
+  - name: Collect running VM names from status
+    set_fact:
+        cfg_vms_status: "{{ cfg_vms_status + item.proxmox_vms }}"
+    with_items: "{{ vm_status.results }}"
+    when: item.proxmox_vms is defined
+    register: bung
 
   - name: Stop specified VMs
     community.general.proxmox_kvm:
@@ -38,8 +57,7 @@
       name: "{{ item.name }}"
       state: stopped
       force: true
-    with_items: "{{ vm_status.results.proxmox_vms }}"
-    when: item.proxmox_vms is defined and (item.proxmox_vms | length > 0)
+    with_items: "{{ cfg_vms_status }}"
     register: stop_vms_job
     async: 180
     poll: 0
@@ -51,9 +69,9 @@
     register: _sjobs_alias_vc_0
     until: _sjobs_alias_vc_0.finished
     retries: 100
-    delay: 5
-    with_items: "{{ stop_vms_job }}"
-    when: item.ansible_job_id is defined
+    delay: 10
+    with_items: "{{ stop_vms_job.results }}"
+    when: item.ansible_job_id is defined and not item.finished
 
   - name: Remove specified VMs
     community.general.proxmox_kvm:
@@ -62,12 +80,10 @@
       api_token_id: "{{ secrets_cfg.proxmox.api_token_id }}"
       api_token_secret: "{{ secrets_cfg.proxmox.api_token_secret }}"
       api_host: "{{ secrets_cfg.proxmox.api_host }}"
-      name: "{{ item.proxmox_vms[0].name }}"
-      #vmid: "{{ item.proxmox_vms.vmid }}"
+      vmid: "{{ item.vmid }}"
       state: absent
       force: true
-    with_items: "{{ vm_status.results }}"
-    when: item.proxmox_vms is defined and (item.proxmox_vms | length > 0)
+    with_items: "{{ _sjobs_alias_vc_0.results }}"
     register: remove_vms_job
     async: 180
     poll: 0
