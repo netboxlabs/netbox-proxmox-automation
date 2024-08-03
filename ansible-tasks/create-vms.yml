@@ -1,0 +1,83 @@
+  - name: Create VM(s) in NetBox
+    netbox.netbox.netbox_virtual_machine:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        name: "{{ item.name }}"
+        status: "Staged"
+        tenant: "{{ item.tenant if item.tenant is defined else proxmox_vm_cfg.default_tenant }}"
+        virtual_machine_role: "Proxmox"
+        site: "{{ item.site if item.site is defined else proxmox_vm_cfg.default_site }}"
+        cluster: "{{ item.vm_cluster if item.vm_cluster is defined else proxmox_vm_cfg.default_vm_cluster }}"
+        vcpus: "{{ item.vcpus }}"
+        memory: "{{ item.memory }}"
+        disk: "{{ item.disk }}"
+      state: present
+    with_items: "{{ proxmox_vm_create }}"
+    #when: item.exists
+    register: vm_create
+
+# "msg": "VM CREATE STATUS {'results': [{'changed': True, 'msg': 'virtual_machine f1 created', 'diff': {'before': {'state': 'absent'}, 'after': {'state': 'present'}}, 'virtual_machine': {'id': 303, 'url': 'http://192.168.80.2/api/virtualization/virtual-machines/303/', 'display': 'f1', 'name': 'f1', 'status': 'staged', 'site': 1, 'cluster': 1, 'device': None, 'role': None, 'tenant': 1, 'platform': None, 'primary_ip': None, 'primary_ip4': None, 'primary_ip6': None, 'vcpus': 2.0, 'memory': 2048, 'disk': 20, 'description': '', 'comments': '', 'config_template': None, 'local_context_data': None, 'tags': [], 'custom_fields': {}, 'config_context': {}, 'created': '2024-06-11T15:13:47.196936Z', 'last_updated': '2024-06-11T15:13:47.196952Z', 'interface_count': 0, 'virtual_disk_count': 0}, 'invocation': {'module_args': {'netbox_url': 'http://192.168.80.2:80', 'netbox_token': 'VALUE_SPECIFIED_IN_NO_LOG_PARAMETER', 'data': {'name': 'f1', 'status': 'Staged', 'tenant': 'Home Lab', 'site': 'Portland', 'cluster': 'proxmox-ve', 'vcpus': 2.0, 'memory': 2048, 'disk': 20, 'virtual_machine_role': None, 'platform': None, 'primary_ip4': None, 'primary_ip6': None, 'device': None, 'tags': None, 'custom_fields': None, 'local_context_data': None, 'description': None, 'config_template': None, 'comments': None}, 'state': 'present', 'validate_certs': True, 'query_params': None, 'cert': None}}, 'failed': False, 'item': {'name': 'f1', 'template': 'jammy-server-cloudimg-amd64-template', 'vcpus': 2, 'memory': 2048, 'disk0': 'scsi0', 'disk': 20, 'interfaces': ['eth0'], 'sshkey': '~/.ssh/identity-proxmox-vm.pub', 'ip': '192.168.80.100/24', 'exists': True}, 'ansible_loop_var': 'item'}, {'changed': True, 'msg': 'virtual_machine f2 created', 'diff': {'before': {'state': 'absent'}, 'after': {'state': 'present'}}, 'virtual_machine': {'id': 304, 'url': 'http://192.168.80.2/api/virtualization/virtual-machines/304/', 'display': 'f2', 'name': 'f2', 'status': 'staged', 'site': 1, 'cluster': 1, 'device': None, 'role': None, 'tenant': 1, 'platform': None, 'primary_ip': None, 'primary_ip4': None, 'primary_ip6': None, 'vcpus': 1.0, 'memory': 512, 'disk': 10, 'description': '', 'comments': '', 'config_template': None, 'local_context_data': None, 'tags': [], 'custom_fields': {}, 'config_context': {}, 'created': '2024-06-11T15:13:48.083326Z', 'last_updated': '2024-06-11T15:13:48.083344Z', 'interface_count': 0, 'virtual_disk_count': 0}, 'invocation': {'module_args': {'netbox_url': 'http://192.168.80.2:80', 'netbox_token': 'VALUE_SPECIFIED_IN_NO_LOG_PARAMETER', 'data': {'name': 'f2', 'status': 'Staged', 'tenant': 'Home Lab', 'site': 'Portland', 'cluster': 'proxmox-ve', 'vcpus': 1.0, 'memory': 512, 'disk': 10, 'virtual_machine_role': None, 'platform': None, 'primary_ip4': None, 'primary_ip6': None, 'device': None, 'tags': None, 'custom_fields': None, 'local_context_data': None, 'description': None, 'config_template': None, 'comments': None}, 'state': 'present', 'validate_certs': True, 'query_params': None, 'cert': None}}, 'failed': False, 'item': {'name': 'f2', 'template': 'focal-server-cloudimg-amd64-template', 'vcpus': 1, 'memory': 512, 'disk0': 'scsi0', 'disk': 10, 'interfaces': ['eth0'], 'sshkey': '~/.ssh/identity-proxmox-vm.pub', 'ip': '192.168.80.101/24', 'exists': True}, 'ansible_loop_var': 'item'}], 'skipped': False, 'changed': True, 'msg': 'All items completed'}"
+  - name: VM Create status
+    debug:
+      msg: "VM CREATE STATUS {{ vm_create }}"
+
+  - name: Create interface(s) for VM(s) in NetBox
+    netbox.netbox.netbox_vm_interface:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        virtual_machine: "{{ item.name }}"
+        name: "{{ item.interface }}"
+        enabled: true
+      state: present
+    with_items: "{{ proxmox_vm_interfaces }}"
+    when: vm_create.changed
+    register: vm_create_interface
+
+# "msg": "VM CREATE STATUS {'results': [{'changed': True, 'msg': 'virtual_machine f1 created', 'diff': {'before': {'state': 'absent'}, 'after': {'state': 'present'}}, 'virtual_machine': {'id': 303, 'url': 'http://192.168.80.2/api/virtualization/virtual-machines/303/', 'display': 'f1', 'name': 'f1', 'status': 'staged', 'site': 1, 'cluster': 1, 'device': None, 'role': None, 'tenant': 1, 'platform': None, 'primary_ip': None, 'primary_ip4': None, 'primary_ip6': None, 'vcpus': 2.0, 'memory': 2048, 'disk': 20, 'description': '', 'comments': '', 'config_template': None, 'local_context_data': None, 'tags': [], 'custom_fields': {}, 'config_context': {}, 'created': '2024-06-11T15:13:47.196936Z', 'last_updated': '2024-06-11T15:13:47.196952Z', 'interface_count': 0, 'virtual_disk_count': 0}, 'invocation': {'module_args': {'netbox_url': 'http://192.168.80.2:80', 'netbox_token': 'VALUE_SPECIFIED_IN_NO_LOG_PARAMETER', 'data': {'name': 'f1', 'status': 'Staged', 'tenant': 'Home Lab', 'site': 'Portland', 'cluster': 'proxmox-ve', 'vcpus': 2.0, 'memory': 2048, 'disk': 20, 'virtual_machine_role': None, 'platform': None, 'primary_ip4': None, 'primary_ip6': None, 'device': None, 'tags': None, 'custom_fields': None, 'local_context_data': None, 'description': None, 'config_template': None, 'comments': None}, 'state': 'present', 'validate_certs': True, 'query_params': None, 'cert': None}}, 'failed': False, 'item': {'name': 'f1', 'template': 'jammy-server-cloudimg-amd64-template', 'vcpus': 2, 'memory': 2048, 'disk0': 'scsi0', 'disk': 20, 'interfaces': ['eth0'], 'sshkey': '~/.ssh/identity-proxmox-vm.pub', 'ip': '192.168.80.100/24', 'exists': True}, 'ansible_loop_var': 'item'}, {'changed': True, 'msg': 'virtual_machine f2 created', 'diff': {'before': {'state': 'absent'}, 'after': {'state': 'present'}}, 'virtual_machine': {'id': 304, 'url': 'http://192.168.80.2/api/virtualization/virtual-machines/304/', 'display': 'f2', 'name': 'f2', 'status': 'staged', 'site': 1, 'cluster': 1, 'device': None, 'role': None, 'tenant': 1, 'platform': None, 'primary_ip': None, 'primary_ip4': None, 'primary_ip6': None, 'vcpus': 1.0, 'memory': 512, 'disk': 10, 'description': '', 'comments': '', 'config_template': None, 'local_context_data': None, 'tags': [], 'custom_fields': {}, 'config_context': {}, 'created': '2024-06-11T15:13:48.083326Z', 'last_updated': '2024-06-11T15:13:48.083344Z', 'interface_count': 0, 'virtual_disk_count': 0}, 'invocation': {'module_args': {'netbox_url': 'http://192.168.80.2:80', 'netbox_token': 'VALUE_SPECIFIED_IN_NO_LOG_PARAMETER', 'data': {'name': 'f2', 'status': 'Staged', 'tenant': 'Home Lab', 'site': 'Portland', 'cluster': 'proxmox-ve', 'vcpus': 1.0, 'memory': 512, 'disk': 10, 'virtual_machine_role': None, 'platform': None, 'primary_ip4': None, 'primary_ip6': None, 'device': None, 'tags': None, 'custom_fields': None, 'local_context_data': None, 'description': None, 'config_template': None, 'comments': None}, 'state': 'present', 'validate_certs': True, 'query_params': None, 'cert': None}}, 'failed': False, 'item': {'name': 'f2', 'template': 'focal-server-cloudimg-amd64-template', 'vcpus': 1, 'memory': 512, 'disk0': 'scsi0', 'disk': 10, 'interfaces': ['eth0'], 'sshkey': '~/.ssh/identity-proxmox-vm.pub', 'ip': '192.168.80.101/24', 'exists': True}, 'ansible_loop_var': 'item'}], 'skipped': False, 'changed': True, 'msg': 'All items completed'}"
+  - name: VM Create Interface status
+    debug:
+      msg: "VM CREATE STATUS {{ vm_create_interface }}"
+
+  - name: VM(s) Create IP(s)
+    netbox_ip_address:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        prefix: "{{ item.prefix }}"
+        status: Active
+        assigned_object:
+          virtual_machine: "{{ item.name }}"
+          name: "{{ item.interface }}"
+        #interface:
+        #  name: "{{ item.interface }}"
+        #  virtual_machine: "{{ item.name }}"
+      state: new
+    with_items: "{{ proxmox_vm_interfaces }}"
+    when: vm_create_interface.changed
+    register: vm_create_ip_status
+
+  - name: ip status
+    debug:
+      msg: "VM create IP status {{ vm_create_ip_status }}"    
+
+  - name: Update VM(s) primary_ip4 in NetBox
+    netbox.netbox.netbox_virtual_machine:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+      # 'assigned_object': {'virtual_machine': 'f1'
+        name: "{{ item['item']['name'] }}"
+        primary_ip4: "{{ item['ip_address']['display'] }}"
+      state: present
+    loop: "{{ vm_create_ip_status.results }}"
+    loop_control:
+      index_var: my_idx
+    when: item.changed
+    register: vm_update_primary_ip4
+
+  - name: VM(s) update primary_ip4 status
+    debug:
+      msg: "VM(s) update primary_ip4 status {{ vm_update_primary_ip4 }}"    
+

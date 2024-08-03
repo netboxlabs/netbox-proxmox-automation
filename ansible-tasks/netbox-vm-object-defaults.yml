@@ -1,0 +1,44 @@
+  - name: Setup tenant from VM-specified value
+    netbox.netbox.netbox_tenant:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        name: "{% if item.tenant is defined %}{{ item.tenant }}{% else %}{{ proxmox_vm_cfg.default_tenant }}{% endif %}"
+      state: present
+    with_items: "{{ proxmox_vm_cfg.vms }}"
+    when: item.tenant is defined or proxmox_vm_cfg.default_tenant is defined
+
+  - name: Setup site group from VM-specified value
+    netbox.netbox.netbox_site_group:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        name: "{% if item.site_group is defined %}{{ item.site_group }}{% else %}{{ proxmox_vm_cfg.default_site_group }}{% endif %}"
+      state: present
+    with_items: "{{ proxmox_vm_cfg.vms }}"
+    when: item.site_group is defined or proxmox_vm_cfg.default_site_group is defined
+
+  - name: Create region from VM-specified value
+    netbox.netbox.netbox_region:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        name: "{% if item.region is defined %}{{ item.region }}{% else %}{{ proxmox_vm_cfg.default_region }}{% endif %}"
+      state: present
+    with_items: "{{ proxmox_vm_cfg.vms }}"
+    when: item.region is defined or proxmox_vm_cfg.default_region is defined
+
+  - name: Create site from VM-specified value
+    netbox.netbox.netbox_site:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        name: "{% if item.site is defined %}{{ item.site }}{% else %}{{ proxmox_vm_cfg.default_site }}{% endif %}"
+        status: Active
+        region: "{% if item.region is defined %}{{ item.region }}{% else %}{{ proxmox_vm_cfg.default_region }}{% endif %}"
+        site_group: "{% if item.site_group is defined %}{{ item.site_group }}{% else %}{{ proxmox_vm_cfg.default_site_group }}{% endif %}"
+        tenant: "{% if item.tenant is defined %}{{ item.tenant }}{% else %}{{ proxmox_vm_cfg.default_tenant }}{% endif %}"
+        facility: "{% if item.facility is defined %}{{ item.facility }}{% else %}{{ proxmox_vm_cfg.default_facility }}{% endif %}"
+        time_zone: "{% if item.timezone is defined %}{{ item.timezone }}{% else %}{{ proxmox_vm_cfg.default_timezone }}{% endif %}"
+      state: present
+    with_items: "{{ proxmox_vm_cfg.vms }}"
