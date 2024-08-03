@@ -23,7 +23,7 @@
 #      msg: "{{ item.name }} | {{ lookup('file', item.sshkey) }} | ip: {{ item.ip }} | gateway: {{ item.ip.split('.')[:3] | join('.') }}.{{ item.gw if item.gw is defined else gw_last_quad }}"
 #    with_items: "{{ proxmox_vm_cfg.vms }}"
 
-  - name: Create each VM with a full clone of our (noted) template
+  - name: Create each VM from a full clone of template
     community.general.proxmox_kvm:
       node: "{{ secrets_cfg.proxmox.node }}"
       api_user: "{{ secrets_cfg.proxmox.api_user }}"
