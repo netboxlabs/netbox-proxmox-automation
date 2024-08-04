@@ -34,3 +34,12 @@
     with_items: "{{ nb_vm_interface_assigned_ip }}"
     #when: vm_config[item].exists and vm_config[item].start
 
+  - name: Update VM State to Active in NetBox
+    netbox.netbox.netbox_virtual_machine:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        name: "{{ item['item'] }}"
+        status: "Active"
+      state: present
+    with_items: "{{ start_vms_job.results }}"
