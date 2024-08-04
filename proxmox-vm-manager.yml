@@ -52,7 +52,7 @@
 
   - name: Define VM configuration(s)
     set_fact:
-      vm_config: "{{ vm_config | combine({item.name: {'template': item.template, 'vcpus': item.vcpus, 'memory': item.memory, 'disk0': item.disk0, 'disk': item.disk, 'sshkey': item.sshkey, 'gw': item.gw if item.gw is defined else gw_last_quad}}) }}"
+      vm_config: "{{ vm_config | combine({item.name: {'template': item.template, 'vcpus': item.vcpus, 'memory': item.memory, 'disk0': item.disk0, 'disk': item.disk, 'sshkey': item.sshkey, 'start': item.start if item.start is defined else default_vm_start_state, 'gw': item.gw if item.gw is defined else gw_last_quad}}) }}"
     with_items: "{{ proxmox_vm_cfg.vms }}"
     when: item.exists
 
@@ -85,3 +85,6 @@
 
   - name: Proxmox VMs IP address settings
     include_tasks: "ansible-tasks/proxmox/vm-ip-settings.yml"
+
+  - name: Start requisite VMs
+    include_tasks: "ansible-tasks/proxmox/start-vms.yml"
