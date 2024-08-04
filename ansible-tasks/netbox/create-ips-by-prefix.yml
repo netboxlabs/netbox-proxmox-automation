@@ -17,5 +17,6 @@
   - name: Collect assigned IP for interface (PREFIX)
     set_fact:
       nb_vm_interface_assigned_ip: "{{ nb_vm_interface_assigned_ip | combine({item['invocation']['module_args']['data']['assigned_object']['name']: item['ip_address']['display']}) }}"
+      proxmox_ipconfig_dict: "{{ proxmox_ipconfig_dict | combine({item['invocation']['module_args']['data']['assigned_object']['virtual_machine']: {'ipconfig' + item['invocation']['module_args']['data']['assigned_object']['name'].split('@')[1] | regex_replace('\\D+', ''): 'ip=' + item['ip_address']['display'] + ',gw=' + item['ip_address']['display'].split('.')[:3] | join('.') + '.' + vm_config[item['invocation']['module_args']['data']['assigned_object']['virtual_machine']].gw|string}}) }}"
     when: item.changed
     with_items: "{{ interface_new_ip_prefix_status.results }}"
