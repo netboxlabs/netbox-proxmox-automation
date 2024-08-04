@@ -1,0 +1,21 @@
+  - name: VM(s) Create IP(s) by Prefix
+    netbox_ip_address:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        prefix: "{{ proxmox_all_vm_interfaces[item].prefix }}"
+        status: Active
+        assigned_object:
+          virtual_machine: "{{ item.split('@')[0] }}"
+          #name: "{{ item.split('@')[0] }}-{{ item.split('@')[1] }}"
+          name: "{{ item }}"
+      state: new
+    with_items: "{{ proxmox_all_vm_interfaces }}"
+    when: vm_create_interface.changed and 'prefix' in proxmox_all_vm_interfaces[item]
+    register: interface_new_ip_prefix_status
+
+  - name: Collect assigned IP for interface (PREFIX)
+    set_fact:
+      nb_vm_interface_assigned_ip: "{{ nb_vm_interface_assigned_ip | combine({item['invocation']['module_args']['data']['assigned_object']['name']: item['ip_address']['display']}) }}"
+    when: item.changed
+    with_items: "{{ interface_new_ip_prefix_status.results }}"

@@ -1,0 +1,66 @@
+- name: "NetBox-Proxmox VM Manager"
+  connection: local
+  hosts: localhost
+  gather_facts: False
+  
+  vars:
+    collected_proxmox_vms: {}
+    proxmox_vm_create: []
+    proxmox_vm_delete: []
+    proxmox_all_vm_interfaces: {}
+    proxmox_vm_interfaces_prefix: []
+    proxmox_vm_interfaces_ip: []
+    nb_vm_created: {}
+    nb_vm_interface_assigned_ip: {}
+
+  tasks:
+  - name: Collect secrets
+    include_vars:
+      file: secrets.yml
+      name: secrets_cfg
+
+  - name: Read Proxmox VM Configuration
+    include_vars:
+      file: vms.yml
+      name: proxmox_vm_cfg
+
+  - name: Init dict(s)
+    set_fact:
+      vm_config: {}
+      vm_config_interfaces: {}
+      the_fact: {}
+
+  - name: Discover Proxmox VMs
+    include_tasks: "ansible-tasks/proxmox/discover-vms.yml"
+
+  - name: Check Prefix and IP settings for Proxmox VMs
+    include_tasks: "ansible-tasks/netbox/prefix-ip-checker.yml"
+
+  - name: Define VM configuration(s)
+    set_fact:
+      vm_config: "{{ vm_config | combine({item.name: {'template': item.template, 'vcpus': item.vcpus, 'memory': item.memory, 'disk0': item.disk0, 'disk': item.disk, 'sshkey': item.sshkey}})}}"
+    with_items: "{{ proxmox_vm_cfg.vms }}"
+    when: item.exists
+
+  - name: Create (Proxmox) VMs in NetBox
+    include_tasks: "ansible-tasks/netbox/create-vms.yml"
+
+  - name: Clone VMs in Proxmox
+    include_tasks: "ansible-tasks/proxmox/clone-vms.yml"
+
+  - name: Grow VM disks in Proxmox
+    include_tasks: "ansible-tasks/proxmox/grow-vm-disk.yml"
+
+  - name: NetBox Create (Proxmox) VMs Network Interfaces
+    include_tasks: "ansible-tasks/netbox/create-network-interfaces.yml"
+
+  - name: NetBox Create IPs (by prefix) for (Proxmox) VMs Network Interfaces
+    include_tasks: "ansible-tasks/netbox/create-ips-by-prefix.yml"
+
+  - name: NetBox Create IPs (static) for (Proxmox) VMs Network Interfaces
+    include_tasks: "ansible-tasks/netbox/create-static-ips.yml"
+
+  - name: NetBox Update primary_ip4 for (Proxmox) VMs
+    include_tasks: "ansible-tasks/netbox/update-primary-ip4.yml"
+
+# "-".join(strIn.split('-')[:-1]) + '-' + ''.join(strIn.split('-')[-1])

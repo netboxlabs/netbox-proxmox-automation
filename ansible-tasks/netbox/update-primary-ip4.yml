@@ -1,0 +1,17 @@
+  - name: Update VM(s) primary_ip4 in NetBox
+    netbox.netbox.netbox_virtual_machine:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+      # 'assigned_object': {'virtual_machine': 'f1'
+        #name: "{{ item['item']['name'] }}"
+        name: "{{ item['invocation']['module_args']['data']['assigned_object']['virtual_machine'] }}"
+        primary_ip4: "{{ item['ip_address']['display'] }}"
+      state: present
+    loop: "{{ interface_new_ip_prefix_status.results }}"
+    when: item.changed and proxmox_all_vm_interfaces[item['invocation']['module_args']['data']['assigned_object']['name']].primary
+    register: vm_update_primary_ip4
+
+  - name: VM(s) update primary_ip4 status
+    debug:
+      msg: "VM(s) update primary_ip4 status {{ vm_update_primary_ip4 }}"    

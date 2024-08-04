@@ -1,0 +1,23 @@
+  - name: Create VM(s) in NetBox
+    netbox.netbox.netbox_virtual_machine:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        name: "{{ item }}"
+        status: "Staged"
+        tenant: "{{ vm_config[item].tenant if vm_config[item].tenant is defined else proxmox_vm_cfg.default_tenant }}"
+        virtual_machine_role: "{{ proxmox_vm_cfg.default_vm_device_role }}"
+        site: "{{ vm_config[item].site if vm_config[item].site is defined else proxmox_vm_cfg.default_site }}"
+        cluster: "{{ vm_config[item].vm_cluster if vm_config[item].vm_cluster is defined else proxmox_vm_cfg.default_vm_cluster }}"
+        vcpus: "{{ vm_config[item].vcpus }}"
+        memory: "{{ vm_config[item].memory }}"
+        disk: "{{ vm_config[item].disk }}"
+      state: present
+    with_items: "{{ vm_config }}"
+    register: vm_create
+
+  - name: Store NetBox VM created state
+    set_fact:
+      nb_vm_created: "{{ nb_vm_created | combine({item['virtual_machine']['name']: True}) }}"
+    when: item['virtual_machine']['status'] == "staged"
+    with_items: "{{ vm_create.results }}"

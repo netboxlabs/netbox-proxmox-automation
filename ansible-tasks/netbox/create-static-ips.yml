@@ -1,0 +1,14 @@
+  - name: VM(s) Create IP(s) (FIXED IP)
+    netbox_ip_address:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        address: "{{ item.ip }}"
+        status: Active
+        assigned_object:
+          virtual_machine: "{{ item.name }}"
+          name: "{{ item.interface }}"
+      state: present
+    with_items: "{{ proxmox_vm_interfaces_ip }}"
+    when: vm_create_interface.changed
+    register: vm_create_ip_status
