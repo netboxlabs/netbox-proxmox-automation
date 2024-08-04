@@ -13,10 +13,6 @@
     async: 180
     poll: 0
 
-  - name: blahblah
-    debug:
-      msg: "hey blahblah {{ start_vms_job }}"
-
   - name: Wait for VM start processes to finish
     async_status:
       #id: "{{ item.ansible_job_id }}"
