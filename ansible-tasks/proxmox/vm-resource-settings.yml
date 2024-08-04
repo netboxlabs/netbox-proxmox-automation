@@ -1,0 +1,28 @@
+  - name: Update Proxmox VMs resource settings
+    community.general.proxmox_kvm:
+      node: "{{ secrets_cfg.proxmox.node }}"
+      api_user: "{{ secrets_cfg.proxmox.api_user }}"
+      api_token_id: "{{ secrets_cfg.proxmox.api_token_id }}"
+      api_token_secret: "{{ secrets_cfg.proxmox.api_token_secret }}"
+      api_host: "{{ secrets_cfg.proxmox.api_host }}"
+      name: "{{ item }}"
+      cores: "{{ vm_config[item].vcpus }}"
+      vcpus: "{{ vm_config[item].vcpus }}"
+      memory: "{{ vm_config[item].memory }}"
+      update: true
+    with_items: "{{ vm_config }}"
+    when: nb_vm_created[item] and not item in collected_proxmox_vms
+    register: update_vms_settings_job
+    async: 180
+    poll: 0
+
+  - name: Wait for VM settings updates processes to finish
+    async_status:
+      #id: "{{ item.ansible_job_id }}"
+      jid: "{{ item.ansible_job_id }}" # ansible version > 2.8
+    register: _ujobs_alias_vc_0
+    until: _ujobs_alias_vc_0.finished
+    retries: 60
+    delay: 10
+    with_items: "{{ update_vms_settings_job.results }}"
+    when: item.ansible_job_id is defined
