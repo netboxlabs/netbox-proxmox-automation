@@ -5,15 +5,10 @@
       api_token_id: "{{ secrets_cfg.proxmox.api_token_id | default(omit) }}"
       api_token_secret: "{{ secrets_cfg.proxmox.api_token_secret | default(omit) }}"
       node: "{{ secrets_cfg.proxmox.node }}"
-    register: fah_q
-
-  - name: show us fah_q
-    debug:
-      msg: "FAH-Q {{ item }} ||| {{ item.name }}"
-    loop: "{{ fah_q.proxmox_vms }}"
+    register: proxmox_discovered_vms
 
   - name: Discover / Collect Proxmox VMs
     set_fact:
       collected_proxmox_vms: "{{ collected_proxmox_vms | combine({item.name: True}) }}"
-    loop: "{{ fah_q.proxmox_vms }}"
+    loop: "{{ proxmox_discovered_vms.proxmox_vms }}"
     when: not item.template
