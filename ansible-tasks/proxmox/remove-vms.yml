@@ -1,6 +1,5 @@
   - name: Capture name of VMs to delete
     set_fact:
-      #vm_config_remove: "{{ vm_config_remove | combine({item.name: True }) }}"
       nb_remove_vms: "{{ nb_remove_vms | combine({item['invocation']['module_args']['name']: True }) }}"
     with_items: "{{ _sjobs_alias_vc_0.results }}"
     when: item.changed
