@@ -1,7 +1,3 @@
-#  - name: Tell us about stop vm job
-#    debug:
-#      msg: "hey {{ stop_vms_job }} || {{ _sjobs_alias_vc_0.results }}"
-
   - name: Capture name of VMs to delete
     set_fact:
       #vm_config_remove: "{{ vm_config_remove | combine({item.name: True }) }}"
