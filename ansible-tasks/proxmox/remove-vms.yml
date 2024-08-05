@@ -9,11 +9,11 @@
       netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
       netbox_token: "{{ secrets_cfg.netbox.api_token }}"
       data:
-        name: "{{ item['invocation']['module_args']['name'] }}"
+        name: "{{ item }}"
         status: "Decommissioning"
       state: present
-    with_items: "{{ _sjobs_alias_vc_0.results }}"
-    when: item.changed
+    with_items: "{{ nb_remove_vms }}"
+    #when: item.changed
 
   - name: Remove specified VMs
     community.general.proxmox_kvm:
