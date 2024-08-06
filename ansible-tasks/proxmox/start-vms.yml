@@ -24,18 +24,7 @@
     with_items: "{{ start_vms_job.results }}"
     when: item.ansible_job_id is defined
 
-# THIS IS WRONG -- FIX
   - name: Wait for SSH on VMs to become available
     wait_for: host="{{ nb_vm_interface_assigned_ip[item] | regex_replace('/.*$', '') }}" port=22 delay=10 timeout=300
-    with_items: "{{ nb_vm_interface_assigned_ip }}"
-    #when: vm_config[item].exists and vm_config[item].start
-
-  - name: Update VM State to Active in NetBox
-    netbox.netbox.netbox_virtual_machine:
-      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
-      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
-      data:
-        name: "{{ item['item'] }}"
-        status: "Active"
-      state: present
-    with_items: "{{ start_vms_job.results }}"
+    with_items: "{{ proxmox_all_vm_interfaces }}"
+    when: proxmox_all_vm_interfaces[item].primary

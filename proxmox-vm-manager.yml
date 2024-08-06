@@ -88,6 +88,9 @@
   - name: "Proxmox: Start specified VMs"
     include_tasks: "ansible-tasks/proxmox/start-vms.yml"
 
+  - name: "NetBox: Set specified VMs to Active"
+    include_tasks: "ansible-tasks/netbox/set-vms-active.yml"
+
   - name: "Proxmox: Stop specified VMs"
     include_tasks: "ansible-tasks/proxmox/stop-vms.yml"
 
