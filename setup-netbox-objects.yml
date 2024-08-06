@@ -1,0 +1,108 @@
+- name: "NetBox-Proxmox VM Manager"
+  connection: local
+  hosts: localhost
+  gather_facts: False
+  
+  vars:
+    collected_proxmox_vms: {}
+    proxmox_vm_create: []
+    proxmox_vm_delete: []
+    proxmox_all_vm_interfaces: {}
+    proxmox_vm_interfaces_prefix: []
+    proxmox_vm_interfaces_ip: []
+    nb_vm_created: {}
+    nb_vm_interface_assigned_ip: {}
+    nb_remove_vms: {}
+    proxmox_ipconfig_dict: {}
+    gw_last_quad: 1
+
+  tasks:
+  - name: Collect secrets
+    include_vars:
+      file: secrets.yml
+      name: secrets_cfg
+
+  - name: Read Proxmox VM Configuration
+    include_vars:
+      file: vms.yml
+      name: proxmox_vm_cfg
+
+  - name: Init dict(s)
+    set_fact:
+      vm_config: {}
+      vm_config_interfaces: {}
+      vm_config_remove: {}
+      the_fact: {}
+      nb_selected_vm: ''
+      nb_selected_interface: ''
+      nb_ipconfig_key_name: ''
+
+  - name: "NetBox: Configure base objects from defaults"
+    include_tasks: "ansible-tasks/netbox/netbox-object-defaults.yml"
+
+  - name: "NetBox: Configure base objects from vm settings"
+    include_tasks: "ansible-tasks/netbox/netbox-vm-object-defaults.yml"
+
+  - name: "NetBox: Configure base objects for VM clusters"
+    include_tasks: "ansible-tasks/netbox/netbox-vm-cluster-objects.yml"
+
+  - name: "Proxmox: Discover VMs"
+    include_tasks: "ansible-tasks/proxmox/discover-vms.yml"
+
+  - name: "NetBox: Check Prefix and IP settings for Proxmox VMs"
+    include_tasks: "ansible-tasks/netbox/prefix-ip-checker.yml"
+
+  - name: SHUT IT
+    meta: end_play
+    
+  - name: Collect VM(s) to create/start
+    set_fact:
+      vm_config: "{{ vm_config | combine({item.name: {'template': item.template, 'vcpus': item.vcpus, 'memory': item.memory, 'disk0': item.disk0, 'disk': item.disk, 'sshkey': item.sshkey, 'start': item.start if item.start is defined else default_vm_start_state, 'gw': item.gw if item.gw is defined else gw_last_quad}}) }}"
+    with_items: "{{ proxmox_vm_cfg.vms }}"
+    when: item.exists
+
+  - name: Collect VM(s) to remove
+    set_fact:
+      vm_config_remove: "{{ vm_config_remove | combine({item.name: True }) }}"
+    with_items: "{{ proxmox_vm_cfg.vms }}"
+    when: not item.exists
+
+  - name: "NetBox: Create (Proxmox) VMs"
+    include_tasks: "ansible-tasks/netbox/create-vms.yml"
+
+  - name: "Proxmox: Clone VMs"
+    include_tasks: "ansible-tasks/proxmox/clone-vms.yml"
+
+  - name: "Proxmox: Grow VM disks"
+    include_tasks: "ansible-tasks/proxmox/grow-vm-disk.yml"
+
+  - name: "NetBox: Create (Proxmox) VMs Network Interfaces"
+    include_tasks: "ansible-tasks/netbox/create-network-interfaces.yml"
+
+  - name: "NetBox: Create IPs (by prefix) for (Proxmox) VMs Network Interfaces"
+    include_tasks: "ansible-tasks/netbox/create-ips-by-prefix.yml"
+
+  - name: "NetBox: Create IPs (static) for (Proxmox) VMs Network Interfaces"
+    include_tasks: "ansible-tasks/netbox/create-static-ips.yml"
+
+  - name: "NetBox: Update primary_ip4 for (Proxmox) VMs"
+    include_tasks: "ansible-tasks/netbox/update-primary-ip4.yml"
+
+  - name: "Proxmox: VMs update resource settings (CPU, memory, etc)"
+    include_tasks: "ansible-tasks/proxmox/vm-resource-settings.yml"
+
+  - name: "Proxmox: VMs update sshkeys settings"
+    include_tasks: "ansible-tasks/proxmox/vm-ssh-key-settings.yml"
+
+  - name: "Proxmox: VMs IP address settings"
+    include_tasks: "ansible-tasks/proxmox/vm-ip-settings.yml"
+
+  - name: "Proxmox: Start specified VMs"
+    include_tasks: "ansible-tasks/proxmox/start-vms.yml"
+
+  - name: "Proxmox: Stop specified VMs"
+    include_tasks: "ansible-tasks/proxmox/stop-vms.yml"
+
+  - name: "Proxmox: Remove specified VMs"
+    include_tasks: "ansible-tasks/proxmox/remove-vms.yml"
+
