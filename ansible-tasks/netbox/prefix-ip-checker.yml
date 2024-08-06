@@ -4,6 +4,12 @@
     loop: "{{ proxmox_vm_cfg.vms | subelements('network_interfaces') }}"
     when: item[0].exists and (item[1].prefix is not defined and item[1].ip is not defined)
 
+  - name: Check that both prefix and ip have NOT been defined for each network interface
+    ansible.builtin.fail:
+      msg: "Both 'ip' AND 'prefix' *cannot* be declared for VM '{{ item[0].name }}'"
+    loop: "{{ proxmox_vm_cfg.vms | subelements('network_interfaces') }}"
+    when: item[0].exists and (item[1].prefix is defined and item[1].ip is defined)
+
   - name: Collect all VM network interfaces (by PREFIX)
     set_fact:
       proxmox_all_vm_interfaces: "{{ proxmox_all_vm_interfaces|default({})|combine({item[0].name + '@' + item[1]['name']: {'primary': true if item[1]['name'] == item[0]['primary_network_interface'] else false, 'prefix': item[1]['prefix']}}) }}"
