@@ -37,15 +37,6 @@
       nb_selected_interface: ''
       nb_ipconfig_key_name: ''
 
-  - name: "NetBox: Configure base objects from defaults"
-    include_tasks: "ansible-tasks/netbox/netbox-object-defaults.yml"
-
-  - name: "NetBox: Configure base objects from vm settings"
-    include_tasks: "ansible-tasks/netbox/netbox-vm-object-defaults.yml"
-
-  - name: "NetBox: Configure base objects for VM clusters"
-    include_tasks: "ansible-tasks/netbox/netbox-vm-cluster-objects.yml"
-
   - name: "Proxmox: Discover VMs"
     include_tasks: "ansible-tasks/proxmox/discover-vms.yml"
 
@@ -102,4 +93,3 @@
 
   - name: "Proxmox: Remove specified VMs"
     include_tasks: "ansible-tasks/proxmox/remove-vms.yml"
-

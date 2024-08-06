@@ -1,14 +1,21 @@
-  - name: VM(s) Create IP(s) (FIXED IP)
+  - name: VM(s) Create IP(s) (STATIC IP)
     netbox_ip_address:
       netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
       netbox_token: "{{ secrets_cfg.netbox.api_token }}"
       data:
-        address: "{{ item.ip }}"
+        address: "{{ proxmox_all_vm_interfaces[item].ip }}"
         status: Active
         assigned_object:
-          virtual_machine: "{{ item.name }}"
-          name: "{{ item.interface }}"
+          virtual_machine: "{{ item.split('@')[0] }}"
+          name: "{{ item }}"
       state: present
-    with_items: "{{ proxmox_vm_interfaces_ip }}"
-    when: vm_create_interface.changed
-    register: vm_create_ip_status
+    with_items: "{{ proxmox_all_vm_interfaces }}"
+    when: vm_create_interface.changed and 'ip' in proxmox_all_vm_interfaces[item]
+    register: interface_new_ip_static_status
+
+  - name: Collect assigned IP for interface (STATIC)
+    set_fact:
+      nb_vm_interface_assigned_ip: "{{ nb_vm_interface_assigned_ip | combine({item['invocation']['module_args']['data']['assigned_object']['name']: item['ip_address']['display']}) }}"
+      proxmox_ipconfig_dict: "{{ proxmox_ipconfig_dict | combine({item['invocation']['module_args']['data']['assigned_object']['virtual_machine']: {'ipconfig' + item['invocation']['module_args']['data']['assigned_object']['name'].split('@')[1] | regex_replace('\\D+', ''): 'ip=' + item['ip_address']['display'] + ',gw=' + item['ip_address']['display'].split('.')[:3] | join('.') + '.' + vm_config[item['invocation']['module_args']['data']['assigned_object']['virtual_machine']].gw|string}}) }}"
+    when: item.changed
+    with_items: "{{ interface_new_ip_static_status.results }}"
