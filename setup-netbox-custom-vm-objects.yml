@@ -38,7 +38,7 @@
       nb_ipconfig_key_name: ''
       proxmox_vm_templates: []
 
-  - name: Discover all existing virtual machines
+  - name: "Proxmox: Discover all existing virtual machines"
     community.general.proxmox_vm_info:
       api_host: "{{ secrets_cfg.proxmox.api_host | default(omit) }}"
       api_user: "{{ secrets_cfg.proxmox.api_user | default(omit) }}"
@@ -47,7 +47,7 @@
       #node: "{{ secrets_cfg.proxmox.node }}"
     register: proxmox_discovered_vms
 
-  - name: Discover / Collect Proxmox VMs
+  - name: "Proxmox: Collect Proxmox VM Templates"
     set_fact:
       collected_proxmox_vm_templates: "{{ collected_proxmox_vm_templates | combine({item.name: True}) }}"
     loop: "{{ proxmox_discovered_vms.proxmox_vms }}"
@@ -58,7 +58,7 @@
       proxmox_vm_templates: "{{ proxmox_vm_templates + [ item + ',' + item ] }}"
     with_items: "{{ collected_proxmox_vm_templates }}"
 
-  - name: Create Proxmox VM template choices
+  - name: "NetBox: Create Proxmox VM template choices"
     netbox.netbox.netbox_custom_field_choice_set:
       netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
       netbox_token: "{{ secrets_cfg.netbox.api_token }}"
@@ -67,13 +67,14 @@
         description: "Proxmox VM Templates"
         extra_choices: "{{ proxmox_vm_templates }}"
 
-  - name: Create Proxmox VM template custom field of type selection
+  - name: "NetBox: Create Proxmox VM template custom field of type selection"
     netbox.netbox.netbox_custom_field:
       netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
       netbox_token: "{{ secrets_cfg.netbox.api_token }}"
       data:
         name: "proxmox_vm_template"
         label: "Proxmox VM Template"
+        group_name: "Proxmox"
         required: true
         content_types:
           - virtualization.virtualmachine
