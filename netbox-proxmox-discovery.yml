@@ -135,12 +135,6 @@
       msg: "Proxmox VM network interface mapping {{ item }}"
     loop: "{{ proxmox_discovered_running_vms_network_interface_mapping }}"
 
-#  - name: THE STUFF with ipconfig0
-#    debug:
-#      msg: "item: {{ item }} ||| VM name: {{ item.name }} ||| VM id: {{ item.vmid | int }} ||| VM CPU count {{ item.cpus | int }} ||| VM memory count: {{ (item.maxmem / (1024*1024)) | float | int }} ||| VM disk size {{ item.config.scsi0 }} !!! {{ (item.maxdisk / (1024*1024*1024)) | int }} ||| VM Mac addr: {{ item.config.net0 }} ||| VM network info: {{ item.config.ipconfig0.split(',')[0] | regex_replace('^ip=', '') }} ||| status: {{ pm_to_nb_status_mapping[item.status] }}"
-#    loop: "{{ proxmox_discovered_vms.proxmox_vms }}"
-#    when: not item.template and item.config.ipconfig0 is defined
-
   - name: "NetBox: Add VM entries for running Proxmox VM(s)"
     netbox.netbox.netbox_virtual_machine:
       netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
@@ -165,6 +159,42 @@
     loop: "{{ proxmox_discovered_running_vms_configuration }}"
 #      - "{{ proxmox_discovered_stopped_vms_configuration }}"
 
+  - name: "Proxmox: VM create interface(s)"
+    netbox.netbox.netbox_vm_interface:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        virtual_machine: "{{ item.name }}"
+        name: "{{ item.interface }}"
+        mac_address: "{{ item['mac-address']}}"
+      state: present
+    with_items: "{{ proxmox_discovered_running_vms_network_interface_mapping }}"
+
+  - name: "Proxmox: VM assign IP address(es)"
+    netbox.netbox.netbox_ip_address:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        address: "{{ item.ip }}"
+        status: Active
+        assigned_object:
+          virtual_machine: "{{ item.name }}"
+          name: "{{ item.interface }}"
+      state: present
+    with_items: "{{ proxmox_discovered_running_vms_network_interface_mapping }}"
+
+#  - name: Update VM(s) primary_ip4 in NetBox (STATIC IP)
+#    netbox.netbox.netbox_virtual_machine:
+#      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+#      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+#      data:
+#        name: "{{ item['invocation']['module_args']['data']['assigned_object']['virtual_machine'] }}"
+#        primary_ip4: "{{ item['ip_address']['display'] }}"
+#      state: present
+#    loop: "{{ interface_new_ip_static_status.results }}"
+#    when: item.changed and proxmox_all_vm_interfaces[item['invocation']['module_args']['data']['assigned_object']['name']].primary
+#    register: vm_update_primary_ip4_static
+
   - name: "NetBox: Add VM entries for stopped Proxmox VM(s)"
     netbox.netbox.netbox_virtual_machine:
       netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
@@ -187,27 +217,4 @@
           proxmox_node: "{{ item.node }}"
       state: present
     loop: "{{ proxmox_discovered_stopped_vms_configuration }}"
-
-  - meta: end_play
-
-  - name: "NetBox: Add VM entries from stopped Proxmox VM(s)"
-    netbox.netbox.netbox_virtual_machine:
-      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
-      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
-      data:
-        name: "{{ item.name }}"
-        status: "{{ pm_to_nb_status_mapping[item.status] }}"
-        #tenant: "{{ vm_config[item].tenant if vm_config[item].tenant is defined else proxmox_vm_cfg.default_tenant }}"
-        #virtual_machine_role: "{{ proxmox_vm_cfg.default_vm_device_role }}"
-        virtual_machine_role: "Proxmox VM"
-        #site: "{{ vm_config[item].site if vm_config[item].site is defined else proxmox_vm_cfg.default_site }}"
-        #cluster: "{{ vm_config[item].vm_cluster if vm_config[item].vm_cluster is defined else proxmox_vm_cfg.default_vm_cluster }}"
-        cluster: "proxmox-ve"
-        vcpus: "{{ item.cpus | int }}"
-        memory: "{{ (item.maxmem / (1024*1024)) | float | int }}"
-        disk: "{{ (item.maxdisk / (1024*1024*1024)) | int }}"
-        custom_fields:
-          vmid: "{{ item.vmid | int }}"
-      state: present
-    loop: "{{ proxmox_discovered_vms.proxmox_vms }}"
 
