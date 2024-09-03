@@ -176,3 +176,29 @@
       state: present
     loop: "{{ proxmox_discovered_stopped_vms_configuration }}"
 
+  - name: Find VMs in Netbox
+    local_action:
+      module: uri
+      url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}/api/virtualization/virtual-machines/"
+      method: GET
+      headers:
+        Authorization: "Token {{ secrets_cfg.netbox.api_token }}"
+      status_code: 200
+      validate_certs: no
+    register: vms
+
+  - name: Show VMs
+    debug:
+      msg: "NB VM {{ item }} ||| {{ item.name }}"
+    loop: "{{ vms.json.results }}"
+
+  - name: "NetBox: Remove VM(s) that no longer exist in Proxmox"
+    netbox.netbox.netbox_virtual_machine:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        name: "{{ item.name }}"
+      state: absent
+    loop: "{{ vms.json.results }}"
+    when: item.custom_fields.vmid | int not in proxmox_discovered_running_vms and item.custom_fields.vmid | int not in proxmox_discovered_stopped_vms
+
