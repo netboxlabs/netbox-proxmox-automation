@@ -1,0 +1,178 @@
+- name: "NetBox-Proxmox VM Manager"
+  connection: local
+  hosts: localhost
+  gather_facts: False
+  
+  vars:
+    proxmox_discovered_running_vms_configuration: []
+    proxmox_discovered_stopped_vms_configuration: []
+    proxmox_discovered_running_vms_networking: []
+    proxmox_discovered_running_vms_network_interface_mapping: []
+    proxmox_discovered_running_vms: []
+    proxmox_discovered_stopped_vms: []
+
+    pm_to_nb_status_mapping:
+      'stopped': 'Offline'
+      'running': 'Active'
+
+  tasks:
+  - name: Collect secrets
+    include_vars:
+      file: secrets.yml
+      name: secrets_cfg
+
+  - name: Read Proxmox VM Configuration
+    include_vars:
+      file: vms.yml
+      name: proxmox_vm_cfg
+
+  - name: "Proxmox: Discover all VMs"
+    community.general.proxmox_vm_info:
+      api_host: "{{ secrets_cfg.proxmox.api_host | default(omit) }}"
+      api_user: "{{ secrets_cfg.proxmox.api_user | default(omit) }}"
+      api_token_id: "{{ secrets_cfg.proxmox.api_token_id | default(omit) }}"
+      api_token_secret: "{{ secrets_cfg.proxmox.api_token_secret | default(omit) }}"
+      #node: "{{ secrets_cfg.proxmox.node }}"
+      #network: true
+      config: current
+    register: proxmox_discovered_vms
+
+  - name: "Proxmox: Collect all running VMs"
+    set_fact:
+      proxmox_discovered_running_vms: "{{ proxmox_discovered_running_vms + [item.vmid] }}"
+    loop: "{{ proxmox_discovered_vms.proxmox_vms }}"
+    when: not item.template and item.status == "running"
+
+  - name: "Proxmox: Collect all stopped VMs"
+    set_fact:
+      proxmox_discovered_stopped_vms: "{{ proxmox_discovered_stopped_vms + [item.vmid] }}"
+    loop: "{{ proxmox_discovered_vms.proxmox_vms }}"
+    when: not item.template and item.status == "stopped"
+
+  - name: "Proxmox: Discover running VM configurations by vmid"
+    community.general.proxmox_vm_info:
+      api_host: "{{ secrets_cfg.proxmox.api_host | default(omit) }}"
+      api_user: "{{ secrets_cfg.proxmox.api_user | default(omit) }}"
+      api_token_id: "{{ secrets_cfg.proxmox.api_token_id | default(omit) }}"
+      api_token_secret: "{{ secrets_cfg.proxmox.api_token_secret | default(omit) }}"
+      vmid: "{{ item }}"
+      network: true
+      config: current
+    loop: "{{ proxmox_discovered_running_vms }}"
+    register: proxmox_discovered_vms_cfg
+
+  - name: "Proxmox: Collect Proxmox running VM configurations"
+    set_fact:
+      proxmox_discovered_running_vms_configuration: "{{ proxmox_discovered_running_vms_configuration + [ {'name': item.proxmox_vms[0].name, 'vmid': item.proxmox_vms[0].vmid, 'node': item.proxmox_vms[0].node, 'status': item.proxmox_vms[0].status, 'vcpus': item.proxmox_vms[0].cpus, 'memory': item.proxmox_vms[0].maxmem, 'disk': item.proxmox_vms[0].maxdisk, 'network': item.proxmox_vms[0].network} ] }}"
+    loop: "{{ proxmox_discovered_vms_cfg.results }}"
+
+  - name: "Proxmox: Discover stopped VM configurations by vmid"
+    community.general.proxmox_vm_info:
+      api_host: "{{ secrets_cfg.proxmox.api_host | default(omit) }}"
+      api_user: "{{ secrets_cfg.proxmox.api_user | default(omit) }}"
+      api_token_id: "{{ secrets_cfg.proxmox.api_token_id | default(omit) }}"
+      api_token_secret: "{{ secrets_cfg.proxmox.api_token_secret | default(omit) }}"
+      vmid: "{{ item }}"
+      config: current
+    loop: "{{ proxmox_discovered_stopped_vms }}"
+    register: proxmox_discovered_stopped_vms_cfg
+
+  - name: "Proxmox: Collect Proxmox stopped VM configurations"
+    set_fact:
+      proxmox_discovered_stopped_vms_configuration: "{{ proxmox_discovered_stopped_vms_configuration + [ {'name': item.proxmox_vms[0].name, 'vmid': item.proxmox_vms[0].vmid, 'node': item.proxmox_vms[0].node, 'status': item.proxmox_vms[0].status, 'vcpus': item.proxmox_vms[0].cpus, 'memory': item.proxmox_vms[0].maxmem, 'disk': item.proxmox_vms[0].maxdisk} ] }}"
+    loop: "{{ proxmox_discovered_stopped_vms_cfg.results }}"
+
+  - name: "Proxmox: Collect all networking information for VM(s)"
+    set_fact:
+      proxmox_discovered_running_vms_networking: "{{ proxmox_discovered_running_vms_networking + [ { 'name': item.0.name, 'interface': item.1.name, 'mac-address': item.1['hardware-address'], 'ip-addresses': item.1['ip-addresses'] } ] }}"
+    loop: "{{ proxmox_discovered_running_vms_configuration | subelements('network') }}"
+    when: item.1.name != "lo" # Exclude loopback interface
+
+  - name: "Proxmox: Collect network interface mappings for VM(s)"
+    set_fact:
+      proxmox_discovered_running_vms_network_interface_mapping: "{{ proxmox_discovered_running_vms_network_interface_mapping + [ { 'name': item.0.name, 'type': item.1['ip-address-type'], 'interface': item.0.interface, 'mac-address': item.0['mac-address'], 'ip': item.1['ip-address'] | string + '/' + item.1['prefix'] | string } ]}}"
+    loop: "{{ proxmox_discovered_running_vms_networking | subelements('ip-addresses') }}"
+    when: item.1['ip-address-type'] == "ipv4" # Only collect ipv4 addresses for this example
+
+  - name: "NetBox: Add VM entries for running Proxmox VM(s)"
+    netbox.netbox.netbox_virtual_machine:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        name: "{{ item.name }}"
+        status: "{{ pm_to_nb_status_mapping[item.status] }}"
+        #tenant: "{{ vm_config[item].tenant if vm_config[item].tenant is defined else proxmox_vm_cfg.default_tenant }}"
+        #virtual_machine_role: "{{ proxmox_vm_cfg.default_vm_device_role }}"
+        virtual_machine_role: "Proxmox VM"
+        #site: "{{ vm_config[item].site if vm_config[item].site is defined else proxmox_vm_cfg.default_site }}"
+        #cluster: "{{ vm_config[item].vm_cluster if vm_config[item].vm_cluster is defined else proxmox_vm_cfg.default_vm_cluster }}"
+        cluster: "proxmox-ve"
+        vcpus: "{{ item.vcpus | int }}"
+        memory: "{{ (item.memory / (1024*1024)) | float | int }}"
+        disk: "{{ (item.disk / (1024*1024*1024)) | int }}"
+        #primary_ip4: "item.config.ipconfig0.split(',')[0] | regex_replace('^ip=', '')"
+        custom_fields:
+          vmid: "{{ item.vmid | int }}"
+          proxmox_node: "{{ item.node }}"
+      state: present
+    loop: "{{ proxmox_discovered_running_vms_configuration }}"
+#      - "{{ proxmox_discovered_stopped_vms_configuration }}"
+
+  - name: "Proxmox: VM create interface(s)"
+    netbox.netbox.netbox_vm_interface:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        virtual_machine: "{{ item.name }}"
+        name: "{{ item.interface }}"
+        mac_address: "{{ item['mac-address']}}"
+      state: present
+    with_items: "{{ proxmox_discovered_running_vms_network_interface_mapping }}"
+
+  - name: "Proxmox: VM assign IP address(es)"
+    netbox.netbox.netbox_ip_address:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        address: "{{ item.ip }}"
+        status: Active
+        assigned_object:
+          virtual_machine: "{{ item.name }}"
+          name: "{{ item.interface }}"
+      state: present
+    with_items: "{{ proxmox_discovered_running_vms_network_interface_mapping }}"
+
+  - name: "NetBox: Update VM(s) primary_ip4"
+    netbox.netbox.netbox_virtual_machine:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        name: "{{ item.name }}"
+        primary_ip4: "{{ item.config.ipconfig0.split(',')[0] | regex_replace('^ip=', '')}}"
+      state: present
+    loop: "{{ proxmox_discovered_vms.proxmox_vms }}"
+    when: not item.template and item.status == "running"
+
+  - name: "NetBox: Add VM entries for stopped Proxmox VM(s)"
+    netbox.netbox.netbox_virtual_machine:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        name: "{{ item.name }}"
+        status: "{{ pm_to_nb_status_mapping[item.status] }}"
+        #tenant: "{{ vm_config[item].tenant if vm_config[item].tenant is defined else proxmox_vm_cfg.default_tenant }}"
+        #virtual_machine_role: "{{ proxmox_vm_cfg.default_vm_device_role }}"
+        virtual_machine_role: "Proxmox VM"
+        #site: "{{ vm_config[item].site if vm_config[item].site is defined else proxmox_vm_cfg.default_site }}"
+        #cluster: "{{ vm_config[item].vm_cluster if vm_config[item].vm_cluster is defined else proxmox_vm_cfg.default_vm_cluster }}"
+        cluster: "proxmox-ve"
+        vcpus: "{{ item.vcpus | int }}"
+        memory: "{{ (item.memory / (1024*1024)) | float | int }}"
+        disk: "{{ (item.disk / (1024*1024*1024)) | int }}"
+        #primary_ip4: "item.config.ipconfig0.split(',')[0] | regex_replace('^ip=', '')"
+        custom_fields:
+          vmid: "{{ item.vmid | int }}"
+          proxmox_node: "{{ item.node }}"
+      state: present
+    loop: "{{ proxmox_discovered_stopped_vms_configuration }}"
+
