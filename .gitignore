@@ -170,4 +170,4 @@ vms.yml
 vms.yml.*
 
 inventory
-
+tests/
