@@ -80,11 +80,11 @@
 
   - name: "NetBox: Staged VM inventory"
     include_tasks: "ansible-tasks/netbox/get-staged-vm-status.yml"
-    
-  - meta: end_play
 
   - name: "Proxmox: Clone VMs"
     include_tasks: "ansible-tasks/proxmox/clone-vms.yml"
+
+  - meta: end_play
 
   - name: "Proxmox: Grow VM disks"
     include_tasks: "ansible-tasks/proxmox/grow-vm-disk.yml"
