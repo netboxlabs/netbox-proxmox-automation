@@ -12,7 +12,7 @@
 
   - name: Save NetBox VM inventory (staged) status
     set_fact:
-      nb_vm_inventory_staged: "{{ nb_vm_inventory_staged | combine({item.name: {'vcpus': item.vcpus | int, 'memory': item.memory, 'disk': item.disk, 'ip': item.primary_ip4.address}}) }}"
+      nb_vm_inventory_staged: "{{ nb_vm_inventory_staged | combine({item.name: {'vcpus': item.vcpus | int, 'memory': item.memory, 'disks': vm_config[item.name].disks, 'ip': item.primary_ip4.address}}) }}"
     with_items: "{{ netbox_vms_all.json.results }}"
     when: item.status.value == 'staged'
 

@@ -7,7 +7,7 @@
       name: "{{ item }}"
       #disk: "{{ vm_config[item].disk0 }}"
       disk: scsi0
-      size: "{{ nb_vm_inventory_staged[item].disk }}G"
+      size: "{{ nb_vm_inventory_staged[item].disks[0] }}G"
       state: resized
     with_items: "{{ nb_vm_inventory_staged }}"
     register: vm_update_disks_job
