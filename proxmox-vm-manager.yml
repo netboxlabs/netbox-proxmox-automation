@@ -84,13 +84,13 @@
   - name: "Proxmox: Clone VMs"
     include_tasks: "ansible-tasks/proxmox/clone-vms.yml"
 
+  - name: "Proxmox: VMs update resource settings (CPU, memory, etc)"
+    include_tasks: "ansible-tasks/proxmox/vm-resource-settings.yml"
+
   - meta: end_play
 
   - name: "Proxmox: Grow VM disks"
     include_tasks: "ansible-tasks/proxmox/grow-vm-disk.yml"
-
-  - name: "Proxmox: VMs update resource settings (CPU, memory, etc)"
-    include_tasks: "ansible-tasks/proxmox/vm-resource-settings.yml"
 
   - name: "Proxmox: VMs update sshkeys settings"
     include_tasks: "ansible-tasks/proxmox/vm-ssh-key-settings.yml"
