@@ -7,7 +7,8 @@
         status: Active
         assigned_object:
           virtual_machine: "{{ item.split('@')[0] }}"
-          name: "{{ item }}"
+          #name: "{{ item }}"
+          name: "{{ item.split('@')[1] }}"
       state: present
     with_items: "{{ proxmox_all_vm_interfaces }}"
     when: vm_create_interface.changed and 'ip' in proxmox_all_vm_interfaces[item]
@@ -16,6 +17,7 @@
   - name: Collect assigned IP for interface (STATIC)
     set_fact:
       nb_vm_interface_assigned_ip: "{{ nb_vm_interface_assigned_ip | combine({item['invocation']['module_args']['data']['assigned_object']['name']: item['ip_address']['display']}) }}"
-      proxmox_ipconfig_dict: "{{ proxmox_ipconfig_dict | combine({item['invocation']['module_args']['data']['assigned_object']['virtual_machine']: {'ipconfig' + item['invocation']['module_args']['data']['assigned_object']['name'].split('@')[1] | regex_replace('\\D+', ''): 'ip=' + item['ip_address']['display'] + ',gw=' + item['ip_address']['display'].split('.')[:3] | join('.') + '.' + vm_config[item['invocation']['module_args']['data']['assigned_object']['virtual_machine']].gw|string}}) }}"
+      #proxmox_ipconfig_dict: "{{ proxmox_ipconfig_dict | combine({item['invocation']['module_args']['data']['assigned_object']['virtual_machine']: {'ipconfig' + item['invocation']['module_args']['data']['assigned_object']['name'].split('@')[1] | regex_replace('\\D+', ''): 'ip=' + item['ip_address']['display'] + ',gw=' + item['ip_address']['display'].split('.')[:3] | join('.') + '.' + vm_config[item['invocation']['module_args']['data']['assigned_object']['virtual_machine']].gw|string}}) }}"
+      proxmox_ipconfig_dict: "{{ proxmox_ipconfig_dict | combine({item['invocation']['module_args']['data']['assigned_object']['virtual_machine']: {'ipconfig' + item['invocation']['module_args']['data']['assigned_object']['name'] | regex_replace('\\D+', ''): 'ip=' + item['ip_address']['display'] + ',gw=' + item['ip_address']['display'].split('.')[:3] | join('.') + '.' + vm_config[item['invocation']['module_args']['data']['assigned_object']['virtual_machine']].gw|string}}) }}"
     when: item.changed
     with_items: "{{ interface_new_ip_static_status.results }}"

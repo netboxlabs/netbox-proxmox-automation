@@ -4,9 +4,10 @@
       netbox_token: "{{ secrets_cfg.netbox.api_token }}"
       data:
         virtual_machine: "{{ item.split('@')[0] }}"
-        #name: "{{ item.split('@')[1] }}"
-        name: "{{ item }}"
+        name: "{{ item.split('@')[1] }}"
+        #name: "{{ item }}"
         enabled: true
       state: present
     with_items: "{{ proxmox_all_vm_interfaces }}"
+    when: item.split('@')[0] not in nb_vm_inventory
     register: vm_create_interface

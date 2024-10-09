@@ -9,7 +9,8 @@
         primary_ip4: "{{ item['ip_address']['display'] }}"
       state: present
     loop: "{{ interface_new_ip_prefix_status.results }}"
-    when: item.changed and proxmox_all_vm_interfaces[item['invocation']['module_args']['data']['assigned_object']['name']].primary
+    #when: item.changed and proxmox_all_vm_interfaces[item['invocation']['module_args']['data']['assigned_object']['name']].primary
+    when: item.changed
     register: vm_update_primary_ip4_prefix
 
   - name: Update VM(s) primary_ip4 in NetBox (STATIC IP)
@@ -23,7 +24,8 @@
         primary_ip4: "{{ item['ip_address']['display'] }}"
       state: present
     loop: "{{ interface_new_ip_static_status.results }}"
-    when: item.changed and proxmox_all_vm_interfaces[item['invocation']['module_args']['data']['assigned_object']['name']].primary
+    #when: item.changed and proxmox_all_vm_interfaces[item['invocation']['module_args']['data']['assigned_object']['name']].primary
+    when: item.changed
     register: vm_update_primary_ip4_static
 
   - name: VM(s) update primary_ip4 status

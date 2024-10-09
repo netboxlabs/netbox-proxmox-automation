@@ -10,6 +10,8 @@
     proxmox_all_vm_interfaces: {}
     proxmox_vm_interfaces_prefix: []
     proxmox_vm_interfaces_ip: []
+    nb_vm_inventory: {}
+    nb_vm_inventory_staged: {}
     nb_vm_created: {}
     nb_vm_interface_assigned_ip: {}
     nb_remove_vms: {}
@@ -55,14 +57,11 @@
     with_items: "{{ proxmox_vm_cfg.vms }}"
     when: not item.exists
 
+  - name: "NetBox: Collect VMs (pre)"
+    include_tasks: "ansible-tasks/netbox/check-vms.yml"
+  
   - name: "NetBox: Create (Proxmox) VMs"
     include_tasks: "ansible-tasks/netbox/create-vms.yml"
-
-  - name: "Proxmox: Clone VMs"
-    include_tasks: "ansible-tasks/proxmox/clone-vms.yml"
-
-  - name: "Proxmox: Grow VM disks"
-    include_tasks: "ansible-tasks/proxmox/grow-vm-disk.yml"
 
   - name: "NetBox: Create (Proxmox) VMs Network Interfaces"
     include_tasks: "ansible-tasks/netbox/create-network-interfaces.yml"
@@ -75,6 +74,20 @@
 
   - name: "NetBox: Update primary_ip4 for (Proxmox) VMs"
     include_tasks: "ansible-tasks/netbox/update-primary-ip4.yml"
+
+  - name: "NetBox: Collect VMs (post)"
+    include_tasks: "ansible-tasks/netbox/check-vms.yml"
+
+  - name: "NetBox: Staged VM inventory"
+    include_tasks: "ansible-tasks/netbox/get-staged-vm-status.yml"
+    
+  - meta: end_play
+
+  - name: "Proxmox: Clone VMs"
+    include_tasks: "ansible-tasks/proxmox/clone-vms.yml"
+
+  - name: "Proxmox: Grow VM disks"
+    include_tasks: "ansible-tasks/proxmox/grow-vm-disk.yml"
 
   - name: "Proxmox: VMs update resource settings (CPU, memory, etc)"
     include_tasks: "ansible-tasks/proxmox/vm-resource-settings.yml"
