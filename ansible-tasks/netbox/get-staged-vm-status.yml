@@ -1,0 +1,21 @@
+  - name: Get NetBox VM inventory (staged) status
+    ansible.builtin.uri:
+      url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}/api/virtualization/virtual-machines/"
+      method: GET
+      headers:
+        Authorization: "Token {{ secrets_cfg.netbox.api_token }}"
+        Accept: application/json
+        Content-Type: application/json
+      status_code: 200
+      validate_certs: no
+    register: netbox_vms_all
+
+  - name: Save NetBox VM inventory (staged) status
+    set_fact:
+      nb_vm_inventory_staged: "{{ nb_vm_inventory_staged | combine({item.name: {'vcpus': item.vcpus | int, 'memory': item.memory, 'disk': item.disk, 'ip': item.primary_ip4.address}}) }}"
+    with_items: "{{ netbox_vms_all.json.results }}"
+    when: item.status.value == 'staged'
+
+  - name: Show, don't tell
+    debug:
+      msg: "it here: {{ nb_vm_inventory_staged }}"
