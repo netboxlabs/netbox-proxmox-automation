@@ -93,10 +93,10 @@
   - name: "Proxmox: VMs IP address settings"
     include_tasks: "ansible-tasks/proxmox/vm-ip-settings.yml"
 
-  - meta: end_play
-
   - name: "Proxmox: Grow VM disks"
     include_tasks: "ansible-tasks/proxmox/grow-vm-disk.yml"
+
+  - meta: end_play
 
   - name: "Proxmox: Start specified VMs"
     include_tasks: "ansible-tasks/proxmox/start-vms.yml"

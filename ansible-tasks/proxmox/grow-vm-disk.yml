@@ -5,10 +5,11 @@
       api_token_secret: "{{ secrets_cfg.proxmox.api_token_secret }}"
       api_host: "{{ secrets_cfg.proxmox.api_host }}"
       name: "{{ item }}"
-      disk: "{{ vm_config[item].disk0 }}"
-      size: "{{ vm_config[item].disk }}G"
+      #disk: "{{ vm_config[item].disk0 }}"
+      disk: scsi0
+      size: "{{ nb_vm_inventory_staged[item].disk }}G"
       state: resized
-    with_items: "{{ vm_config }}"
+    with_items: "{{ nb_vm_inventory_staged }}"
     register: vm_update_disks_job
     async: 180
     poll: 0
