@@ -87,16 +87,16 @@
   - name: "Proxmox: VMs update resource settings (CPU, memory, etc)"
     include_tasks: "ansible-tasks/proxmox/vm-resource-settings.yml"
 
-  - meta: end_play
-
-  - name: "Proxmox: Grow VM disks"
-    include_tasks: "ansible-tasks/proxmox/grow-vm-disk.yml"
-
   - name: "Proxmox: VMs update sshkeys settings"
     include_tasks: "ansible-tasks/proxmox/vm-ssh-key-settings.yml"
 
   - name: "Proxmox: VMs IP address settings"
     include_tasks: "ansible-tasks/proxmox/vm-ip-settings.yml"
+
+  - meta: end_play
+
+  - name: "Proxmox: Grow VM disks"
+    include_tasks: "ansible-tasks/proxmox/grow-vm-disk.yml"
 
   - name: "Proxmox: Start specified VMs"
     include_tasks: "ansible-tasks/proxmox/start-vms.yml"

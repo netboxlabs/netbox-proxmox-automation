@@ -8,10 +8,11 @@
       name: "{{ item }}"
       ipconfig:
         #ipconfig0: "ip={{ nb_vm_interface_assigned_ip[item].ip }},gw={{ nb_vm_interface_assigned_ip[item].ip.split('.')[:3] | join('.') }}.{{ item.gw if item.gw is defined else gw_last_quad }}"
-        "{{ proxmox_ipconfig_dict[item] }}"
+        #"{{ proxmox_ipconfig_dict[item] }}"
+        ipconfig0: "ip={{ nb_vm_inventory_staged[item].ip }},gw={{ nb_vm_inventory_staged[item].ip.split('.')[:3] | join('.') }}.{{ item.gw if item.gw is defined else gw_last_quad }}"
       update: true
-    with_items: "{{ vm_config }}"
-    when: nb_vm_created[item] and not item in collected_proxmox_vms
+    with_items: "{{ nb_vm_inventory_staged }}"
+    when: not item in collected_proxmox_vms and item in nb_vm_inventory_staged
     register: update_vms_settings_job
     async: 180
     poll: 0

@@ -12,7 +12,7 @@
       state: present
       timeout: 120
     with_items: "{{ vm_config }}"
-    when: not item in collected_proxmox_vms and (item in nb_vm_inventory_staged or item in nb_vm_created)
+    when: not item in collected_proxmox_vms and item in nb_vm_inventory_staged
     register: clone_vms_job
     async: 180
     poll: 0

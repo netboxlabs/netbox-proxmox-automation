@@ -9,7 +9,7 @@
       sshkeys: "{{ lookup('file', vm_config[item].sshkey) }}"
       update: true
     with_items: "{{ vm_config }}"
-    when: nb_vm_created[item] and not item in collected_proxmox_vms
+    when: not item in collected_proxmox_vms and item in nb_vm_inventory_staged
     register: update_vms_settings_job
     async: 180
     poll: 0
