@@ -49,7 +49,7 @@
 
   - name: Collect VM(s) to create/start
     set_fact:
-      vm_config: "{{ vm_config | combine({item.name: {'template': item.template, 'vcpus': item.vcpus, 'memory': item.memory, 'disks': item.disks, 'sshkey': item.sshkey, 'start': item.start if item.start is defined else default_vm_start_state, 'gw': item.gw if item.gw is defined else gw_last_quad}}) }}"
+      vm_config: "{{ vm_config | combine({item.name: {'template': item.template, 'vcpus': item.vcpus, 'memory': item.memory, 'disks': item.disks, 'sshkey': item.sshkey, 'storage': item.storage if item.storage is defined else proxmox_vm_cfg.default_storage, 'start': item.start if item.start is defined else default_vm_start_state, 'gw': item.gw if item.gw is defined else gw_last_quad}}) }}"
     with_items: "{{ proxmox_vm_cfg.vms }}"
     when: item.exists
 

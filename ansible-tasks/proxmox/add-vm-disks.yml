@@ -7,7 +7,7 @@
       name: "{{ item.name }}"
       disk: "{{ item.disk_name }}"
       size: "{{ item.disk_size }}"
-      storage: local-lvm
+      storage: "{{ vm_config[item.name].storage }}"
       backup: false
       ssd: false
       create: regular
