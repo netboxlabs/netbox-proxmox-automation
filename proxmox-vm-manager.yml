@@ -52,21 +52,6 @@
     with_items: "{{ proxmox_vm_cfg.vms }}"
     when: item.exists
 
-  - name: Collect VM(s) disks
-    set_fact:
-      nb_vm_config_disks: "{{ nb_vm_config_disks + [{'name': item.0.name, 'disk': item.1}] }}"
-#    debug:
-#      msg: "vm: {{ item.0.name }} disk: {{ item.1 }}"
-    with_subelements:
-      - "{{ proxmox_vm_cfg.vms }}"
-      - disks
-
-  - name: show vm disks
-    debug:
-      msg: "vm disks: {{ nb_vm_config_disks }}"
-
-  - meta: end_play
-
   - name: Collect VM(s) to remove
     set_fact:
       vm_config_remove: "{{ vm_config_remove | combine({item.name: True }) }}"
@@ -90,6 +75,11 @@
 
   - name: "NetBox: Update primary_ip4 for (Proxmox) VMs"
     include_tasks: "ansible-tasks/netbox/update-primary-ip4.yml"
+
+  - name: "NetBox: Add disks to VMs"
+    include_tasks: "ansible-tasks/netbox/create-vms-disks.yml"
+
+  - meta: end_play
 
   - name: "NetBox: Collect VMs (post)"
     include_tasks: "ansible-tasks/netbox/check-vms.yml"
