@@ -15,6 +15,7 @@
     nb_vm_created: {}
     nb_vm_interface_assigned_ip: {}
     nb_remove_vms: {}
+    nb_vm_config_disks: []
     proxmox_ipconfig_dict: {}
     gw_last_quad: 1
 
@@ -50,6 +51,21 @@
       vm_config: "{{ vm_config | combine({item.name: {'template': item.template, 'vcpus': item.vcpus, 'memory': item.memory, 'disks': item.disks, 'sshkey': item.sshkey, 'start': item.start if item.start is defined else default_vm_start_state, 'gw': item.gw if item.gw is defined else gw_last_quad}}) }}"
     with_items: "{{ proxmox_vm_cfg.vms }}"
     when: item.exists
+
+  - name: Collect VM(s) disks
+    set_fact:
+      nb_vm_config_disks: "{{ nb_vm_config_disks + [{'name': item.0.name, 'disk': item.1}] }}"
+#    debug:
+#      msg: "vm: {{ item.0.name }} disk: {{ item.1 }}"
+    with_subelements:
+      - "{{ proxmox_vm_cfg.vms }}"
+      - disks
+
+  - name: show vm disks
+    debug:
+      msg: "vm disks: {{ nb_vm_config_disks }}"
+
+  - meta: end_play
 
   - name: Collect VM(s) to remove
     set_fact:
