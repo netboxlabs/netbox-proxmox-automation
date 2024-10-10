@@ -1,0 +1,34 @@
+  - name: Add VM disks
+    community.general.proxmox_disk:
+      api_user: "{{ secrets_cfg.proxmox.api_user }}"
+      api_token_id: "{{ secrets_cfg.proxmox.api_token_id }}"
+      api_token_secret: "{{ secrets_cfg.proxmox.api_token_secret }}"
+      api_host: "{{ secrets_cfg.proxmox.api_host }}"
+      name: "{{ item.name }}"
+      disk: "{{ item.disk_name }}"
+      size: "{{ item.disk_size }}"
+      storage: local-lvm
+      backup: false
+      ssd: false
+      create: regular
+      state: present
+    loop: "{{ nb_vm_collected_disks }}"
+    when: item.disk_name != 'scsi0'
+    register: vm_add_disks_job
+    async: 180
+    poll: 0
+
+  - name: show disk add
+    debug:
+      msg: "add disks: {{ vm_add_disks_job }}"
+
+  - name: Wait for VM disk updates processes to finish
+    async_status:
+      #id: "{{ item.ansible_job_id }}"
+      jid: "{{ item.ansible_job_id }}" # ansible version > 2.8
+    register: _ujobs_alias_vc_0
+    until: _ujobs_alias_vc_0.finished
+    retries: 60
+    delay: 10
+    with_items: "{{ vm_add_disks_job.results }}"
+    when: item.ansible_job_id is defined
