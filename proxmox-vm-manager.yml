@@ -16,6 +16,7 @@
     nb_vm_interface_assigned_ip: {}
     nb_remove_vms: {}
     nb_vm_config_disks: []
+    nb_vm_collected_disks: []
     proxmox_ipconfig_dict: {}
     gw_last_quad: 1
 
@@ -79,8 +80,6 @@
   - name: "NetBox: Add disks to VMs"
     include_tasks: "ansible-tasks/netbox/create-vms-disks.yml"
 
-  - meta: end_play
-
   - name: "NetBox: Collect VMs (post)"
     include_tasks: "ansible-tasks/netbox/check-vms.yml"
 
@@ -101,6 +100,9 @@
 
   - name: "Proxmox: Grow VM disks"
     include_tasks: "ansible-tasks/proxmox/grow-vm-disk.yml"
+
+  - name: "Proxmox: Add VM disks"
+    include_tasks: "ansible-tasks/proxmox/add-vm-disks.yml"
 
   - meta: end_play
 

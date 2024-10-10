@@ -23,3 +23,13 @@
         size: "{{ item.disk_size }}"
       state: present
     loop: "{{ nb_vm_config_disks }}"
+    register: nb_vm_disks
+
+  - name: Collect configured VM(s) disks
+    set_fact:
+      nb_vm_collected_disks: "{{ nb_vm_collected_disks + [{'name': item['invocation']['module_args']['data']['virtual_machine'], 'disk_name': item['invocation']['module_args']['data']['name'], 'disk_size': item['invocation']['module_args']['data']['size']}] }}"
+    loop: "{{ nb_vm_disks.results }}"
+
+#  - name: Show it
+#    debug:
+#      msg: "blah: {{ nb_vm_collected_disks }}"
