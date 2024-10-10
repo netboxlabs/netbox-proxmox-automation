@@ -17,6 +17,15 @@
     nb_remove_vms: {}
     nb_vm_config_disks: []
     nb_vm_collected_disks: []
+    nb_dns_plugin_zn: {}
+    nb_dns_plugin_soa: {}
+    nb_dns_plugin_ns: {}
+    nb_dns_plugin_mx: {}
+    nb_dns_plugin_mx_dol: []
+    nb_dns_plugin_rr: {}
+    nb_dns_plugin_rr_dol: []
+    nb_dns_plugin_changed: false
+    tmp_dns_zone_dir: ''    
     proxmox_ipconfig_dict: {}
     gw_last_quad: 1
 
