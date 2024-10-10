@@ -1,0 +1,22 @@
+  tasks:
+    - name: Copy Bind9 (DNS) zone files
+      become: true
+      copy:
+        src: "{{ item }}"
+        dest: "{{ hostvars['localhost']['remote_bind9_zone_db_directory'] }}"
+        owner: "bind"
+        group: "bind"
+        mode: 0600
+      with_fileglob:
+        - "{{ hostvars['localhost']['tmp_dns_zone_dir'] }}/db.*"
+      when: hostvars['localhost']['nb_dns_plugin_changed'] is defined and hostvars['localhost']['nb_dns_plugin_changed']
+      notify:
+        - Restart bind9
+
+  handlers:
+    - name: Restart bind9
+      become: true
+      service:
+        name: bind9
+        state: restarted
+      when: hostvars['localhost']['nb_dns_plugin_changed'] is defined and hostvars['localhost']['nb_dns_plugin_changed']

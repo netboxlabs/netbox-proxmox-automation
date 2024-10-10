@@ -1,0 +1,29 @@
+  - name: Create DNS 'A' record in Netbox
+    local_action:
+      module: uri
+      url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}/api/plugins/netbox-dns/records/"
+      method: POST
+      headers:
+        Authorization: "Token {{ secrets_cfg.netbox.api_token }}"
+        Accept: application/json
+        Content-Type: application/json
+      body_format: json
+      body:
+        zone: "{{ nb_dns_plugin_zn[proxmox_vm_cfg.default_dns_domainname].zone_id }}"
+        type: A
+        name: test1
+        fqdn: "test1.{{ proxmox_vm_cfg.default_dns_domainname }}"
+        value: 192.168.80.200
+        status: active
+        managed: false
+        disable_ptr: false
+      status_code: 201
+      validate_certs: no
+    register: dns_record_create
+    failed_when: dns_record_create.status not in [200, 201, 400]
+
+# when status == 201, set changed flag to true -- this will set into motion all of our DNS change plays
+  - name: Set flag after DNS created record
+    set_fact:
+      nb_dns_plugin_changed: true
+    when: dns_record_create.status | int == 201
