@@ -1,0 +1,29 @@
+  - name: NB Discover VMs
+    local_action:
+      module: uri
+      url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}/api/virtualization/virtual-machines/"
+      method: GET
+      headers:
+        Authorization: "Token {{ secrets_cfg.netbox.api_token }}"
+        Accept: application/json
+        Content-Type: application/json
+      status_code: 200
+      validate_certs: no
+    register: nb_active_vms
+
+#  - name: Show raw VMs collected from NB
+#    debug:
+#      msg: "raw VM {{ item }}"
+#    loop: "{{ nb_vms.json.results }}"
+
+  - name: Collect active NetBox VMs
+    set_fact:
+      nb_collected_remove_vms: "{{ nb_collected_remove_vms | combine({item.name: True}) }}"
+    with_items: "{{ nb_active_vms.json.results }}"
+    when: item.status.value == 'active'
+
+#  - name: Show NB collected VMs
+#    debug:
+#      msg: "NB collected VM: {{ item }}"
+#    with_items: "{{ nb_collected_vms }}"
+
