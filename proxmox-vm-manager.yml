@@ -137,7 +137,7 @@
 
   - name: "BIND9: Create (DNS) zone dbs"
     include_tasks: "ansible-tasks/dns/bind9/create-zone-files.yml"
-    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns
+    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns is defined and proxmox_vm_cfg.update_dns and 'bind9' in proxmox_vm_cfg.dns_integrations
 
   - meta: end_play
 
