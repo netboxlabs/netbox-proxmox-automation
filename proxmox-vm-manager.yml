@@ -10,6 +10,7 @@
     proxmox_all_vm_interfaces: {}
     proxmox_vm_interfaces_prefix: []
     proxmox_vm_interfaces_ip: []
+    nb_collected_vms: {}
     nb_vm_inventory: {}
     nb_vm_inventory_staged: {}
     nb_vm_created: {}
@@ -57,6 +58,9 @@
   - name: "Proxmox: Discover VMs"
     include_tasks: "ansible-tasks/proxmox/discover-vms.yml"
 
+  - name: "NetBox: Collect VMs"
+    include_tasks: "ansible-tasks/netbox/collect-staged-vms.yml"
+
   - name: "NetBox: Check Prefix and IP settings for Proxmox VMs"
     include_tasks: "ansible-tasks/netbox/prefix-ip-checker.yml"
 
@@ -64,7 +68,7 @@
     set_fact:
       vm_config: "{{ vm_config | combine({item.name: {'template': item.template, 'vcpus': item.vcpus, 'memory': item.memory, 'disks': item.disks, 'sshkey': item.sshkey, 'storage': item.storage if item.storage is defined else proxmox_vm_cfg.default_storage, 'start': item.start if item.start is defined else default_vm_start_state, 'gw': item.gw if item.gw is defined else gw_last_quad}}) }}"
     with_items: "{{ proxmox_vm_cfg.vms }}"
-    when: item.exists
+    when: item.exists and nb_collected_vms[item.name] is defined
 
   - name: Collect VM(s) to remove
     set_fact:
@@ -72,72 +76,88 @@
     with_items: "{{ proxmox_vm_cfg.vms }}"
     when: not item.exists
 
-  - name: "NetBox: Collect VMs (pre)"
-    include_tasks: "ansible-tasks/netbox/check-vms.yml"
-  
   - name: "NetBox: Create (Proxmox) VMs"
     include_tasks: "ansible-tasks/netbox/create-vms.yml"
+    when: vm_config | length > 0
 
   - name: "NetBox: Create (Proxmox) VMs Network Interfaces"
     include_tasks: "ansible-tasks/netbox/create-network-interfaces.yml"
+    when: vm_config | length > 0
 
   - name: "NetBox: Create IPs (by prefix) for (Proxmox) VMs Network Interfaces"
     include_tasks: "ansible-tasks/netbox/create-ips-by-prefix.yml"
+    when: vm_config | length > 0
 
   - name: "NetBox: Create IPs (static) for (Proxmox) VMs Network Interfaces"
     include_tasks: "ansible-tasks/netbox/create-static-ips.yml"
+    when: vm_config | length > 0
 
   - name: "NetBox: Update primary_ip4 for (Proxmox) VMs"
     include_tasks: "ansible-tasks/netbox/update-primary-ip4.yml"
+    when: vm_config | length > 0
 
   - name: "NetBox: Add disks to VMs"
     include_tasks: "ansible-tasks/netbox/create-vms-disks.yml"
+    when: vm_config | length > 0
 
   - name: "NetBox: Collect VMs (post)"
     include_tasks: "ansible-tasks/netbox/check-vms.yml"
+    when: vm_config | length > 0
 
   - name: "NetBox: Staged VM inventory"
     include_tasks: "ansible-tasks/netbox/get-staged-vm-status.yml"
+    when: vm_config | length > 0
 
   - name: "Proxmox: Clone VMs"
     include_tasks: "ansible-tasks/proxmox/clone-vms.yml"
+    when: vm_config | length > 0
 
   - name: "Proxmox: VMs update resource settings (CPU, memory, etc)"
     include_tasks: "ansible-tasks/proxmox/vm-resource-settings.yml"
+    when: vm_config | length > 0
 
   - name: "Proxmox: VMs update sshkeys settings"
     include_tasks: "ansible-tasks/proxmox/vm-ssh-key-settings.yml"
+    when: vm_config | length > 0
 
   - name: "Proxmox: VMs IP address settings"
     include_tasks: "ansible-tasks/proxmox/vm-ip-settings.yml"
+    when: vm_config | length > 0
 
   - name: "Proxmox: Grow VM disks"
     include_tasks: "ansible-tasks/proxmox/grow-vm-disk.yml"
+    when: vm_config | length > 0
 
   - name: "Proxmox: Add VM disks"
     include_tasks: "ansible-tasks/proxmox/add-vm-disks.yml"
+    when: vm_config | length > 0
 
   - name: "NetBox: Set specified VMs to Active"
     include_tasks: "ansible-tasks/netbox/set-vms-active.yml"
+    when: vm_config | length > 0
 
   - name: "NetBox: Find DNS zones via netbox-dns plugin"
     include_tasks: "ansible-tasks/netbox/find-dns-zones.yml"
-    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns
+    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns and vm_config | length > 0
 
   - name: "NetBox: Create DNS entries via netbox-dns plugin"
     include_tasks: "ansible-tasks/netbox/create-dns-record.yml"
-    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns
+    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns and vm_config | length > 0
 
   - name: "NetBox: Find DNS zones SOA via netbox-dns plugin"
     include_tasks: "ansible-tasks/netbox/find-dns-zones-info.yml"
-    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns
+    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns and vm_config | length > 0
 
   - name: "Proxmox: Start specified VMs"
     include_tasks: "ansible-tasks/proxmox/start-vms.yml"
+    when: vm_config | length > 0
 
   - name: "BIND9: Create (DNS) zone dbs"
     include_tasks: "ansible-tasks/dns/bind9/create-zone-files.yml"
-    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns is defined and proxmox_vm_cfg.update_dns and 'bind9' in proxmox_vm_cfg.dns_integrations
+    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns is defined and proxmox_vm_cfg.update_dns and 'bind9' in proxmox_vm_cfg.dns_integrations and vm_config | length > 0
+
+  - name: "NetBox: Set VMs to decommissioning"
+    include_tasks: "ansible-tasks/netbox/set-vms-decommissioning.yml"
 
   - meta: end_play
 
@@ -147,7 +167,7 @@
   - name: "Proxmox: Remove specified VMs"
     include_tasks: "ansible-tasks/proxmox/remove-vms.yml"
 
-- name: "bind9: propagate DNS changes"
+- name: "BIND9: propagate DNS changes"
   connection: paramiko
   hosts: dns
   gather_facts: False
