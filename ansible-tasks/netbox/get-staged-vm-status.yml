@@ -16,6 +16,6 @@
     with_items: "{{ netbox_vms_all.json.results }}"
     when: item.status.value == 'staged'
 
-  - name: Show, don't tell
-    debug:
-      msg: "it here: {{ nb_vm_inventory_staged }}"
+#  - name: Show, don't tell
+#    debug:
+#      msg: "it here: {{ nb_vm_inventory_staged }}"
