@@ -11,6 +11,7 @@
     proxmox_vm_interfaces_prefix: []
     proxmox_vm_interfaces_ip: []
     nb_collected_vms: {}
+    nb_collected_remove_vms: {}
     nb_vm_inventory: {}
     nb_vm_inventory_staged: {}
     nb_vm_created: {}
@@ -74,7 +75,7 @@
     set_fact:
       vm_config_remove: "{{ vm_config_remove | combine({item.name: True }) }}"
     with_items: "{{ proxmox_vm_cfg.vms }}"
-    when: not item.exists
+    when: not item.exists and nb_collected_remove_vms[item.name] is defined
 
   - name: "NetBox: Create (Proxmox) VMs"
     include_tasks: "ansible-tasks/netbox/create-vms.yml"
@@ -98,10 +99,6 @@
 
   - name: "NetBox: Add disks to VMs"
     include_tasks: "ansible-tasks/netbox/create-vms-disks.yml"
-    when: vm_config | length > 0
-
-  - name: "NetBox: Collect VMs (post)"
-    include_tasks: "ansible-tasks/netbox/check-vms.yml"
     when: vm_config | length > 0
 
   - name: "NetBox: Staged VM inventory"
