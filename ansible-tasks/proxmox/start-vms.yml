@@ -7,7 +7,7 @@
       api_host: "{{ secrets_cfg.proxmox.api_host }}"
       name: "{{ item }}"
       state: started
-    with_items: "{{ vm_config }}"
+    loop: "{{ nb_vm_active }}"
     when: vm_config[item].start
     register: start_vms_job
     async: 180
@@ -24,7 +24,14 @@
     with_items: "{{ start_vms_job.results }}"
     when: item.ansible_job_id is defined
 
-  - name: Wait for SSH on VMs to become available
-    wait_for: host="{{ nb_vm_interface_assigned_ip[item] | regex_replace('/.*$', '') }}" port=22 delay=10 timeout=300
-    with_items: "{{ proxmox_all_vm_interfaces }}"
-    when: proxmox_all_vm_interfaces[item].primary
+  - name: Clean up async file(s) for VM start
+    ansible.builtin.async_status:
+      jid: '{{ item.ansible_job_id }}'
+      mode: cleanup
+    with_items: "{{ start_vms_job.results }}"
+    when: item.ansible_job_id is defined
+
+#  - name: Wait for SSH on VMs to become available
+#    wait_for: host="{{ nb_vm_interface_assigned_ip[item] | regex_replace('/.*$', '') }}" port=22 delay=10 timeout=300
+#    with_items: "{{ proxmox_all_vm_interfaces }}"
+#    when: proxmox_all_vm_interfaces[item].primary

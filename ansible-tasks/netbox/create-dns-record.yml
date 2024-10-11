@@ -1,3 +1,8 @@
+#  - name: Show active NB VM
+#    debug:
+#      msg: "hostname: {{ item }} ip address: {{ nb_vm_inventory_staged[item]['ip'] }} zone: {{ nb_dns_plugin_zn[proxmox_vm_cfg.default_dns_domainname] }} zone_id: {{ nb_dns_plugin_zn[proxmox_vm_cfg.default_dns_domainname].zone_id }}"
+#    loop: "{{ nb_vm_active }}"
+
   - name: Create DNS 'A' record in Netbox
     local_action:
       module: uri
@@ -11,19 +16,24 @@
       body:
         zone: "{{ nb_dns_plugin_zn[proxmox_vm_cfg.default_dns_domainname].zone_id }}"
         type: A
-        name: test1
-        fqdn: "test1.{{ proxmox_vm_cfg.default_dns_domainname }}"
-        value: 192.168.80.200
+        name: "{{ item }}"
+        #fqdn: "{{ item }}.{{ proxmox_vm_cfg.default_dns_domainname }}"
+        value: "{{ nb_vm_inventory_staged[item]['ip'].split('/')[0] }}"
         status: active
         managed: false
         disable_ptr: false
       status_code: 201
       validate_certs: no
+    loop: "{{ nb_vm_active }}"
     register: dns_record_create
     failed_when: dns_record_create.status not in [200, 201, 400]
 
-# when status == 201, set changed flag to true -- this will set into motion all of our DNS change plays
+#  - name: Show DNS record create
+#    debug:
+#      msg: "hey DNS create {{ dns_record_create }}"
+
   - name: Set flag after DNS created record
     set_fact:
       nb_dns_plugin_changed: true
-    when: dns_record_create.status | int == 201
+    loop: "{{ dns_record_create.results }}"
+    when: item.status == 201
