@@ -1,0 +1,5 @@
+  - name: Use the registered var and the file module to remove the temporary file
+    ansible.builtin.file:
+      path: "{{ hostvars['localhost']['tmp_dns_zone_dir'] }}"
+      state: absent
+    when: hostvars['localhost']['nb_dns_plugin_changed'] is defined and hostvars['localhost']['tmp_dns_zone_dir'] is defined
