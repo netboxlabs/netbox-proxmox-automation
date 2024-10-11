@@ -13,11 +13,10 @@
         memory: "{{ vm_config[item].memory }}"
       state: present
     with_items: "{{ vm_config }}"
-    when: item not in nb_vm_inventory
     register: vm_create
 
   - name: Store NetBox VM created state
     set_fact:
       nb_vm_created: "{{ nb_vm_created | combine({item['virtual_machine']['name']: True}) }}"
-    when: vm_create | length > 0 and 'virtual_machine' in item and 'status' in item['virtual_machine'] and item['virtual_machine']['status'] == "staged"
+    when: item['virtual_machine'] is defined and item['virtual_machine']['status'] is defined and item['virtual_machine']['status'] == "staged"
     with_items: "{{ vm_create.results }}"
