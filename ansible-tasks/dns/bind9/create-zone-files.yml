@@ -16,7 +16,7 @@
 
   - name: Create DNS zone files (bind9)
     ansible.builtin.template:
-      src: templates/dns/zone-template.j2
+      src: templates/dns/bind9/zone-template.j2
       dest: "{{ tmp_dns_zone_dir }}/db.{{ item }}"
     with_items: "{{ nb_dns_plugin_zn }}"
     when: nb_dns_plugin_changed
