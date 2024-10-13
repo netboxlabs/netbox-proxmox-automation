@@ -25,9 +25,9 @@
   gather_facts: False
   
   vars:
+    vm_config: {}
     collected_proxmox_vms: {}
     proxmox_vm_create: []
-    #proxmox_vm_delete: []
     proxmox_all_vm_interfaces: {}
     proxmox_vm_interfaces_prefix: []
     proxmox_vm_interfaces_ip: []
@@ -37,12 +37,9 @@
     nb_vm_inventory_staged: {}
     nb_vm_created: {}
     nb_vm_interface_assigned_ip: {}
-    nb_remove_vms: {}
     nb_vm_config_disks: []
     nb_vm_collected_disks: []
     nb_vm_active: []
-    #nb_vm_stopped: []
-    nb_vm_decomissioning: []
     nb_dns_plugin_zn: {}
     nb_dns_plugin_soa: {}
     nb_dns_plugin_ns: {}
@@ -66,16 +63,6 @@
     include_vars:
       file: vms.yml
       name: proxmox_vm_cfg
-
-  - name: Init dict(s)
-    set_fact:
-      vm_config: {}
-      vm_config_interfaces: {}
-      vm_config_remove: {}
-      the_fact: {}
-      nb_selected_vm: ''
-      nb_selected_interface: ''
-      nb_ipconfig_key_name: ''
 
   - name: Set update DNS flag (create)
     set_fact:
@@ -183,22 +170,11 @@
   gather_facts: False
 
   vars:
+    vm_config_remove: {}
     collected_proxmox_vms: {}
-    proxmox_vm_create: []
     proxmox_vm_delete: []
-    proxmox_all_vm_interfaces: {}
-    proxmox_vm_interfaces_prefix: []
-    proxmox_vm_interfaces_ip: []
-    nb_collected_staged_vms: {}
     nb_collected_active_vms: {}
-    nb_vm_inventory: {}
-    nb_vm_inventory_staged: {}
-    nb_vm_created: {}
-    nb_vm_interface_assigned_ip: {}
     nb_remove_vms: {}
-    #nb_vm_config_disks: []
-    #nb_vm_collected_disks: []
-    #nb_vm_active: []
     nb_vm_stopped: []
     nb_vm_offline: []
     nb_vm_decomissioning: []
@@ -211,8 +187,6 @@
     nb_dns_plugin_rr_dol: []
     nb_dns_plugin_deleted: false
     tmp_dns_zone_dir: ''    
-    #proxmox_ipconfig_dict: {}
-    #gw_last_quad: 1
     nb_dns_plugin_delete_record_ids: {}
     update_dns: false
 
@@ -226,16 +200,6 @@
     include_vars:
       file: vms.yml
       name: proxmox_vm_cfg
-
-  - name: Init dict(s)
-    set_fact:
-      vm_config: {}
-      vm_config_interfaces: {}
-      vm_config_remove: {}
-      the_fact: {}
-      nb_selected_vm: ''
-      nb_selected_interface: ''
-      nb_ipconfig_key_name: ''
 
   - name: Set update DNS flag (remove)
     set_fact:
