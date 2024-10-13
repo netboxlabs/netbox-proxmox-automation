@@ -3,16 +3,17 @@
       netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
       netbox_token: "{{ secrets_cfg.netbox.api_token }}"
       data:
-        name: "{{ item }}"
+        name: "{{ item.name }}"
         status: "Staged"
-        tenant: "{{ vm_config[item].tenant if vm_config[item].tenant is defined else proxmox_vm_cfg.default_tenant }}"
+        tenant: "{{ item.tenant if item.tenant is defined else proxmox_vm_cfg.default_tenant }}"
         virtual_machine_role: "{{ proxmox_vm_cfg.default_vm_device_role }}"
-        site: "{{ vm_config[item].site if vm_config[item].site is defined else proxmox_vm_cfg.default_site }}"
-        cluster: "{{ vm_config[item].vm_cluster if vm_config[item].vm_cluster is defined else proxmox_vm_cfg.default_vm_cluster }}"
-        vcpus: "{{ vm_config[item].vcpus }}"
-        memory: "{{ vm_config[item].memory }}"
+        site: "{{ item.site if item.site is defined else proxmox_vm_cfg.default_site }}"
+        cluster: "{{ item.vm_cluster if item.vm_cluster is defined else proxmox_vm_cfg.default_vm_cluster }}"
+        vcpus: "{{ item.vcpus }}"
+        memory: "{{ item.memory }}"
       state: present
-    with_items: "{{ vm_config }}"
+    with_items: "{{ proxmox_vm_cfg.vms }}"
+    when: nb_collected_staged_vms[item.name] is not defined and nb_collected_active_vms[item.name] is not defined
     register: vm_create
 
   - name: Store NetBox VM created state

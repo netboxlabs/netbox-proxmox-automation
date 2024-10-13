@@ -9,5 +9,5 @@
         enabled: true
       state: present
     with_items: "{{ proxmox_all_vm_interfaces }}"
-    when: item.split('@')[0] not in vm_config
+    when: item.split('@')[0] in nb_vm_created
     register: vm_create_interface

@@ -31,7 +31,7 @@
     proxmox_all_vm_interfaces: {}
     proxmox_vm_interfaces_prefix: []
     proxmox_vm_interfaces_ip: []
-    nb_collected_vms: {}
+    nb_collected_staged_vms: {}
     nb_collected_active_vms: {}
     nb_vm_inventory: {}
     nb_vm_inventory_staged: {}
@@ -79,8 +79,14 @@
   - name: "Proxmox: Discover VMs"
     include_tasks: "ansible-tasks/proxmox/discover-vms.yml"
 
+  - name: "NetBox: Collect active VMs"
+    include_tasks: "ansible-tasks/netbox/collect-active-vms.yml"
+
   - name: "NetBox: Collect staged VMs"
     include_tasks: "ansible-tasks/netbox/collect-staged-vms.yml"
+
+  - name: "NetBox: Create (Proxmox) VMs"
+    include_tasks: "ansible-tasks/netbox/create-vms.yml"
 
   - name: "NetBox: Check Prefix and IP settings for Proxmox VMs"
     include_tasks: "ansible-tasks/netbox/prefix-ip-checker.yml"
@@ -89,15 +95,10 @@
     set_fact:
       vm_config: "{{ vm_config | combine({item.name: {'template': item.template, 'vcpus': item.vcpus, 'memory': item.memory, 'disks': item.disks, 'sshkey': item.sshkey, 'storage': item.storage if item.storage is defined else proxmox_vm_cfg.default_storage, 'start': item.start if item.start is defined else default_vm_start_state, 'gw': item.gw if item.gw is defined else gw_last_quad}}) }}"
     with_items: "{{ proxmox_vm_cfg.vms }}"
-    when: item.exists and nb_collected_vms[item.name] is defined
-
-  - name: "NetBox: Create (Proxmox) VMs"
-    include_tasks: "ansible-tasks/netbox/create-vms.yml"
-    when: vm_config | length > 0
+    when: item.exists and (nb_collected_staged_vms[item.name] is defined or nb_vm_created[item.name] is defined)
 
   - name: "NetBox: Create (Proxmox) VMs Network Interfaces"
     include_tasks: "ansible-tasks/netbox/create-network-interfaces.yml"
-    when: vm_config | length > 0
 
   - name: "NetBox: Create IPs (by prefix) for (Proxmox) VMs Network Interfaces"
     include_tasks: "ansible-tasks/netbox/create-ips-by-prefix.yml"
@@ -179,7 +180,7 @@
     proxmox_all_vm_interfaces: {}
     proxmox_vm_interfaces_prefix: []
     proxmox_vm_interfaces_ip: []
-    nb_collected_vms: {}
+    nb_collected_staged_vms: {}
     nb_collected_active_vms: {}
     nb_vm_inventory: {}
     nb_vm_inventory_staged: {}

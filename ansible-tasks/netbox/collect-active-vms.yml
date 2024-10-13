@@ -25,5 +25,5 @@
 #  - name: Show NB collected VMs
 #    debug:
 #      msg: "NB collected VM: {{ item }}"
-#    with_items: "{{ nb_collected_vms }}"
+#    with_items: "{{ nb_collected_active_vms }}"
 

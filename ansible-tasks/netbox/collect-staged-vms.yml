@@ -18,12 +18,12 @@
 
   - name: Collect staged NetBox VMs
     set_fact:
-      nb_collected_vms: "{{ nb_collected_vms | combine({item.name: True}) }}"
+      nb_collected_staged_vms: "{{ nb_collected_staged_vms | combine({item.name: True}) }}"
     with_items: "{{ nb_vms.json.results }}"
     when: item.status.value == 'staged'
 
 #  - name: Show NB collected VMs
 #    debug:
 #      msg: "NB collected VM: {{ item }}"
-#    with_items: "{{ nb_collected_vms }}"
+#    with_items: "{{ nb_collected_staged_vms }}"
 
