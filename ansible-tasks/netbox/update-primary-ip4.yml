@@ -28,6 +28,6 @@
     when: item.changed
     register: vm_update_primary_ip4_static
 
-  - name: VM(s) update primary_ip4 status
-    debug:
-      msg: "VM(s) update primary_ip4 status {{ vm_update_primary_ip4_prefix }} {{ vm_update_primary_ip4_static }}"    
+#  - name: VM(s) update primary_ip4 status
+#    debug:
+#      msg: "VM(s) update primary_ip4 status {{ vm_update_primary_ip4_prefix }} {{ vm_update_primary_ip4_static }}"    

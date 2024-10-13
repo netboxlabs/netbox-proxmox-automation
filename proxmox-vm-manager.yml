@@ -1,4 +1,25 @@
-- name: "NetBox-Proxmox VM Manager"
+- name: "BIND9: Set BIND9 directory where zone dbs are stored"
+  connection: local
+  hosts: localhost
+  gather_facts: False
+
+  tasks:
+  - name: Collect secrets
+    include_vars:
+      file: secrets.yml
+      name: secrets_cfg
+
+  - name: Read Proxmox VM Configuration
+    include_vars:
+      file: vms.yml
+      name: proxmox_vm_cfg
+
+  - name: Init dict(s)
+    set_fact:
+      remote_bind9_zone_db_directory: "{{ proxmox_vm_cfg.remote_bind9_zone_db_directory }}"
+    when: (proxmox_vm_cfg.update_dns is defined and proxmox_vm_cfg.update_dns) and (proxmox_vm_cfg.dns_integrations | length > 0 and 'bind9' in proxmox_vm_cfg.dns_integrations)
+
+- name: "NetBox-Proxmox VM Manager: Create VM(s)"
   connection: local
   hosts: localhost
   gather_facts: False
@@ -6,12 +27,12 @@
   vars:
     collected_proxmox_vms: {}
     proxmox_vm_create: []
-    proxmox_vm_delete: []
+    #proxmox_vm_delete: []
     proxmox_all_vm_interfaces: {}
     proxmox_vm_interfaces_prefix: []
     proxmox_vm_interfaces_ip: []
     nb_collected_vms: {}
-    nb_collected_remove_vms: {}
+    nb_collected_active_vms: {}
     nb_vm_inventory: {}
     nb_vm_inventory_staged: {}
     nb_vm_created: {}
@@ -20,7 +41,7 @@
     nb_vm_config_disks: []
     nb_vm_collected_disks: []
     nb_vm_active: []
-    nb_vm_stopped: []
+    #nb_vm_stopped: []
     nb_vm_decomissioning: []
     nb_dns_plugin_zn: {}
     nb_dns_plugin_soa: {}
@@ -54,12 +75,11 @@
       nb_selected_vm: ''
       nb_selected_interface: ''
       nb_ipconfig_key_name: ''
-      remote_bind9_zone_db_directory: "{{ proxmox_vm_cfg.remote_bind9_zone_db_directory }}"
 
   - name: "Proxmox: Discover VMs"
     include_tasks: "ansible-tasks/proxmox/discover-vms.yml"
 
-  - name: "NetBox: Collect VMs"
+  - name: "NetBox: Collect staged VMs"
     include_tasks: "ansible-tasks/netbox/collect-staged-vms.yml"
 
   - name: "NetBox: Check Prefix and IP settings for Proxmox VMs"
@@ -70,12 +90,6 @@
       vm_config: "{{ vm_config | combine({item.name: {'template': item.template, 'vcpus': item.vcpus, 'memory': item.memory, 'disks': item.disks, 'sshkey': item.sshkey, 'storage': item.storage if item.storage is defined else proxmox_vm_cfg.default_storage, 'start': item.start if item.start is defined else default_vm_start_state, 'gw': item.gw if item.gw is defined else gw_last_quad}}) }}"
     with_items: "{{ proxmox_vm_cfg.vms }}"
     when: item.exists and nb_collected_vms[item.name] is defined
-
-  - name: Collect VM(s) to remove
-    set_fact:
-      vm_config_remove: "{{ vm_config_remove | combine({item.name: True }) }}"
-    with_items: "{{ proxmox_vm_cfg.vms }}"
-    when: not item.exists and nb_collected_remove_vms[item.name] is defined
 
   - name: "NetBox: Create (Proxmox) VMs"
     include_tasks: "ansible-tasks/netbox/create-vms.yml"
@@ -151,18 +165,111 @@
 
   - name: "BIND9: Create (DNS) zone dbs"
     include_tasks: "ansible-tasks/dns/bind9/create-zone-files.yml"
-    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns is defined and proxmox_vm_cfg.update_dns and 'bind9' in proxmox_vm_cfg.dns_integrations and vm_config | length > 0
+    when: (proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns is defined and proxmox_vm_cfg.update_dns) and (proxmox_vm_cfg.dns_integrations | length > 0 and 'bind9' in proxmox_vm_cfg.dns_integrations) and vm_config | length > 0
+
+- name: "NetBox-Proxmox VM Manager: Delete VM(s)"
+  connection: local
+  hosts: localhost
+  gather_facts: False
+
+  vars:
+    collected_proxmox_vms: {}
+    proxmox_vm_create: []
+    proxmox_vm_delete: []
+    proxmox_all_vm_interfaces: {}
+    proxmox_vm_interfaces_prefix: []
+    proxmox_vm_interfaces_ip: []
+    nb_collected_vms: {}
+    nb_collected_active_vms: {}
+    nb_vm_inventory: {}
+    nb_vm_inventory_staged: {}
+    nb_vm_created: {}
+    nb_vm_interface_assigned_ip: {}
+    nb_remove_vms: {}
+    #nb_vm_config_disks: []
+    #nb_vm_collected_disks: []
+    #nb_vm_active: []
+    nb_vm_stopped: []
+    nb_vm_offline: []
+    nb_vm_decomissioning: []
+    nb_dns_plugin_zn: {}
+    nb_dns_plugin_soa: {}
+    nb_dns_plugin_ns: {}
+    nb_dns_plugin_mx: {}
+    nb_dns_plugin_mx_dol: []
+    nb_dns_plugin_rr: {}
+    nb_dns_plugin_rr_dol: []
+    nb_dns_plugin_changed: false
+    tmp_dns_zone_dir: ''    
+    #proxmox_ipconfig_dict: {}
+    #gw_last_quad: 1
+    nb_dns_plugin_delete_record_ids: {}
+
+  tasks:
+  - name: Collect secrets
+    include_vars:
+      file: secrets.yml
+      name: secrets_cfg
+
+  - name: Read Proxmox VM Configuration
+    include_vars:
+      file: vms.yml
+      name: proxmox_vm_cfg
+
+  - name: Init dict(s)
+    set_fact:
+      vm_config: {}
+      vm_config_interfaces: {}
+      vm_config_remove: {}
+      the_fact: {}
+      nb_selected_vm: ''
+      nb_selected_interface: ''
+      nb_ipconfig_key_name: ''
+
+  - name: "NetBox: Collect active VMs"
+    include_tasks: "ansible-tasks/netbox/collect-active-vms.yml"
+
+  - name: Collect VM(s) to remove
+    set_fact:
+      vm_config_remove: "{{ vm_config_remove | combine({item.name: True }) }}"
+    with_items: "{{ proxmox_vm_cfg.vms }}"
+    when: not item.exists and nb_collected_active_vms[item.name] is defined
 
   - name: "NetBox: Set VMs to decommissioning"
     include_tasks: "ansible-tasks/netbox/set-vms-decommissioning.yml"
+    when: vm_config_remove | length > 0
 
-  - meta: end_play
+  - name: "NetBox: Find DNS zones via netbox-dns plugin"
+    include_tasks: "ansible-tasks/netbox/find-dns-zones.yml"
+    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns and vm_config_remove | length > 0
+
+  - name: "NetBox: Delete DNS records (netbox-dns plugin)"
+    include_tasks: "ansible-tasks/netbox/delete-dns-record.yml"
+    when: vm_config_remove | length > 0 and proxmox_vm_cfg.update_dns is defined and proxmox_vm_cfg.update_dns
+
+  - name: "NetBox: Find DNS zones SOA via netbox-dns plugin"
+    include_tasks: "ansible-tasks/netbox/find-dns-zones-info.yml"
+    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns and vm_config_remove | length > 0
+
+  - name: "BIND9: Create (DNS) zone dbs"
+    include_tasks: "ansible-tasks/dns/bind9/create-zone-files.yml"
+    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns is defined and proxmox_vm_cfg.update_dns and 'bind9' in proxmox_vm_cfg.dns_integrations and vm_config_remove | length > 0
+
+  - name: "NetBox: Set VMs to offline"
+    include_tasks: "ansible-tasks/netbox/set-vms-offline.yml"
+    when: vm_config_remove | length > 0
 
   - name: "Proxmox: Stop specified VMs"
     include_tasks: "ansible-tasks/proxmox/stop-vms.yml"
+    when: vm_config_remove | length > 0 and nb_vm_offline | length > 0
 
   - name: "Proxmox: Remove specified VMs"
     include_tasks: "ansible-tasks/proxmox/remove-vms.yml"
+    when: vm_config_remove | length > 0 and nb_vm_offline | length > 0
+
+  - name: "NetBox: Remove deleted VMs"
+    include_tasks: "ansible-tasks/netbox/remove-vms.yml"
+    when: vm_config_remove | length > 0 and nb_vm_offline | length > 0
 
 - name: "BIND9: propagate DNS changes"
   connection: paramiko
@@ -180,7 +287,7 @@
         mode: 0600
       with_fileglob:
         - "{{ hostvars['localhost']['tmp_dns_zone_dir'] }}/db.*"
-      when: hostvars['localhost']['nb_dns_plugin_changed'] is defined and hostvars['localhost']['nb_dns_plugin_changed'] and hostvars['localhost']['tmp_dns_zone_dir'] is defined
+      when: ((hostvars['localhost']['nb_dns_plugin_changed'] is defined and hostvars['localhost']['nb_dns_plugin_changed']) or (hostvars['localhost']['nb_dns_plugin_deleted'] is defined and hostvars['localhost']['nb_dns_plugin_deleted'])) and hostvars['localhost']['tmp_dns_zone_dir'] is defined
       notify:
         - Restart bind9
 
@@ -190,7 +297,7 @@
       service:
         name: bind9
         state: restarted
-      when: hostvars['localhost']['nb_dns_plugin_changed'] is defined and hostvars['localhost']['nb_dns_plugin_changed']
+      when: (hostvars['localhost']['nb_dns_plugin_changed'] is defined and hostvars['localhost']['nb_dns_plugin_changed']) or (hostvars['localhost']['nb_dns_plugin_deleted'] is defined and hostvars['localhost']['nb_dns_plugin_deleted'])
 
 - name: Clean up
   connection: local

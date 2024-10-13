@@ -2,13 +2,13 @@
     ansible.builtin.tempfile:
       state: directory
       suffix: build
-    when: nb_dns_plugin_changed
+    when: nb_dns_plugin_changed or nb_dns_plugin_deleted
     register: tmp_bind9_zones_dir
 
   - name: Set temporary build directory variable
     set_fact:
       tmp_dns_zone_dir: "{{ tmp_bind9_zones_dir.path }}"
-    when: nb_dns_plugin_changed
+    when: nb_dns_plugin_changed or nb_dns_plugin_deleted
 
 #  - name: Show bind9 tmp zones dir
 #    debug:
@@ -19,5 +19,5 @@
       src: templates/dns/bind9/zone-template.j2
       dest: "{{ tmp_dns_zone_dir }}/db.{{ item }}"
     with_items: "{{ nb_dns_plugin_zn }}"
-    when: nb_dns_plugin_changed
+    when: nb_dns_plugin_changed or nb_dns_plugin_deleted
 

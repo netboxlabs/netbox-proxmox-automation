@@ -1,6 +1,6 @@
-  - name: Tell us about 'proxmox_vm_interfaces'
-    debug:
-      msg: "proxmox_vm_interfaces {{ proxmox_vm_interfaces }}"
+#  - name: Tell us about 'proxmox_vm_interfaces'
+#    debug:
+#      msg: "proxmox_vm_interfaces {{ proxmox_vm_interfaces }}"
 
   - name: Tell us about Proxmox VMs
     set_fact:
@@ -16,6 +16,6 @@
     when: item[0].exists
     register: whatever
 
-  - name: Tell us about 'proxmox_vm_interfaces' AGAIN
-    debug:
-      msg: "proxmox_vm stuff AGAIN {{ proxmox_vm_create }} |||| {{ proxmox_vm_interfaces }}"
+#  - name: Tell us about 'proxmox_vm_interfaces' AGAIN
+#    debug:
+#      msg: "proxmox_vm stuff AGAIN {{ proxmox_vm_create }} |||| {{ proxmox_vm_interfaces }}"

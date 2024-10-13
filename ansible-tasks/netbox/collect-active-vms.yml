@@ -18,7 +18,7 @@
 
   - name: Collect active NetBox VMs
     set_fact:
-      nb_collected_remove_vms: "{{ nb_collected_remove_vms | combine({item.name: True}) }}"
+      nb_collected_active_vms: "{{ nb_collected_active_vms | combine({item.name: True}) }}"
     with_items: "{{ nb_active_vms.json.results }}"
     when: item.status.value == 'active'
 

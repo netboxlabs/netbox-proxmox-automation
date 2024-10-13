@@ -1,19 +1,16 @@
+#  - name: Start state for VM delete
+#    debug:
+#      msg: "Start state for VM delete: {{ _sjobs_alias_vc_0 }} ||| {{ _sjobs_alias_vc_0.results }}"
+
   - name: Capture name of VMs to delete
     set_fact:
-      nb_remove_vms: "{{ nb_remove_vms | combine({item['invocation']['module_args']['name']: True }) }}"
+      nb_remove_vms: "{{ nb_remove_vms | combine({item['invocation']['module_args']['name']: item.vmid }) }}"
     with_items: "{{ _sjobs_alias_vc_0.results }}"
     when: item.changed
 
-  - name: NetBox VMs status to Decommissioning
-    netbox.netbox.netbox_virtual_machine:
-      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
-      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
-      data:
-        name: "{{ item }}"
-        status: "Decommissioning"
-      state: present
-    with_items: "{{ nb_remove_vms }}"
-    #when: item.changed
+#  - name: VM TO DELETE IN PROXMOX
+#    debug:
+#      msg: "VMTD: {{ nb_remove_vms }}"
 
   - name: Remove specified VMs
     community.general.proxmox_kvm:
@@ -22,11 +19,10 @@
       api_token_id: "{{ secrets_cfg.proxmox.api_token_id }}"
       api_token_secret: "{{ secrets_cfg.proxmox.api_token_secret }}"
       api_host: "{{ secrets_cfg.proxmox.api_host }}"
-      vmid: "{{ item.vmid }}"
+      vmid: "{{ nb_remove_vms[item] }}"
       state: absent
       force: true
-    with_items: "{{ _sjobs_alias_vc_0.results }}"
-    when: item.changed
+    with_items: "{{ nb_remove_vms }}"
     register: remove_vms_job
     async: 180
     poll: 0
@@ -42,11 +38,11 @@
     with_items: "{{ remove_vms_job.results }}"
     when: item.ansible_job_id is defined
 
-  - name: NetBox Remove VMs
-    netbox.netbox.netbox_virtual_machine:
-      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
-      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
-      data:
-        name: "{{ item }}"
-      state: absent
-    with_items: "{{ nb_remove_vms }}"
+#  - name: NetBox Remove VMs
+#    netbox.netbox.netbox_virtual_machine:
+#      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+#      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+#      data:
+#        name: "{{ item }}"
+#      state: absent
+#    with_items: "{{ nb_remove_vms }}"

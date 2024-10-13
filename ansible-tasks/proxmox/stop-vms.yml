@@ -9,7 +9,7 @@
       state: stopped
       force: true
     with_items: "{{ vm_config_remove }}"
-    when: item in vm_config_remove and vm_config_remove[item] and item in collected_proxmox_vms
+    when: vm_config_remove[item] is defined and item in nb_vm_offline
     register: stop_vms_job
     async: 180
     poll: 0

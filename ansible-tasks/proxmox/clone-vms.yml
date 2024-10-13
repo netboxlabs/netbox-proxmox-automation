@@ -28,8 +28,8 @@
     with_items: "{{ clone_vms_job.results }}"
     when: item.ansible_job_id is defined
 
-  - name: CLONE VMS JOB
-    debug:
-      msg: "CLONE VMS JOB {{ item }} ||| {{ item.item }}"
-    #when: item.changed
-    with_items: "{{ clone_vms_job.results }}"
+#  - name: CLONE VMS JOB
+#    debug:
+#      msg: "CLONE VMS JOB {{ item }} ||| {{ item.item }}"
+#    #when: item.changed
+#    with_items: "{{ clone_vms_job.results }}"
