@@ -13,7 +13,7 @@
         memory: "{{ item.memory }}"
       state: present
     with_items: "{{ proxmox_vm_cfg.vms }}"
-    when: nb_collected_staged_vms[item.name] is not defined and nb_collected_active_vms[item.name] is not defined
+    when: item.exists and (nb_collected_staged_vms[item.name] is not defined or nb_collected_active_vms[item.name] is not defined or nb_vm_created[item.name] is not defined)
     register: vm_create
 
   - name: Store NetBox VM created state

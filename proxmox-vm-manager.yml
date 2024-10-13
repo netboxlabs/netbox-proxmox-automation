@@ -91,11 +91,15 @@
   - name: "NetBox: Check Prefix and IP settings for Proxmox VMs"
     include_tasks: "ansible-tasks/netbox/prefix-ip-checker.yml"
 
+  - name: debug it
+    debug:
+      msg: "{{ nb_collected_staged_vms }} ||| {{ nb_vm_created }} ||| {{ nb_collected_active_vms}}"
+
   - name: Collect VM(s) to create/start
     set_fact:
       vm_config: "{{ vm_config | combine({item.name: {'template': item.template, 'vcpus': item.vcpus, 'memory': item.memory, 'disks': item.disks, 'sshkey': item.sshkey, 'storage': item.storage if item.storage is defined else proxmox_vm_cfg.default_storage, 'start': item.start if item.start is defined else default_vm_start_state, 'gw': item.gw if item.gw is defined else gw_last_quad}}) }}"
     with_items: "{{ proxmox_vm_cfg.vms }}"
-    when: item.exists and (nb_collected_staged_vms[item.name] is defined or nb_vm_created[item.name] is defined)
+    when: item.exists and (nb_collected_staged_vms[item.name] is defined or nb_collected_active_vms[item.name] is defined or nb_vm_created[item.name] is defined)
 
   - name: "NetBox: Create (Proxmox) VMs Network Interfaces"
     include_tasks: "ansible-tasks/netbox/create-network-interfaces.yml"
