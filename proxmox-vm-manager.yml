@@ -54,6 +54,7 @@
     tmp_dns_zone_dir: ''    
     proxmox_ipconfig_dict: {}
     gw_last_quad: 1
+    update_dns: false
 
   tasks:
   - name: Collect secrets
@@ -75,6 +76,10 @@
       nb_selected_vm: ''
       nb_selected_interface: ''
       nb_ipconfig_key_name: ''
+
+  - name: Set update DNS flag (create)
+    set_fact:
+      update_dns: "{{ proxmox_vm_cfg.update_dns }}"
 
   - name: "Proxmox: Discover VMs"
     include_tasks: "ansible-tasks/proxmox/discover-vms.yml"
@@ -116,6 +121,10 @@
     include_tasks: "ansible-tasks/netbox/update-primary-ip4.yml"
     when: vm_config | length > 0
 
+  - name: show vm config
+    debug:
+      msg: "SHOW VM CONFIG: {{ vm_config }}"
+      
   - name: "NetBox: Add disks to VMs"
     include_tasks: "ansible-tasks/netbox/create-vms-disks.yml"
     when: vm_config | length > 0
@@ -152,6 +161,10 @@
     include_tasks: "ansible-tasks/netbox/set-vms-active.yml"
     when: vm_config | length > 0
 
+  - name: "Proxmox: Start specified VMs"
+    include_tasks: "ansible-tasks/proxmox/start-vms.yml"
+    when: vm_config | length > 0
+
   - name: "NetBox: Find DNS zones via netbox-dns plugin"
     include_tasks: "ansible-tasks/netbox/find-dns-zones.yml"
     when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns and vm_config | length > 0
@@ -163,10 +176,6 @@
   - name: "NetBox: Find DNS zones SOA via netbox-dns plugin"
     include_tasks: "ansible-tasks/netbox/find-dns-zones-info.yml"
     when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns and vm_config | length > 0
-
-  - name: "Proxmox: Start specified VMs"
-    include_tasks: "ansible-tasks/proxmox/start-vms.yml"
-    when: vm_config | length > 0
 
   - name: "BIND9: Create (DNS) zone dbs"
     include_tasks: "ansible-tasks/dns/bind9/create-zone-files.yml"
@@ -204,11 +213,12 @@
     nb_dns_plugin_mx_dol: []
     nb_dns_plugin_rr: {}
     nb_dns_plugin_rr_dol: []
-    nb_dns_plugin_changed: false
+    nb_dns_plugin_deleted: false
     tmp_dns_zone_dir: ''    
     #proxmox_ipconfig_dict: {}
     #gw_last_quad: 1
     nb_dns_plugin_delete_record_ids: {}
+    update_dns: false
 
   tasks:
   - name: Collect secrets
@@ -230,6 +240,10 @@
       nb_selected_vm: ''
       nb_selected_interface: ''
       nb_ipconfig_key_name: ''
+
+  - name: Set update DNS flag (remove)
+    set_fact:
+      update_dns: "{{ proxmox_vm_cfg.update_dns }}"
 
   - name: "NetBox: Collect active VMs"
     include_tasks: "ansible-tasks/netbox/collect-active-vms.yml"
@@ -258,7 +272,7 @@
 
   - name: "BIND9: Create (DNS) zone dbs"
     include_tasks: "ansible-tasks/dns/bind9/create-zone-files.yml"
-    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns is defined and proxmox_vm_cfg.update_dns and 'bind9' in proxmox_vm_cfg.dns_integrations and vm_config_remove | length > 0
+    when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns is defined and (proxmox_vm_cfg.update_dns and 'bind9' in proxmox_vm_cfg.dns_integrations) and vm_config_remove | length > 0
 
   - name: "NetBox: Set VMs to offline"
     include_tasks: "ansible-tasks/netbox/set-vms-offline.yml"
@@ -292,7 +306,7 @@
         mode: 0600
       with_fileglob:
         - "{{ hostvars['localhost']['tmp_dns_zone_dir'] }}/db.*"
-      when: ((hostvars['localhost']['nb_dns_plugin_changed'] is defined and hostvars['localhost']['nb_dns_plugin_changed']) or (hostvars['localhost']['nb_dns_plugin_deleted'] is defined and hostvars['localhost']['nb_dns_plugin_deleted'])) and hostvars['localhost']['tmp_dns_zone_dir'] is defined
+      when: hostvars['localhost'].update_dns and ((hostvars['localhost']['nb_dns_plugin_changed'] is defined and hostvars['localhost']['nb_dns_plugin_changed']) or (hostvars['localhost']['nb_dns_plugin_deleted'] is defined and hostvars['localhost']['nb_dns_plugin_deleted'])) and hostvars['localhost']['tmp_dns_zone_dir'] is defined
       notify:
         - Restart bind9
 

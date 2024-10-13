@@ -15,9 +15,9 @@
     when: vm_create_interface.changed and 'prefix' in proxmox_all_vm_interfaces[item]
     register: interface_new_ip_prefix_status
 
-  - name: DTS
-    debug:
-      msg: "DTS IP by prefix: {{ interface_new_ip_prefix_status }}"
+#  - name: DTS
+#    debug:
+#      msg: "DTS IP by prefix: {{ interface_new_ip_prefix_status }}"
       
   - name: Collect assigned IP for interface (PREFIX)
     set_fact:
