@@ -266,7 +266,7 @@
         mode: 0600
       with_fileglob:
         - "{{ hostvars['localhost']['tmp_dns_zone_dir'] }}/db.*"
-      when: hostvars['localhost'].update_dns and ((hostvars['localhost']['nb_dns_plugin_changed'] is defined and hostvars['localhost']['nb_dns_plugin_changed']) or (hostvars['localhost']['nb_dns_plugin_deleted'] is defined and hostvars['localhost']['nb_dns_plugin_deleted'])) and hostvars['localhost']['tmp_dns_zone_dir'] is defined
+      when: (hostvars['localhost'].update_dns is defined and hostvars['localhost'].update_dns) and ((hostvars['localhost']['nb_dns_plugin_changed'] is defined and hostvars['localhost']['nb_dns_plugin_changed']) or (hostvars['localhost']['nb_dns_plugin_deleted'] is defined and hostvars['localhost']['nb_dns_plugin_deleted'])) and hostvars['localhost']['tmp_dns_zone_dir'] is defined
       notify:
         - Restart bind9
 
