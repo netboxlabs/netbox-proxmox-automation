@@ -121,10 +121,6 @@
     include_tasks: "ansible-tasks/netbox/update-primary-ip4.yml"
     when: vm_config | length > 0
 
-  - name: show vm config
-    debug:
-      msg: "SHOW VM CONFIG: {{ vm_config }}"
-      
   - name: "NetBox: Add disks to VMs"
     include_tasks: "ansible-tasks/netbox/create-vms-disks.yml"
     when: vm_config | length > 0
