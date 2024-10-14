@@ -63,6 +63,8 @@ This automation is based on the premise(s) that:
 
 [ProxBox](https://github.com/netdevopsbr/netbox-proxbox) is a neat implementation of pulling information from Proxmox into NetBox.  It has its place, most certainly, but what it does is *not* the aim of `netbox-proxmox-ansible`.
 
+# Placeholder
+
 While you should be able to use your Linux distribution of choice with this automation, due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.
 
 There are two key parts to this automation:
