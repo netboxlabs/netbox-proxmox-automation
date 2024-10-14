@@ -30,6 +30,14 @@ Creating and deleting virtual machines, in NetBox, will both update virtual mach
 
 When you discover virtual machines in Proxmox, this will create/reconcile virtual machine changes in NetBox.
 
+## What this implementation *is*
+
+`netbox-proxmox-ansible` is a client-based system where you can blah blah
+
+## What this implementation *is not*
+
+`netbox-proxmox-ansible` is *not* a NetBox plugin; nor is it a script.
+
 While you should be able to use your Linux distribution of choice with this automation, due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.
 
 This automation is based on the premise(s) that:
