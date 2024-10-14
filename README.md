@@ -1,6 +1,8 @@
 # Project Summary
 
-`netbox-proxmox-ansible` implements a series of tools to manage your Proxmox VMs by using NetBox as your *Network Source of Truth (NSoT)*, as NetBox was designed.  In other words, this automation will collect the *desired* state of (Proxmox) virtual machines in Netbox -- and deploy identical virtual machine configurations to Proxmox.  This automation handles both creation and removal of Proxmox virtual machines.
+`netbox-proxmox-ansible` implements a series of tools to manage your Proxmox VMs by using NetBox as your *Network Source of Truth (NSoT)*, as NetBox was designed.  In other words, this automation will collect the *desired* state of (Proxmox) virtual machines in Netbox -- and deploy identical virtual machine configurations to Proxmox.
+
+This automation handles both the creation and removal of Proxmox virtual machines.
 
 *This implementation also supports discovering virtual machines in Proxmox, should you want to document your (Proxmox) operational state in NetBox.*
 
