@@ -54,10 +54,9 @@ This automation is based on the premise(s) that:
   7. You have access to the NetBox and Proxmox APIs (via API tokens, respectively)
   8. Your Proxmox API token and its underlying privileges can both manage VMs and storage (query, create, delete, etc)
   9. If you want to make DNS changes:
-  
-    - You have installed the netbox-dns plugin in your NetBox instance (OPTIONAL)
-    - You are running bind9 as your DNS server and have "admin" rights to make DNS changes (OPTIONAL)
-    - You are able to run Ansible with elevated privileges (i.e. root, OPTIONAL, for DNS changes)
+  - You have installed the netbox-dns plugin in your NetBox instance (OPTIONAL)
+  - You are running bind9 as your DNS server and have "admin" rights to make DNS changes (OPTIONAL)
+  - You are able to run Ansible with elevated privileges (i.e. root, OPTIONAL, for DNS changes)
 
 ## What this implementation *is not*
 
