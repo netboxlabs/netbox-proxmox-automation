@@ -4,7 +4,7 @@
 
 When you think of the challenges of a widely used network documentation solution and a widely used virtualization technology, this implementation represents the marriage between virtual machine documentation (NetBox) and the automation of virtual machine configurations (Proxmox).
 
-`netbox-proxmox-ansible` uses [Ansible](https://www.ansible.com/) to implement a series of tools to manage your Proxmox VMs: With NetBox as your [*Network Source of Truth (NSoT)*](https://netboxlabs.com/blog/what-is-a-network-source-of-truth/), as NetBox was designed.  In other words, this automation will collect the *desired* state of (Proxmox) virtual machines in Netbox -- and deploy identical virtual machine configurations to Proxmox.
+`netbox-proxmox-ansible` uses [Ansible](https://www.ansible.com/) implements tooling to manage your Proxmox VMs: With NetBox as your [*Network Source of Truth (NSoT)*](https://netboxlabs.com/blog/what-is-a-network-source-of-truth/), as NetBox was designed.  In other words, this automation will collect the *desired* state of (Proxmox) virtual machines in Netbox -- and deploy identical virtual machine configurations to Proxmox.
 
 This automation handles both the creation and removal of Proxmox virtual machines.
 
