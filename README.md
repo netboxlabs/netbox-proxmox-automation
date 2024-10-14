@@ -253,6 +253,7 @@ It is recommended that you do *not* create an API token for the Proxmox 'root' u
     - Uncheck Privilege Separation
     - Make sure that Expire is set to 'never'
     - Click OK
+    - This is the *only* time that your Proxmox API token will be shown in clear text.  Please store it in a safe space, as it will be required when configuring `secrets.yml` in the next section of this document.
 3. Login to the Proxmox node via SSH
 - Become root: `sudo su -`
 - Add `api_user` to the correct role.  For example: `pveum acl modify / -user api_user@pve -role Administrator`
