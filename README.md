@@ -32,7 +32,7 @@ When you discover virtual machines in Proxmox, this will create/reconcile virtua
 
 ## What this implementation *is*
 
-`netbox-proxmox-ansible` is a client-based system where you can blah blah
+`netbox-proxmox-ansible` is a client-based implementation where you can blah blah
 
 ## What this implementation *is not*
 
