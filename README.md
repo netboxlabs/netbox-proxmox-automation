@@ -64,7 +64,16 @@ This automation is based on the premise(s) that:
 
 [ProxBox](https://github.com/netdevopsbr/netbox-proxbox) is a neat implementation of pulling information from Proxmox into NetBox.  ProxBox has its place, most certainly, but what it does is *not* the aim of `netbox-proxmox-ansible`.
 
-# Placeholder
+# Installation
+
+`netbox-proxmox-ansible` is intended to make your life as simple as possible.  Once you have a working NetBox instance, and have (optionally) installed the `netbox-dns` plugin and a name server (which you have permissions to manage), the entire process of managing Proxmox virtual machines via NetBox involves two simple requirements.
+
+  1. You have created a configuration file which holds your virtual machine configurations: `vms.yml`
+  2. You are able to run a current version of Ansible, preferably with elevated permissions (i.e. root) when it comes to DNS changes
+
+## Inital Setup (Python)
+
+Python initial setup blahblah
 
 There are two key parts to this automation:
   1. `vm-manager.py`
@@ -277,6 +286,7 @@ The automated VM cloning and configuration process will handle IP allocation/con
 ## Known Issues
 - Has not been tested with NetBox 4.0 or newer (it *should* work)
 - `vm-cluster-manager.py` should be more intuitive and complete
+- *Only* supports SCSI disk types
 
 ## Roadmap -- Delivery TBD
 - Support other DNS implementations than bind9: Gandi, Squarespace, etc
