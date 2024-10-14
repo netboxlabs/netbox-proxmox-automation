@@ -19,11 +19,10 @@ When you use NetBox to create virtual machines in Proxmox, their *desired* state
 - state of each VM disk (disk name and size)
 - update netbox-dns plugin for each virtual machine (if enabled)
 
-When you use NetBox to remove virtual machines from Proxmox, this will:
-- set initial vm state (Decommissioning)
+When you use NetBox to remove virtual machines from Proxmox, their *desired* state will be generated, including:
+- initial vm state (Decommissioning)
 - identify Proxmox virtual machines that need to be removed
-- set virtual machines to Offline in NetBox
-- stop and remove virtual machines in Proxmox based on NetBox VMs that are in an Offline state
+- desired vm state ahead of removal (Offline)
 - update netbox-dns plugin for each virtual machine (if enabled)
 - remove non-existent virtual machine objects in Netbox
 
