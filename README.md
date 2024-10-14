@@ -6,23 +6,26 @@ This automation handles both the creation and removal of Proxmox virtual machine
 
 *This implementation also supports discovering virtual machines in Proxmox, should you want to document your (Proxmox) operational state in NetBox.*
 
-- When you use NetBox to create virtual machines in Proxmox, their *desired* state will be generated, including:
-  - hostname
-  - initial vm state (Staged)
-  - network interface(s)
-  - IP(s) for each network interface(s)
-  - primary network interface for each virtual machine
-  - state of each VM disk (disk name and size)
-  - update netbox-dns plugin for each virtual machine (if enabled)
-- When you use NetBox to remove virtual machines from Proxmox, this will:
-  - set initial vm state (Decommissioning)
-  - identify Proxmox virtual machines that need to be removed
-  - set virtual machines to Offline in NetBox
-  - stop and remove virtual machines in Proxmox based on NetBox VMs that are in an Offline state
-  - update netbox-dns plugin for each virtual machine (if enabled)
-  - remove non-existent virtual machine objects in Netbox
-- Creating and deleting virtual machines, in NetBox, will both update virtual machine state in Proxmox *and* update your DNS, if your DNS implementation is supported by this automation.
-- When you discover virtual machines in Proxmox, this will create/reconcile virtual machine changes in NetBox.
+When you use NetBox to create virtual machines in Proxmox, their *desired* state will be generated, including:
+- hostname
+- initial vm state (Staged)
+- network interface(s)
+- IP(s) for each network interface(s)
+- primary network interface for each virtual machine
+- state of each VM disk (disk name and size)
+- update netbox-dns plugin for each virtual machine (if enabled)
+
+When you use NetBox to remove virtual machines from Proxmox, this will:
+- set initial vm state (Decommissioning)
+- identify Proxmox virtual machines that need to be removed
+- set virtual machines to Offline in NetBox
+- stop and remove virtual machines in Proxmox based on NetBox VMs that are in an Offline state
+- update netbox-dns plugin for each virtual machine (if enabled)
+- remove non-existent virtual machine objects in Netbox
+
+Creating and deleting virtual machines, in NetBox, will both update virtual machine state in Proxmox *and* update your DNS, if your DNS implementation is supported by this automation.
+
+When you discover virtual machines in Proxmox, this will create/reconcile virtual machine changes in NetBox.
 
 While you should be able to use your Linux distribution of choice with this automation, due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.
 
