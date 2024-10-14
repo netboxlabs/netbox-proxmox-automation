@@ -144,6 +144,48 @@ shell$ source venv/bin/activate
 (venv) shell$ ansible-galaxy collection install community.general
 ```
 
+## Initial Setup (NetBox objects + dependencies)
+
+here
+
+## Initial Setup (NetBox API user + key)
+
+It is recommended that you do *not* create an API token for the NetBox 'admin' user.  Instead, create a new user in NetBox; then create a new permission for that API user -- that has sufficient read/write/modify permissions to modify the following object types in NetBox, at a minimum:
+
+  - Devices
+  - Interfaces (devices and virtual machines)
+  - Virtual Machines (groups, clusters, virtual machines)
+
+### Create NetBox User + Group
+ 
+In the NetBox UI:
+
+1. Navigate to Admin > Users
+2. Create a new user called `api_user`, or a user of your choice
+3. Navigate to Admin > Groups
+4. Create a new group called `api_user_group`, or a group of your choice
+5. Navigate to Admin > Users, select `api_user` (or the user that you created), click the Edit button, and associate `api_user` with the group that you just created.
+
+### Create NetBox Permissions
+
+In the Netbox UI:
+
+1. Navigate to Admin > Permissions
+2. Create a new permission called `api_user_permissions` (or whatever you want to call it) and ensure that this permission has read/write/update/delete rights for the object types, at a minimum, noted above.  Associate the user and/or group with the permission that you've created.
+
+### Create NetBox API Token
+
+While it is possible to use passwords with the Netbox Ansible collection, `netbox-proxmox-ansible` does not allow this behavior.  Instead a NetBox API token is required.
+
+In the NetBox UI:
+
+1. Navigate to Admin > API Tokens
+2. Add a new token, associating it with `api_user`, with the following characteristics: Write enabled (you can select other characteristics if you wish)
+
+## Initial Setup (Proxmox API user + key)
+
+It is recommended that you do *not* create an API token for the Proxmox 'root' user.
+
 ## Initial Setup (Ansible vault and secrets)
 
 `netbox-proxmox-ansible` requires that you store secrets in a file called `secrets.yml`.  While `secrets.yml` is excluded in .gitignore, it is best practice to encrypt any file where secrets live.  For this purpose we will use [Ansible vault](https://docs.ansible.com/ansible/latest/vault_guide/index.html).
@@ -170,14 +212,6 @@ netbox:
 3. Encrypt `secrets.yml` with the `ansible-vault` command: `ansible-vault encrypt secrets.yml`.  This will prompt you for a (new) passphrase and a passphrase confirmation.
 4. Verify that `secrets.yml` has been encrypted: `head -1 secrets.yml`.  This should provide output like: `$ANSIBLE_VAULT;1.1;AES256`.
 5. To view (a decrypted) `secrets.yml`, run this command: `ansible-vault view secrets.yml`.  This will prompt you for your passphrase.
-
-## Initial Setup (Proxmox API user + key)
-
-here
-
-## Initial Setup (NetBox API user + key)
-
-here
 
 There are two key parts to this automation:
   1. `vm-manager.py`
