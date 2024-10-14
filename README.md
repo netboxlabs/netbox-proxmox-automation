@@ -45,8 +45,8 @@ NetBox models virtual machines in an intuitive way.  You can define roles for vi
 In this context, `netbox-proxmox-ansible` takes virtual machine configurations from NetBox then applies their (running) states to Proxmox.  Of course, it works in the opposite way as well.
 
 This automation is based on the premise(s) that:
-  1. You are using Python 3 on your client
-  2. You are using a Python 3 `venv`
+  1. You are using Python (version 3) on your client
+  2. You are using a Python `venv`
   3. You have a running Proxmox instance or cluster
   4. You have a running NetBox instance
   5. You have converted a cloud-init image to a Proxmox virtual machine template
@@ -86,7 +86,7 @@ There are two key parts to this automation:
 
   From your terminal, run: `. ./setup.sh`
 
-This should install everything you need and drop you into a Python 3 `venv`.  You *must* run all future commands in a Python 3 venv.
+This should install everything you need and drop you into a Python `venv`.  You *must* run all future commands in a Python venv.
 
 If you want to do this manually, do this:
 
@@ -237,7 +237,7 @@ If successful, VM will be deleted in NetBox, in Proxmox, and if DNS updates have
 
 ## `vm-cluster-manager.py` Usage
 
-`vm-cluster-manager.py` does not take any arguments.  Instead it is a configurator that uses the Python 3 `questionary` module.  It will ask you a series of questions about your environment and will create any objects in NetBox that don't already exist.  *NOTE: You need to be able to run Ansible with elevated privileges (e.g. root) to be able to run `vm-cluster-manager.py`.*
+`vm-cluster-manager.py` does not take any arguments.  Instead it is a configurator that uses the Python `questionary` module.  It will ask you a series of questions about your environment and will create any objects in NetBox that don't already exist.  *NOTE: You need to be able to run Ansible with elevated privileges (e.g. root) to be able to run `vm-cluster-manager.py`.*
 
 *Only* run `vm-cluster-manager.py` if:
   - Your Proxmox VM node is running and available on your network
