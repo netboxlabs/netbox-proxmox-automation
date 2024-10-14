@@ -85,6 +85,8 @@ This automation is based on the premise(s) that:
 
 [ProxBox](https://github.com/netdevopsbr/netbox-proxbox) is a neat implementation of pulling information from Proxmox into NetBox.  ProxBox has its place, most certainly, but what it does is *not* the aim of `netbox-proxmox-ansible`.
 
+Further, `netbox-proxmox-ansible` does *not* deploy a future state for any Proxmox virtual machine.  For example, let's say you deploy a Proxmox virtual machine called 'vm1' and it's intended to be a(n) LDAP server.  The scope of `netbox-proxmox-ansible` is to ensure that each virtual machine that you document/model and deploy to Proxmox has a consistent baseline configuration, from which you can take future automation steps.  NetBox will document/model your *desired* Proxmox virtual machine state, but additional automation states like desired package installations and configurations are left up to further automation that you might choose to do once your vitual machine is running in Proxmox.  As `netbox-proxmox-ansible` is free for you to use and/or modify, you are welcome to introduce subsequent automations to `netbox-proxmox-ansible` in your own environment.
+
 # Installation
 
 `netbox-proxmox-ansible` is intended to make your life as simple as possible.  Once you have a working Proxmox node (or cluster), have provisioned a Proxmox API token with the permissions noted above, a NetBox instance, a NetBox API token, and have (optionally) installed the `netbox-dns` plugin and a name server (which you have permissions to manage), the entire process of managing Proxmox virtual machines via NetBox involves three simple requirements.
@@ -188,7 +190,7 @@ This process is [well documented](https://pve.proxmox.com/wiki/Cloud-Init_Suppor
 - logging into your Proxmox node(s) and running these commands as the 'root' user, or as a user who has adequate permissions to modify Proxmox virtual machines and the underlying storage
 - downloading a cloud image
 - following the documented process in the previous link
-- ensuring that your cloud-init image has included `qemu-guest-agent`; `qemu-guest-agent` is required for discovery of network interfaces/settings and underlying platform information
+- ensuring that your cloud-init image has included `qemu-guest-agent`; `qemu-guest-agent` is *required* for the discovery of network interfaces/settings and underlying platform information
 - converting your cloud-init image to a Proxmox VM template
 
 The automated VM cloning and configuration process will handle IP allocation/configuration, host naming, ssh key configuration and more.  The default user for an Ubuntu cloud image is always 'ubuntu'; please refer to the documentation (about default users) for other cloud images.
