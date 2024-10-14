@@ -42,7 +42,19 @@ Proxmox is highly conducive to using cloud-init images -- when cloud-init images
 
 NetBox models virtual machines in an intuitive way.  You can define roles for virtual machines, such as for Proxmox, and from there you can define both virtual machine state (Active, Offline, etc) and other resources like vcpus, memory, network configuration, disks, and more (perhaps, also, through customizations in NetBox).
 
+In this context, `netbox-proxmox-ansible` takes virtual machine configurations from NetBox then applies their (running) states to Proxmox.  Of course, it works in the opposite way as well.
 
+This automation is based on the premise(s) that:
+  1. You are using Python 3 on your client
+  2. You are using a Python 3 `venv`
+  3. You have a running Proxmox instance or cluster
+  4. You have a running NetBox instance
+  5. You have converted a cloud-init image to a Proxmox virtual machine template
+  6. Your Promox virtual machine template(s) has/have qemu-guest-agent installed, and that qemu-guest-agent has been enabled via cloud-init
+  7. You have access to the NetBox and Proxmox APIs (via API token)
+  8. You have installed the netbox-dns plugin in your NetBox instance (OPTIONAL)
+  9. You are running bind9 as your DNS server and have "admin" rights to make DNS changes (OPTIONAL)
+  10. You are able to run Ansible with elevated privileges (i.e. root)
 
 ## What this implementation *is not*
 
@@ -51,18 +63,6 @@ NetBox models virtual machines in an intuitive way.  You can define roles for vi
 [ProxBox](https://github.com/netdevopsbr/netbox-proxbox) is a neat implementation of pulling information from Proxmox into NetBox.  It has its place, most certainly, but what it does is *not* the aim of `netbox-proxmox-ansible`.
 
 While you should be able to use your Linux distribution of choice with this automation, due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.
-
-This automation is based on the premise(s) that:
-  1. You have a running Proxmox instance or cluster
-  2. You have a running NetBox instance
-  3. You are running bind9 and have access to make DNS changes
-  4. You are using Python 3
-  5. You are using a((n) Ubuntu) cloud image that has been configured (qemu-guest-agent has been enabled) and converted into a Proxmox VM template
-  6. You have access to the Proxmox API (via API token)
-  7. You have access to the NetBox API (via API token)
-  8. You are able to run Ansible with elevated privileges (i.e. root).
-    - This is required by `vm-manager.py` to be able to make DNS updates.
-    - This is required by `vm-cluster-manager.py` to get hardware information for your Proxmox VM node.
 
 There are two key parts to this automation:
   1. `vm-manager.py`
