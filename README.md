@@ -93,6 +93,8 @@ This automation is based on the premise(s) that:
   2. You have created an encrypted configuration file which holds your API tokens and related information: `secrets.yml`.
   3. You are running a current version of Ansible (2.17.4 was used for developing `netbox-proxmox-ansible`), preferably with the ability to have elevated permissions (i.e. root) should you want to automate DNS changes -- and can install any dependencies required by `netbox-proxmox-ansible`.
 
+While these various initial configuration notes might seem like a heavy lift, your initial configuration of `netbox-proxmox-ansible` should take less than an hour.  Plus, you will likely only need to run these configuration steps only once.
+
 ## Inital Configuration: Python
 
 Open a shell on your local system.  *Do not* run these commands as the 'root' user.  The following commands should run on MacOS, Linux, and UNIX-like systems; you will need to run these commands during initial installation or upgrades of `netbox-proxmox-ansible`.
