@@ -28,7 +28,7 @@ When you use NetBox to remove virtual machines from Proxmox, their *desired* sta
 
 Creating and deleting virtual machines, in NetBox, will both update virtual machine state in Proxmox *and* update your DNS, if your DNS implementation is supported by this automation.  *You will need the [netbox-dns plugin](https://github.com/peteeckel/netbox-plugin-dns) if you want to manage your DNS records in NetBox.*
 
-When you discover virtual machines in Proxmox, this will create/reconcile virtual machine changes in NetBox.
+When you discover virtual machines in Proxmox, this will create/merge virtual machine changes in NetBox.
 
 ## What this implementation *is*
 
