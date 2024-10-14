@@ -58,6 +58,26 @@ This automation is based on the premise(s) that:
   - You are running bind9 as your DNS server and have "admin" rights to make DNS changes (OPTIONAL)
   - You are able to run Ansible with elevated privileges (i.e. root, OPTIONAL, for DNS changes)
 
+## Usage
+
+Basic usage of `netbox-proxmox-ansible`, to provision Proxmox virtual machines to their desired state(s), is as follows:
+
+```
+shell$ source venv/bin/activate
+
+(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass
+```
+
+Should you want to update the DNS as well as provision Proxmox virtual machines to their desired state(s), use the following command:
+
+```
+shell$ source venv/bin/activate
+
+(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass --ask-pass --ask-become-pass
+```
+
+The above will prompt you for a SSH password, the password that you would use for `sudo` commands, and finally your Ansible vault passphrase.
+
 ## What this implementation *is not*
 
 `netbox-proxmox-ansible` is *not* a NetBox plugin; nor is it a script or a webhook (at this point in time).  And this is by design.
@@ -147,6 +167,14 @@ netbox:
 2. Encrypt `secrets.yml` with the `ansible-vault` command: `ansible-vault encrypt secrets.yml`.  This will prompt you for a (new) passphrase and a passphrase confirmation.
 3. Verify that `secrets.yml` has been encrypted: `head -1 secrets.yml`.  This should provide output like: `$ANSIBLE_VAULT;1.1;AES256`.
 4. To view (a decrypted) `secrets.yml`, run this command: `ansible-vault view secrets.yml`.  This will prompt you for your passphrase.
+
+## Initial Setup (Proxmox API user + key)
+
+here
+
+## Initial Setup (NetBox API user + key)
+
+here
 
 There are two key parts to this automation:
   1. `vm-manager.py`
