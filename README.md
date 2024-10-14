@@ -8,7 +8,7 @@ When you think of the challenges of a widely used network documentation solution
 
 This automation handles both the creation and removal of Proxmox virtual machines.
 
-*This implementation also supports discovering virtual machines in Proxmox, should you want to document and/or merge your (Proxmox) operational state in NetBox.*
+*This implementation also supports discovering virtual machines in Proxmox, should you want to document and/or merge your (Proxmox) operational state into NetBox.*
 
 When you use NetBox to create virtual machines in Proxmox, their *desired* state will be generated, including:
 - hostname
@@ -26,7 +26,7 @@ When you use NetBox to remove virtual machines from Proxmox, their *desired* sta
 - update netbox-dns plugin for each virtual machine (if enabled)
 - remove non-existent virtual machine objects in Netbox
 
-Creating and deleting virtual machines, in NetBox, will both update virtual machine state in Proxmox *and* update your DNS, if your DNS implementation is supported by this automation.  *You will need the [netbox-dns plugin](https://github.com/peteeckel/netbox-plugin-dns) if you want to manage your DNS records in NetBox.*
+Creating and deleting virtual machines in NetBox will both update virtual machine state in Proxmox *and* update your DNS, if your DNS implementation is supported by this automation.  *You will need the [netbox-dns plugin](https://github.com/peteeckel/netbox-plugin-dns) if you want to manage your DNS records in NetBox.*
 
 When you discover virtual machines in Proxmox, this will create/merge virtual machine changes in NetBox.
 
@@ -36,7 +36,7 @@ When you discover virtual machines in Proxmox, this will create/merge virtual ma
 
 You *should* be able to run `netbox-proxmox-ansible` from *any* Windows, MacOS, or Linux/UNIX-like system -- so long as you have both Ansible and Python (version 3) installed.  (*Python 2 is long dead, so it is not supported here.*)
 
-`netbox-proxmox-ansible` uses cloud-init images to induce virtual machine changes on Proxmox based on the *desired* state in NetBox (and vice versa).  Almost always these cloud-init images will be Debian or Debian-derived images (Debian or Ubuntu), RHEL-derived images (Rocky Linux), or maybe even Windows-based cloud-init images.  *(Windows cloud-init images are currently un-tested.)*  While you should be able to use a cloud-init image of choice with this automation, and due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.  We welcome any reports around other cloud-init images, and will merge in this functionality as we are able.
+`netbox-proxmox-ansible` uses cloud-init images to induce virtual machine changes on Proxmox based on the *desired* state in NetBox (and vice versa).  Almost always these cloud-init images will be Debian or Debian-derived images (e.g. Debian or Ubuntu), RHEL-derived images (e.g. Rocky Linux), or maybe even Windows-based cloud-init images.  *(Windows cloud-init images are currently un-tested.)*  While you should be able to use a cloud-init image of choice with this automation, and due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.  We welcome any reports around other cloud-init images, and will merge in this functionality as we are able.
 
 Proxmox is highly conducive to using cloud-init images -- when cloud-init images are converted to templates.  You can define items like ssh keys and network configurations in Proxmox by way of using cloud-init images, and cloud-init will cascade these settings into your Proxmox virtual machines: *Dynamically*.  Further, Proxmox has a comprehensive API -- you can define virtual machine resources, plus disk configurations and more -- where you can leverage automation, in this case Ansible, to lay down your desired virtual machine states in Proxmox with little effort.
 
@@ -66,14 +66,61 @@ This automation is based on the premise(s) that:
 
 # Installation
 
-`netbox-proxmox-ansible` is intended to make your life as simple as possible.  Once you have a working NetBox instance, and have (optionally) installed the `netbox-dns` plugin and a name server (which you have permissions to manage), the entire process of managing Proxmox virtual machines via NetBox involves two simple requirements.
+`netbox-proxmox-ansible` is intended to make your life as simple as possible.  Once you have a working Proxmox node (or cluster), have provisioned a Proxmox API token with the permissions noted above, a NetBox instance, a NetBox API token, and have (optionally) installed the `netbox-dns` plugin and a name server (which you have permissions to manage), the entire process of managing Proxmox virtual machines via NetBox involves two simple requirements.
 
-  1. You have created a configuration file which holds your virtual machine configurations: `vms.yml`
-  2. You are able to run a current version of Ansible, preferably with elevated permissions (i.e. root) when it comes to DNS changes
+  1. You have created a configuration file which holds your environment and virtual machine configurations: `vms.yml`
+  2. You are running a current version of Ansible (2.17.4 was used for developing `netbox-proxmox-ansible`), preferably with the ability to have elevated permissions (i.e. root) should you want to automate DNS changes
 
 ## Inital Setup (Python)
 
-Python initial setup blahblah
+Open a shell on your local system.  *Do not* run these commands as the 'root' user.  The following commands should run on MacOS, Linux, and UNIX-like systems; you will need to run these commands during initial installation or upgrades of `netbox-proxmox-ansible`.
+
+```
+shell$ cd /path/to/netbox-proxmox-ansible
+
+shell$ deactivate # this will fail if there is no configured venv
+
+shell$ rm -rf venv
+
+shell$ python3 -m venv venv
+
+shell$ source venv/bin/activate
+
+(venv) shell$ pip install -r requirements.txt # this will install all of the dependencies
+```
+
+To leave `venv`, simply type 'deactivate'.
+
+```
+(venv) shell$ deactivate
+shell$
+```
+
+With each usage of `netbox-proxmox-ansible`, make sure that you enter `venv` before running any Ansible commands.  Else this automation will not work.
+
+```
+shell$ cd /path/to/netbox-proxmox-ansible
+
+shell$ source venv/bin/activate
+
+(venv) shell$  # <--- this is the desired result
+```
+
+## Initial Setup (Netbox collection for Ansible)
+
+```
+shell$ source venv/bin/activate
+
+(venv) shell$ ansible-galaxy collection install netbox.netbox
+```
+
+## Initial Setup (Proxmox for Ansible via community.general collection)
+
+```
+shell$ source venv/bin/activate
+
+(venv) shell$ ansible-galaxy collection install community.general
+```
 
 There are two key parts to this automation:
   1. `vm-manager.py`
