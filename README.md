@@ -1,5 +1,7 @@
 # Project Summary
 
+NetBox is a widely used tool for documenting networks.  Proxmox is a freely available virtualization technology that allows you to deploy virtual machines at scale, and perhaps in a clustered configuration.  NetBox has approximately 15,000 users of its open source project.  Proxmox has approximately 900,000 users of its open source project.  When you think of the challenges of a widely used network documentation solution and a widely used virtualization implementation, this implementation is the marriage that we've been looking for.
+
 `netbox-proxmox-ansible` uses [Ansible](https://www.ansible.com/) to implement a series of tools to manage your Proxmox VMs: With NetBox as your [*Network Source of Truth (NSoT)*](https://netboxlabs.com/blog/what-is-a-network-source-of-truth/), as NetBox was designed.  In other words, this automation will collect the *desired* state of (Proxmox) virtual machines in Netbox -- and deploy identical virtual machine configurations to Proxmox.
 
 This automation handles both the creation and removal of Proxmox virtual machines.
