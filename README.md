@@ -182,7 +182,7 @@ name-or-ip-of-dns-serverN
 
 ## Initial Setup (NetBox objects + dependencies)
 
-here
+Given the heirarchical nature of NetBox, you will need to create the following objects before using `netbox-proxmox-ansible` automation.  You should refer to the [NetBox planning guide](https://netboxlabs.com/docs/netbox/en/stable/getting-started/planning/) to address these dependencies before proceeding with `netbox-proxmox-ansible`.
 
 ## Initial Setup (NetBox API user + key)
 
