@@ -93,7 +93,7 @@ This automation is based on the premise(s) that:
   2. You have created an encrypted configuration file which holds your API tokens and related information: `secrets.yml`.
   3. You are running a current version of Ansible (2.17.4 was used for developing `netbox-proxmox-ansible`), preferably with the ability to have elevated permissions (i.e. root) should you want to automate DNS changes -- and can install any dependencies required by `netbox-proxmox-ansible`.
 
-## Inital Setup (Python)
+## Inital Configuration: Python
 
 Open a shell on your local system.  *Do not* run these commands as the 'root' user.  The following commands should run on MacOS, Linux, and UNIX-like systems; you will need to run these commands during initial installation or upgrades of `netbox-proxmox-ansible`.
 
@@ -128,7 +128,7 @@ shell$ source venv/bin/activate
 (venv) shell$  # <--- this is the desired result
 ```
 
-## Initial Setup (Netbox collection for Ansible)
+## Initial Configuration: Netbox collection for Ansible
 
 ```
 shell$ source venv/bin/activate
@@ -136,7 +136,7 @@ shell$ source venv/bin/activate
 (venv) shell$ ansible-galaxy collection install netbox.netbox
 ```
 
-## Initial Setup (Proxmox for Ansible via community.general collection)
+## Initial Configuration: Proxmox for Ansible via community.general collection
 
 ```
 shell$ source venv/bin/activate
@@ -144,7 +144,7 @@ shell$ source venv/bin/activate
 (venv) shell$ ansible-galaxy collection install community.general
 ```
 
-## Initial Setup (Ansible inventory file)
+## Initial Configuration: Ansible inventory file
 
 You will need to create an inventory file to be able to use `netbox-proxmox-ansible`.
 
@@ -180,11 +180,21 @@ name-or-ip-of-dns-server1
 name-or-ip-of-dns-serverN
 ```
 
-## Initial Setup (NetBox objects + dependencies)
+## Initial Configuration: Creating Proxmox virtual machine templates from (cloud-init) images
+
+This process is [well documented](https://pve.proxmox.com/wiki/Cloud-Init_Support) by the Proxmox team.  In the end it comes down to:
+- downloading a cloud image
+- following the documented process in the previous link
+- converting your image to a Proxmox VM template
+- ensuring that your Proxmox VM template has an associated SSH (public) key.
+
+The automated VM cloning and configuration process will handle IP allocation/configuration and host naming.  The default user for an Ubuntu cloud image is always 'ubuntu'; please refer to the documentation (about default users) for other cloud images.
+
+## Initial Configuration: NetBox objects + dependencies
 
 Given the heirarchical nature of NetBox, you will need to create the following objects before using `netbox-proxmox-ansible` automation.  You should refer to the [NetBox planning guide](https://netboxlabs.com/docs/netbox/en/stable/getting-started/planning/) to address these dependencies before proceeding with `netbox-proxmox-ansible`.
 
-## Initial Setup (NetBox API user + key)
+## Initial Configuration: NetBox API user + key
 
 It is recommended that you do *not* create an API token for the NetBox 'admin' user.  Instead, create a new user in NetBox; then create a new permission for that API user -- that has sufficient read/write/modify permissions to modify the following object types in NetBox, at a minimum:
 
@@ -220,7 +230,7 @@ In the NetBox UI:
 
 Once you've created a NetBox API token, store it some place safe in the meantime; most NetBox installations will obscure the API token once it's been created.
 
-## Initial Setup (Proxmox API user + key)
+## Initial Configuration: Proxmox API user + key
 
 While the Proxmox implementation that's part of the Ansible community.general collection allows you to use passwords when doing Proxmox automation, `netbox-proxmox-ansible` does not allow this behavior.
 
@@ -271,7 +281,7 @@ proxmox-ve-shell# pveum acl modify / -user api_user@pve -role Administrator # al
 
 For the command line above, note that you *will get the Proxmox API token via stdout only once*.  Make sure to copy and store this token in a safe place.  You will need it when we generate the Ansible `secrets.yml` configuration in the next step.
 
-## Initial Setup (Ansible vault and secrets)
+## Initial Configuration: Ansible vault and secrets
 
 `netbox-proxmox-ansible` requires that you store secrets in a file called `secrets.yml`.  While `secrets.yml` is excluded in .gitignore, it is best practice to encrypt any file where secrets live.  For this purpose we will use [Ansible vault](https://docs.ansible.com/ansible/latest/vault_guide/index.html).
 
@@ -297,209 +307,6 @@ netbox:
 3. Encrypt `secrets.yml` with the `ansible-vault` command: `ansible-vault encrypt secrets.yml`.  This will prompt you for a (new) passphrase and a passphrase confirmation.
 4. Verify that `secrets.yml` has been encrypted: `head -1 secrets.yml`.  This should provide output like: `$ANSIBLE_VAULT;1.1;AES256`.
 5. To view (a decrypted) `secrets.yml`, run this command: `ansible-vault view secrets.yml`.  This will prompt you for your passphrase.
-
-There are two key parts to this automation:
-  1. `vm-manager.py`
-  2. `vm-cluster-manager.py`
-
-`vm-manager.py`:
-  1. creates (or deletes) the VM (or VMs) in NetBox
-  2. creates network interfaces and allocates IP addresses in NetBox (IPAM) -- either statically or dynamically
-  3. creates and configures (or delete(s)) the VM(s) in Proxmox
-  4. `vm-manager.py` will also update the DNS for each VM, for both creation and deletion, if configured
-  
-  The data flow looks like this, regardless of whether you are creating or deleting a VM in Proxmox.
-
-  `Client -> NetBox API call (VMs, interfaces, and IPAM) -> Proxmox API (VMs and storage) -> NetBox API call (netbox-dns for DNS data) -> Ansible runner -> (bind9) DNS changes`
-
-`vm-cluster-manager.py` interactively creates a Proxmox VM cluster and cluster nodes in NetBox.  You need at least one Proxmox vm cluster and one Proxmox vm node before you can run `vm-manager.py`.
-
-# Initial Installation
-
-## `netbox-proxmox-ansible` Dependencies
-
-  From your terminal, run: `. ./setup.sh`
-
-This should install everything you need and drop you into a Python `venv`.  You *must* run all future commands in a Python venv.
-
-If you want to do this manually, do this:
-
-  ```
-  terminal% deactivate
-
-  terminal% rm -rf venv
-
-  terminal% python3 -m venv venv
-
-  terminal% source venv/bin/activate
-
-  terminal% pip install -r requirements.txt
-  ```
-
-## Initial Configuration
-
-1. Make sure that you have a working NetBox API token
-2. Make sure that you have a working Proxmox API token; this token should have sufficient privileges to query storage on Proxmox and to operate on VMs (start, stop, delete, etc)
-3. You will see a series of configuration stubs under the `conf.d` directory.  Copy each configuration (e.g. `cd conf.d ; cp -pi netbox.yml-sample netbox.yml`) so that you've written configurations for:
-    - ansible
-    - dns
-    - netbox
-    - proxmox
-    - ssh
-    - ssl
-    - vm_info
-4. If you want to do DNS updates, you'll need to install the [netbox-dns plugin](https://github.com/peteeckel/netbox-plugin-dns) in your NetBox instance
-5. Make sure that you have administrator access to your bind9 instance (if DNS has been enabled in your configuration)
-6. Run `vm-cluster-manager.py` if you need assistance in creating Proxmox VM cluster(s) and Proxmox VM node(s)
-
-## VM Configuration
-1. Write a new `vm-info.yml`; `cd conf.d ; cp vm-info.yml-sample vm-info.yml` and season `vm_info.yml` to taste
-2. `vm-info.yml` is required by `vm-manager.py`
-
-### `vm-info.yml` Required Fields
-
-In the 'global' section of `vm_info.yml`, the following fields are *required*:
-  - default_tenant
-  - dns_forward_zone (if using DNS)
-  - dns_reverse_zone (if using DNS)
-  - default_proxmox_node_name
-  - default_vm_template_name
-
-For each VM in the `vms` section of `vm_info.yml`, the following fields are *required*:
-  - name
-  - vcpus (integer)
-  - memory (in MB, integer)
-  - storage (in GB, integer)
-  - proxmox_storage (usually local-lvm should be chosen, but consult your Proxmox storage configuration for options)
-
-### `vm_info.yml` Optional Fields
-
-For each VM in the `vms` section of `vm_info.yml`, the following fields are *optional*:
-  - proxmox_node_name (if not set, VM will be deployed on `default_proxmox_node_name`)
-  - vm_template_name (if not set, VM will be created from `default_vm_template_name`)
-
-# How to Use netbox-proxmox-ansible
-
-## `vm-manager.py` Usage
-
-`vm_info.yml` needs to exist before using `vm-manager.py`!
-
-Use the `--verbose` option for any `vm-manager.py` argument to show, *gasp*, verbose output.
-
-```
-prompt% source venv/bin/activate
-
-(venv) prompt% ./vm-manager.py --help
-usage: vm-manager.py [-h] {createvm,deletevm} ...
-
-Proxmox VM Command-line Based Manager
-
-positional arguments:
-  {createvm,deletevm}  sub-command help
-    createvm           createvm help action
-    deletevm           deletevm help action
-
-options:
-  -h, --help           show this help message and exit
-
-End Options
-
-(venv) prompt% ./vm-manager.py createvm --help
-usage: vm-manager.py createvm [-h] [--hostname HOSTNAME] [-v]
-
-options:
-  -h, --help           show this help message and exit
-  --hostname HOSTNAME  name of vm to create
-  -v, --verbose        show verbose output
-
-(venv) prompt% ./vm-manager.py deletevm --help
-usage: vm-manager.py deletevm [-h] [--hostname HOSTNAME] [-v]
-
-options:
-  -h, --help           show this help message and exit
-  --hostname HOSTNAME  name of vm to create
-  -v, --verbose        show verbose output
-```
-
-### Creating VM(s)
-
-To create *all* VMs listed in `vm_info.yml`:
-
-  ```
-  prompt% source venv/bin/activate
-
-  (venv) prompt% ./vm-manager.py createvm
-  ```
-
-If successful, VM(s) will be created in NetBox, in Proxmox, and if DNS updates have been enabled -- on your primary bind9 server.
-
-### Creating VM by name
-
-To create a VM, by name, as listed in `vm_info.yml`:
-
-  ```
-  prompt% source venv/bin/activate
-
-  (venv) prompt% ./vm-manager.py createvm --hostname name-of-matching-vm-from-vms-yml-config
-  ```
-
-If successful, VM will be created in NetBox, in Proxmox, and if DNS updates have been enabled -- on your primary bind9 server.
-
-### Deleting VM(s)
-
-To delete *all* VMs listed in `vm_info.yml`:
-
-  ```
-  prompt% source venv/bin/activate
-
-  (venv) prompt% ./vm-manager.py deletevm
-  ```
-
-If successful, VM(s) will be delete in NetBox, in Proxmox, and if DNS updates have been enabled -- from your primary bind9 server.
-
-### Deleting VM by name
-
-To delete a VM, by name, as listed in `vm_info.yml`:
-
-  ```
-  prompt% source venv/bin/activate
-
-  (venv) prompt% ./vm-manager.py deletevm --hostname name-of-matching-vm-from-vms-yml-config
-  ```
-
-If successful, VM will be deleted in NetBox, in Proxmox, and if DNS updates have been enabled -- from your primary bind9 server.
-
-## `vm-cluster-manager.py` Usage
-
-`vm-cluster-manager.py` does not take any arguments.  Instead it is a configurator that uses the Python `questionary` module.  It will ask you a series of questions about your environment and will create any objects in NetBox that don't already exist.  *NOTE: You need to be able to run Ansible with elevated privileges (e.g. root) to be able to run `vm-cluster-manager.py`.*
-
-*Only* run `vm-cluster-manager.py` if:
-  - Your Proxmox VM node is running and available on your network
-  - You haven't already configured virtual machine cluster types in NetBox
-  - You haven't already configured at least one Proxmox VM cluster in NetBox
-  - You haven't added Proxmox VM nodes as Devices in NetBox
-  - You might be missing Sites, Locations, Tenants, etc in NetBox
-
-When you run `vm-cluster-manager.py` it will:
-  - Inspect the hardware of the Proxmox VM node that you want to add
-  - Add Sites, Locations, Tenants, etc that are related to your Proxmox VM node
-  - Add Cluster Types (Proxmox)
-  - Add Manufacturer and Platform info (if it doesn't already exist)
-  - Add hardware information (make, model, serial number) for your Proxmox VM node
-  - Add Device for your Proxmox VM node
-  - Add active/inactive network device information for your Proxmox VM node
-
-Ultimately, running `vm-cluster-manager.py`, if necessary, will tie your VM(s) to the right Proxmox VM cluster when you run `vm-manager.py`.  Without this information in NetBox, `vm-manager.py` is not bound to function correctly.
-
-# Working with Ubuntu/Debian Cloud Images
-
-This process is [well documented](https://pve.proxmox.com/wiki/Cloud-Init_Support) by the Proxmox team.  In the end it comes down to:
-- downloading a cloud image
-- following the documented process in the previous link
-- converting your image to a Proxmox VM template
-- ensuring that your Proxmox VM template has an associated SSH (public) key.
-
-The automated VM cloning and configuration process will handle IP allocation/configuration and host naming.  The default user for an Ubuntu cloud image is always 'ubuntu'.
 
 # Authors
 - Nate Patwardhan <npatwardhan@netboxlabs.com>
