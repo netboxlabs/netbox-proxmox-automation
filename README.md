@@ -143,7 +143,7 @@ netbox:
   api_token: some-api-token-secret-here
 ```
 
-1. Generate a clear text secrets.yml with the format noted above.
+1. Generate a clear text `secrets.yml` with the format noted above.
 2. Encrypt `secrets.yml` with the `ansible-vault` command: `ansible-vault encrypt secrets.yml`.  This will prompt you for a (new) passphrase and a passphrase confirmation.
 3. Verify that `secrets.yml` has been encrypted: `head -1 secrets.yml`.  This should provide output like: `$ANSIBLE_VAULT;1.1;AES256`.
 4. To view (a decrypted) `secrets.yml`, run this command: `ansible-vault view secrets.yml`.  This will prompt you for your passphrase.
