@@ -62,7 +62,7 @@ This automation is based on the premise(s) that:
 
 `netbox-proxmox-ansible` is *not* a NetBox plugin; nor is it a script or a webhook (at this point in time).  And this is by design.
 
-[ProxBox](https://github.com/netdevopsbr/netbox-proxbox) is a neat implementation of pulling information from Proxmox into NetBox.  It has its place, most certainly, but what it does is *not* the aim of `netbox-proxmox-ansible`.
+[ProxBox](https://github.com/netdevopsbr/netbox-proxbox) is a neat implementation of pulling information from Proxmox into NetBox.  ProxBox has its place, most certainly, but what it does is *not* the aim of `netbox-proxmox-ansible`.
 
 # Placeholder
 
