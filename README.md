@@ -32,7 +32,7 @@ When you discover virtual machines in Proxmox, this will create/reconcile virtua
 
 ## What this implementation *is*
 
-`netbox-proxmox-ansible` is a client-based implementation where you define virtual machine configurations (in YAML) then create your *desired* virtual machine states in NetBox.  Ansible then automates your *desired* virtual machine states in Proxmox.  The same can also be done in reverse: Where Proxmox holds your initial virtual machine states -- that you then want to document in NetBox.
+`netbox-proxmox-ansible` is a client-based implementation where you define virtual machine configurations (in YAML) then create your *desired* virtual machine states in NetBox.  Ansible then automates your *desired* virtual machine states in Proxmox.  The same can also be done in reverse: Where Proxmox holds your initial virtual machine states -- that you then want to "discover" in Proxmox then document in NetBox.
 
 You *should* be able to run `netbox-proxmox-ansible` from *any* Windows, MacOS, or Linux/UNIX-like system -- so long as you have both Ansible and Python (version 3) installed.  (*Python 2 is long dead, so it is not supported here.*)
 
