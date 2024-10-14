@@ -54,7 +54,7 @@ This automation is based on the premise(s) that:
   7. You have access to the NetBox and Proxmox APIs (via API tokens, respectively)
   8. You have installed the netbox-dns plugin in your NetBox instance (OPTIONAL)
   9. You are running bind9 as your DNS server and have "admin" rights to make DNS changes (OPTIONAL)
-  10. You are able to run Ansible with elevated privileges (i.e. root)
+  10. You are able to run Ansible with elevated privileges (i.e. root, OPTIONAL, for DNS changes)
 
 ## What this implementation *is not*
 
