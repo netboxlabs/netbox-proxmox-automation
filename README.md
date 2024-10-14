@@ -185,6 +185,7 @@ name-or-ip-of-dns-serverN
 ## Initial Configuration: Creating Proxmox virtual machine templates from (cloud-init) images
 
 This process is [well documented](https://pve.proxmox.com/wiki/Cloud-Init_Support) by the Proxmox team.  In the end it comes down to:
+- logging into your Proxmox node(s) and running these commands as the 'root' user, or as a user who has adequate permissions to modify Proxmox virtual machines and the underlying storage
 - downloading a cloud image
 - following the documented process in the previous link
 - ensuring that your cloud-init image has included `qemu-guest-agent`; `qemu-guest-agent` is required for discovery of network interfaces/settings and underlying platform information
