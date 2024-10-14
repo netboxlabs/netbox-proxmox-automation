@@ -1,7 +1,7 @@
   - name: Find DNS record in NetBox by name
     local_action:
       module: uri
-      url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}/api/plugins/netbox-dns/records/?zone={{ proxmox_vm_cfg.default_dns_domainname }}&name={{ item }}"
+      url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}/api/plugins/netbox-dns/records/?zone={{ vm_config_remove[item].domain_name }}&name={{ item }}"
       method: GET
       headers:
         Authorization: "Token {{ secrets_cfg.netbox.api_token }}"
@@ -9,7 +9,7 @@
         Content-Type: application/json
       body_format: json
 #      body:
-#        zone: "{{ nb_dns_plugin_zn[proxmox_vm_cfg.default_dns_domainname].zone_id }}"
+#        zone: "{{ nb_dns_plugin_zn[vm_config_remove[item].domain_name].zone_id }}"
 #        type: A
 #        name: test1
       status_code: 200
@@ -43,7 +43,7 @@
         Content-Type: application/json
       body_format: json
       #body:
-      #  zone: "{{ nb_dns_plugin_zn[proxmox_vm_cfg.default_dns_domainname].zone_id }}"
+      #  zone: "{{ nb_dns_plugin_zn[vm_config_remove[item].domain_name].zone_id }}"
       #  type: A
       #  name: "{{ item }}"
       status_code: 204

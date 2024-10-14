@@ -8,7 +8,7 @@
       name: "{{ item }}"
       state: started
     loop: "{{ nb_vm_active }}"
-    when: vm_config[item].start
+    when: vm_config_create[item].start
     register: start_vms_job
     async: 180
     poll: 0

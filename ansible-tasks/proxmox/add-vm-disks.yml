@@ -7,7 +7,7 @@
       name: "{{ item.name }}"
       disk: "{{ item.disk_name }}"
       size: "{{ item.disk_size }}"
-      storage: "{{ vm_config[item.name].storage }}"
+      storage: "{{ vm_config_create[item.name].storage }}"
       backup: false
       ssd: false
       create: regular

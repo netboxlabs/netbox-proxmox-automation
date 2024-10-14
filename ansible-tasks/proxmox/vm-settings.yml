@@ -6,14 +6,14 @@
       api_token_secret: "{{ secrets_cfg.proxmox.api_token_secret }}"
       api_host: "{{ secrets_cfg.proxmox.api_host }}"
       name: "{{ item }}"
-      cores: "{{ vm_config[item].vcpus }}"
-      vcpus: "{{ vm_config[item].vcpus }}"
-      memory: "{{ vm_config[item].memory }}"
-      sshkeys: "{{ lookup('file', vm_config[item].sshkey) }}"
+      cores: "{{ vm_config_create[item].vcpus }}"
+      vcpus: "{{ vm_config_create[item].vcpus }}"
+      memory: "{{ vm_config_create[item].memory }}"
+      sshkeys: "{{ lookup('file', vm_config_create[item].sshkey) }}"
       ipconfig:
         ipconfig0: "ip={{ item.ip }},gw={{ item.ip.split('.')[:3] | join('.') }}.{{ item.gw if item.gw is defined else gw_last_quad }}"
       update: true
-    with_items: "{{ vm_config }}"
+    with_items: "{{ vm_config_create }}"
     when: nb_vm_created[item] and not item in collected_proxmox_vms
     register: update_vms_settings_job
     async: 180

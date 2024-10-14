@@ -1,6 +1,6 @@
 #  - name: Show active NB VM
 #    debug:
-#      msg: "hostname: {{ item }} ip address: {{ nb_vm_inventory_staged[item]['ip'] }} zone: {{ nb_dns_plugin_zn[proxmox_vm_cfg.default_dns_domainname] }} zone_id: {{ nb_dns_plugin_zn[proxmox_vm_cfg.default_dns_domainname].zone_id }}"
+#      msg: "hostname: {{ item }} ip address: {{ nb_vm_inventory_staged[item]['ip'] }} zone: {{ nb_dns_plugin_zn[vm_config_create[item].domain_name] }} zone_id: {{ nb_dns_plugin_zn[vm_config_create[item].domain_name].zone_id }}"
 #    loop: "{{ nb_vm_active }}"
 
   - name: Create DNS 'A' record in Netbox
@@ -14,10 +14,9 @@
         Content-Type: application/json
       body_format: json
       body:
-        zone: "{{ nb_dns_plugin_zn[proxmox_vm_cfg.default_dns_domainname].zone_id }}"
+        zone: "{{ nb_dns_plugin_zn[vm_config_create[item].domain_name].zone_id }}"
         type: A
         name: "{{ item }}"
-        #fqdn: "{{ item }}.{{ proxmox_vm_cfg.default_dns_domainname }}"
         value: "{{ nb_vm_inventory_staged[item]['ip'].split('/')[0] }}"
         status: active
         managed: false

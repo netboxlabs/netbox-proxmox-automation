@@ -23,7 +23,7 @@
         size: "{{ item.disk_size }}"
       state: present
     loop: "{{ nb_vm_config_disks }}"
-    when: vm_config[item.name] is defined and nb_vm_created[item.name] is defined
+    when: vm_config_create[item.name] is defined and nb_vm_created[item.name] is defined
     register: nb_vm_disks
 
 #  - name: show created

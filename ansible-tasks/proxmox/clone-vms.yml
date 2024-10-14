@@ -5,13 +5,13 @@
       api_token_id: "{{ secrets_cfg.proxmox.api_token_id }}"
       api_token_secret: "{{ secrets_cfg.proxmox.api_token_secret }}"
       api_host: "{{ secrets_cfg.proxmox.api_host }}"
-      clone: "{{ vm_config[item].template }}"
+      clone: "{{ vm_config_create[item].template }}"
       name: "{{ item }}"
       agent: 'enabled=1'
-      storage: "{{ vm_config[item].storage if vm_config[item].storage is defined else proxmox_vm_cfg.default_storage }}"
+      storage: "{{ vm_config_create[item].storage if vm_config_create[item].storage is defined else proxmox_vm_cfg.default_storage }}"
       state: present
       timeout: 120
-    with_items: "{{ vm_config }}"
+    with_items: "{{ vm_config_create }}"
     when: not item in collected_proxmox_vms and item in nb_vm_inventory_staged
     register: clone_vms_job
     async: 180

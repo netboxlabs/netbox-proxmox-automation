@@ -6,9 +6,9 @@
       api_token_secret: "{{ secrets_cfg.proxmox.api_token_secret }}"
       api_host: "{{ secrets_cfg.proxmox.api_host }}"
       name: "{{ item }}"
-      sshkeys: "{{ lookup('file', vm_config[item].sshkey) }}"
+      sshkeys: "{{ lookup('file', vm_config_create[item].sshkey) }}"
       update: true
-    with_items: "{{ vm_config }}"
+    with_items: "{{ vm_config_create }}"
     when: not item in collected_proxmox_vms and item in nb_vm_inventory_staged
     register: update_vms_settings_job
     async: 180
