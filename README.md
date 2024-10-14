@@ -38,6 +38,10 @@ You *should* be able to run `netbox-proxmox-ansible` from *any* Windows, MacOS, 
 
 `netbox-proxmox-ansible` uses cloud-init images to induce virtual machine changes on Proxmox based on the *desired* state in NetBox (and vice versa).  Almost always these cloud-init images will be Debian or Debian-derived images (Debian or Ubuntu), RHEL-based images (Rocky Linux), or maybe even Windows-based cloud-init images.  *(Windows cloud-init images are currently un-tested.)*
 
+Proxmox is highly conducive towards using cloud-init images -- when cloud-init images are converted to templates.  You can define items like ssh keys and network configurations in Proxmox by way of using cloud-init images, and cloud-init will cascade these settings into your Proxmox virtual machines: *Dynamically*.  Further, Proxmox has a comprehensive API -- you can define virtual machine resources, plus disk configurations and more -- and you can leverage automation, in this case Ansible, to lay down your desired virtual machine states in Proxmox with little effort.
+
+
+
 ## What this implementation *is not*
 
 `netbox-proxmox-ansible` is *not* a NetBox plugin; nor is it a script.  And this is by design.
