@@ -40,6 +40,8 @@ You *should* be able to run `netbox-proxmox-ansible` from *any* Windows, MacOS, 
 
 Proxmox is highly conducive towards using cloud-init images -- when cloud-init images are converted to templates.  You can define items like ssh keys and network configurations in Proxmox by way of using cloud-init images, and cloud-init will cascade these settings into your Proxmox virtual machines: *Dynamically*.  Further, Proxmox has a comprehensive API -- you can define virtual machine resources, plus disk configurations and more -- and you can leverage automation, in this case Ansible, to lay down your desired virtual machine states in Proxmox with little effort.
 
+NetBox models virtual machines in an intuitive way.  You can define roles, such as for Proxmox, and from there you can define both virtual machine state (Active, Offline, etc) and other resources like vcpus, memory, network configuration, disks, and more (perhaps, also, through customizations in NetBox).
+
 
 
 ## What this implementation *is not*
