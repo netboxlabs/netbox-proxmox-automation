@@ -30,6 +30,26 @@ Creating and deleting virtual machines in NetBox will both update virtual machin
 
 When you discover virtual machines in Proxmox, this will create/merge virtual machine changes in NetBox.
 
+## Usage
+
+Basic usage of `netbox-proxmox-ansible`, to provision Proxmox virtual machines to their desired state(s), is as follows:
+
+```
+shell$ source venv/bin/activate
+
+(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass
+```
+
+Should you want to update the DNS as well as provision Proxmox virtual machines to their desired state(s), use the following command:
+
+```
+shell$ source venv/bin/activate
+
+(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass --ask-pass --ask-become-pass
+```
+
+The above will prompt you for a SSH password, the password that you would use for `sudo` commands, and finally your Ansible vault passphrase.
+
 ## What this implementation *is*
 
 `netbox-proxmox-ansible` is a client-based implementation where you define virtual machine configurations (in YAML) then create your *desired* virtual machine states in NetBox.  Ansible then automates your *desired* virtual machine states from NetBox to Proxmox.  The same can also be done in reverse: Where Proxmox holds your initial virtual machine states -- that you want to "discover" in Proxmox then document/merge in/into NetBox.
@@ -57,26 +77,6 @@ This automation is based on the premise(s) that:
   - You have installed the netbox-dns plugin in your NetBox instance (OPTIONAL)
   - You are running bind9 as your DNS server and have "admin" rights to make DNS changes (OPTIONAL)
   - You are able to run Ansible with elevated privileges (i.e. root, OPTIONAL, for DNS changes)
-
-## Usage
-
-Basic usage of `netbox-proxmox-ansible`, to provision Proxmox virtual machines to their desired state(s), is as follows:
-
-```
-shell$ source venv/bin/activate
-
-(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass
-```
-
-Should you want to update the DNS as well as provision Proxmox virtual machines to their desired state(s), use the following command:
-
-```
-shell$ source venv/bin/activate
-
-(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass --ask-pass --ask-become-pass
-```
-
-The above will prompt you for a SSH password, the password that you would use for `sudo` commands, and finally your Ansible vault passphrase.
 
 ## What this implementation *is not*
 
