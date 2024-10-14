@@ -8,7 +8,7 @@ When you think of the challenges of a widely used network documentation solution
 
 This automation handles both the creation and removal of Proxmox virtual machines.
 
-*This implementation also supports discovering virtual machines in Proxmox, should you want to document your (Proxmox) operational state in NetBox.*
+*This implementation also supports discovering virtual machines in Proxmox, should you want to document and/or merge your (Proxmox) operational state in NetBox.*
 
 When you use NetBox to create virtual machines in Proxmox, their *desired* state will be generated, including:
 - hostname
