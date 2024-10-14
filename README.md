@@ -122,6 +122,32 @@ shell$ source venv/bin/activate
 (venv) shell$ ansible-galaxy collection install community.general
 ```
 
+## Initial Setup (Ansible vault and secrets)
+
+`netbox-proxmox-ansible` requires that you store secrets in a file called `secrets.yml`.  While `secrets.yml` is excluded in .gitignore, it is best practice to encrypt any file where secrets live.  For this purpose we will use [Ansible vault](https://docs.ansible.com/ansible/latest/vault_guide/index.html).
+
+`secrets.yml` is used to store your Proxmox and NetBox authentication information (nodes, hosts, users, API tokens, etc) and must be in the following format:
+
+```
+---
+proxmox:
+  node: name-of-proxmox-node # (frequently proxmox-ve by default)
+  api_host: hostname-or-ip-of-proxmox-api-host
+  api_user: api_user@pve # season to taste
+  api_token_id: id-of-api-user-token
+  api_token_secret: some-api-token-secret-here
+netbox:
+  api_proto: http # or https, season to taste
+  api_host: hostname-or-ip-of-netbox-host
+  api_port: 80 # or season to taste
+  api_token: some-api-token-secret-here
+```
+
+1. Generate a clear text secrets.yml with the format noted above.
+2. Encrypt `secrets.yml` with the `ansible-vault` command: `ansible-vault encrypt secrets.yml`.  This will prompt you for a (new) passphrase and a passphrase confirmation.
+3. Verify that `secrets.yml` has been encrypted: `head -1 secrets.yml`.  This should provide output like: `$ANSIBLE_VAULT;1.1;AES256`.
+4. To view (a decrypted) `secrets.yml`, run this command: `ansible-vault view secrets.yml`.  This will prompt you for your passphrase.
+
 There are two key parts to this automation:
   1. `vm-manager.py`
   2. `vm-cluster-manager.py`
