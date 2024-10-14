@@ -34,11 +34,15 @@ When you discover virtual machines in Proxmox, this will create/reconcile virtua
 
 `netbox-proxmox-ansible` is a client-based implementation where you define virtual machine configurations (in YAML) then create your *desired* virtual machine states in NetBox.  Ansible then automates your *desired* virtual machine states in Proxmox.  The same can also be done in reverse: Where Proxmox holds your initial virtual machine states -- that you then want to document in NetBox.
 
-You should be able to run `netbox-proxmox-ansible` from *any* Windows, MacOS, or Linux/UNIX-like system -- so long as you have both Ansible and Python (version 3) installed.  Python 2 is long dead, so it is not supported here.
+You should be able to run `netbox-proxmox-ansible` from *any* Windows, MacOS, or Linux/UNIX-like system -- so long as you have both Ansible and Python (version 3) installed.  (*Python 2 is long dead, so it is not supported here.*)
+
+`netbox-proxmox-ansible` uses cloud-init images to induce virtual machine changes on Proxmox based on the *desired* state in NetBox (and vice versa).
 
 ## What this implementation *is not*
 
-`netbox-proxmox-ansible` is *not* a NetBox plugin; nor is it a script.
+`netbox-proxmox-ansible` is *not* a NetBox plugin; nor is it a script.  And this is by design.
+
+[ProxBox](https://github.com/netdevopsbr/netbox-proxbox) is a neat implementation of pulling information from Proxmox into NetBox.  It has its place, most certainly, but what it does is *not* the aim of `netbox-proxmox-ansible`.
 
 While you should be able to use your Linux distribution of choice with this automation, due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.
 
