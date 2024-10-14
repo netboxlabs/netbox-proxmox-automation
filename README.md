@@ -97,7 +97,7 @@ Further, `netbox-proxmox-ansible` does *not* deploy a future state for any Proxm
 
 While these various initial configuration notes might seem like a heavy lift, your initial configuration of `netbox-proxmox-ansible` should take less than an hour.  Plus, you will likely only need to run these configuration steps only once.
 
-## Inital Configuration: Python
+## Initial Configuration: Python
 
 Open a shell on your local system.  *Do not* run these commands as the 'root' user.  The following commands should run on MacOS, Linux, and UNIX-like systems; you will need to run these commands during initial installation or upgrades of `netbox-proxmox-ansible`.
 
