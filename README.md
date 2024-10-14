@@ -1,6 +1,6 @@
 # Project Summary
 
-[NetBox](https://github.com/netbox-community/netbox) is a widely used tool for documenting networks.  [Proxmox](https://www.proxmox.com/en/) is a freely available virtualization technology that allows you to deploy virtual machines at scale, and perhaps in a clustered configuration.  NetBox has approximately 15,000 users of its open source project.  Proxmox has approximately 900,000 users of its open source project.
+[NetBox](https://github.com/netbox-community/netbox) is a widely used tool for documenting/modeling networks (network devices, virtual machines, etc), and also provides a great IPAM solution.  [Proxmox](https://www.proxmox.com/en/) is a freely available virtualization technology that allows you to deploy virtual machines at scale, and perhaps in a clustered configuration.  NetBox has approximately 15,000 users of its open source project.  Proxmox has approximately 900,000 users of its open source project.
 
 When you think of the challenges of a widely used network documentation solution and a widely used virtualization technology, this implementation represents the marriage between virtual machine documentation (NetBox) and the automation of virtual machine configurations (Proxmox).
 
