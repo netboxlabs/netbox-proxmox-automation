@@ -156,8 +156,8 @@
     include_tasks: "ansible-tasks/netbox/create-dns-record.yml"
     when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns and vm_config_create | length > 0
 
-  - name: "NetBox: Find DNS zones SOA via netbox-dns plugin"
-    include_tasks: "ansible-tasks/netbox/find-dns-zones-info.yml"
+  - name: "NetBox: Find DNS zones SOA via netbox-dns plugin (create)"
+    include_tasks: "ansible-tasks/netbox/find-dns-zones-info-create.yml"
     when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns and vm_config_create | length > 0
 
   - name: "BIND9: Create (DNS) zone dbs"
@@ -226,8 +226,8 @@
     include_tasks: "ansible-tasks/netbox/delete-dns-record.yml"
     when: vm_config_remove | length > 0 and proxmox_vm_cfg.update_dns is defined and proxmox_vm_cfg.update_dns
 
-  - name: "NetBox: Find DNS zones SOA via netbox-dns plugin"
-    include_tasks: "ansible-tasks/netbox/find-dns-zones-info.yml"
+  - name: "NetBox: Find DNS zones SOA via netbox-dns plugin (remove)"
+    include_tasks: "ansible-tasks/netbox/find-dns-zones-info-remove.yml"
     when: proxmox_vm_cfg is defined and proxmox_vm_cfg.update_dns and vm_config_remove | length > 0
 
   - name: "BIND9: Create (DNS) zone dbs"
