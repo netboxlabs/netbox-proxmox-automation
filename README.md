@@ -144,6 +144,42 @@ shell$ source venv/bin/activate
 (venv) shell$ ansible-galaxy collection install community.general
 ```
 
+## Initial Setup (Ansible inventory file)
+
+You will need to create an inventory file to be able to use `netbox-proxmox-ansible`.
+
+If you do not need DNS support, do this.
+
+```
+shell$ cd /path/to/netbox-proxmox-ansible
+
+shell$ source venv/bin/activate
+
+(venv) shell$ cat inventory
+[proxmox]
+name-or-ip-of-proxmox-node1
+... etc ...
+name-or-ip-of-proxmox-nodeN
+```
+
+If you need DNS support, do this:
+
+```
+shell$ cd /path/to/netbox-proxmox-ansible
+
+shell$ source venv/bin/activate
+
+(venv) shell$ cat inventory
+[proxmox]
+name-or-ip-of-proxmox-node1
+... etc ...
+name-or-ip-of-proxmox-nodeN
+[dns]
+name-or-ip-of-dns-server1
+... etc ...
+name-or-ip-of-dns-serverN
+```
+
 ## Initial Setup (NetBox objects + dependencies)
 
 here
