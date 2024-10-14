@@ -9,20 +9,20 @@
         Content-Type: application/json
       status_code: 200
       validate_certs: no
-    when: (nb_dns_plugin_changed is defined and nb_dns_plugin_changed) or (nb_dns_plugin_deleted is defined and nb_dns_plugin_deleted)
+    when: nb_dns_plugin_changed is defined and nb_dns_plugin_changed
     register: dns_zones_changed
 
   - name: Gather SOA for DNS zone(s) from NetBox
     set_fact:
       nb_dns_plugin_soa: "{{ nb_dns_plugin_soa | combine({item.name: { 'origin': item.name, 'ttl': item.soa_ttl, 'soa_ns_name': item.soa_mname.name, 'soa_hostmaster': item.soa_rname, 'serial': item.soa_serial, 'refresh': item.soa_refresh, 'retry': item.soa_retry, 'expire': item.soa_expire, 'minimum': item.soa_minimum, 'nameservers': item.nameservers } }) }}"
     with_items: "{{ dns_zones_changed.json.results }}"
-    when: (nb_dns_plugin_changed is defined and nb_dns_plugin_changed) or (nb_dns_plugin_deleted is defined and nb_dns_plugin_deleted)
+    when: nb_dns_plugin_changed is defined and nb_dns_plugin_changed
 
   - name: Collect name servers from NetBox (SOA)
     set_fact:
       nb_dns_plugin_ns: "{{ nb_dns_plugin_ns | combine({item: {'ns': nb_dns_plugin_soa[item].nameservers | selectattr('name', 'defined') | map(attribute='name') | list}}) }}"
     with_items: "{{ nb_dns_plugin_soa }}"
-    when: (nb_dns_plugin_changed is defined and nb_dns_plugin_changed) or (nb_dns_plugin_deleted is defined and nb_dns_plugin_deleted)
+    when: nb_dns_plugin_changed is defined and nb_dns_plugin_changed
 
   - name: Get DNS records from Netbox
     local_action:
@@ -35,14 +35,14 @@
         Content-Type: application/json
       status_code: 200
       validate_certs: no
-    when: (nb_dns_plugin_changed is defined and nb_dns_plugin_changed) or (nb_dns_plugin_deleted is defined and nb_dns_plugin_deleted)
+    when: nb_dns_plugin_changed is defined and nb_dns_plugin_changed
     register: dns_records
 
   - name: Collect DNS (MX) records to DOL
     set_fact:
       nb_dns_plugin_mx_dol: "{{ nb_dns_plugin_mx_dol + [{ 'zone': item.zone.name, 'mx_value': item.value }] }}"
     loop: "{{ dns_records.json.results }}"
-    when: (nb_dns_plugin_changed is defined and nb_dns_plugin_changed) or (nb_dns_plugin_deleted is defined and nb_dns_plugin_deleted) and item.type == 'MX' and item.status == 'active'
+    when: (nb_dns_plugin_changed is defined and nb_dns_plugin_changed) and item.type == 'MX' and item.status == 'active'
 
   - name: Convert DNS (MX) records to zone format
     set_fact:
@@ -60,13 +60,13 @@
     set_fact:
       nb_dns_plugin_rr_dol: "{{ nb_dns_plugin_rr_dol + [{ 'zone': item.zone.name, 'rr_def': {'rr_name': item.name, 'rr_value': item.value, 'rr_ttl': item.ttl if item.ttl else '', 'rr_type': item.type} }] }}"
     loop: "{{ dns_records.json.results }}"
-    when: (nb_dns_plugin_changed is defined and nb_dns_plugin_changed) or (nb_dns_plugin_deleted is defined and nb_dns_plugin_deleted) and item.type not in ['SOA', 'NS', 'MX'] and item.status == 'active'
+    when: (nb_dns_plugin_changed is defined and nb_dns_plugin_changed) and item.type not in ['SOA', 'NS', 'MX'] and item.status == 'active'
 
   - name: Convert DNS (RR) records to zone format
     set_fact:
       nb_dns_plugin_rr: "{{ nb_dns_plugin_rr | combine({item.zone: {'rr': nb_dns_plugin_rr_dol | selectattr('zone', 'defined') | selectattr('zone', 'match', item.zone) | map(attribute='rr_def') | list}}) }}"
     loop: "{{ nb_dns_plugin_rr_dol }}"
-    when: (nb_dns_plugin_changed is defined and nb_dns_plugin_changed) or (nb_dns_plugin_deleted is defined and nb_dns_plugin_deleted)
+    when: nb_dns_plugin_changed is defined and nb_dns_plugin_changed
 
 #  - name: Show DNS (RR)
 #    debug:
