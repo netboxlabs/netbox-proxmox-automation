@@ -186,6 +186,8 @@ name-or-ip-of-dns-serverN
 
 ## Initial Configuration: Creating Proxmox virtual machine templates from (cloud-init) images
 
+`netbox-proxmox-ansible` *only* supports cloud-init images.  The dynamic nature of Proxmox virtual machine automation requires this implementation to be able to set things, during the Proxmox virtual machine provisioning process, like network configuration, hostnames, and more.  While it's *possible* that `netbox-proxmox-ansible` *might* support your existing Proxmox virtual machine templates, it's *highly* recommended that you follow the procedure below -- for the best results.  
+
 This process is [well documented](https://pve.proxmox.com/wiki/Cloud-Init_Support) by the Proxmox team.  In the end it comes down to:
 - logging into your Proxmox node(s) and running these commands as the 'root' user, or as a user who has adequate permissions to modify Proxmox virtual machines and the underlying storage
 - downloading a cloud image
@@ -194,6 +196,28 @@ This process is [well documented](https://pve.proxmox.com/wiki/Cloud-Init_Suppor
 - converting your cloud-init image to a Proxmox VM template
 
 The automated VM cloning and configuration process will handle IP allocation/configuration, host naming, ssh key configuration and more.  The default user for an Ubuntu cloud image is always 'ubuntu'; please refer to the documentation (about default users) for other cloud images.
+
+The first step before modifying cloud-init images, obviously, is to download the cloud-init images.  Here's an example that will download the focal, jammy, and noble releases of Ubuntu, in parallel, as root, to a Proxmox node.
+
+```
+proxmox-ve-node# cd /root
+
+proxmox-ve-node# mkdir -p cloud-images/ubuntu
+
+proxmox-ve-node# cd cloud-images/ubuntu
+
+proxmox-ve-node# for r in jammy focal noble; do wget "https://cloud-images.ubuntu.com/${r}/current/${r}-server-cloudimg-amd64.img" & done
+```
+
+Then let the cloud-init images download.  Once the downloads have completed, you might want to take backups of the original cloud-init images -- as we will proceed with modifying these cloud-init images slightly before converting them to Proxmox virtual machine templates.  Taking backups of the original cloud-init images is helpful should you ever need to revert any customization you did before converting the cloud-init images into Proxmox virtual machine templates.  Run this, again, as 'root' on the proxmox-node of your choice.
+
+```
+proxmox-ve-node# cd /root/cloud-images/ubuntu
+
+proxmox-ve-node# for img in `ls -1 *img`; do cp -pi $img $img.$(date +%Y-%m-%d); done
+```
+
+blah
 
 ## Initial Configuration: NetBox objects + dependencies
 
