@@ -22,6 +22,7 @@ This automation handles both the creation and removal of Proxmox virtual machine
   - update netbox-dns plugin for each virtual machine (if enabled)
   - remove non-existent virtual machine objects in Netbox
 - Creating and deleting virtual machines, in NetBox, will both update virtual machine state in Proxmox *and* update your DNS, if your DNS implementation is supported by this automation.
+- When you discover virtual machines in Proxmox, this will create/reconcile virtual machine changes in NetBox.
 
 While you should be able to use your Linux distribution of choice with this automation, due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.
 
