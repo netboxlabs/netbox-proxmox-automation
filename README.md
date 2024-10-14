@@ -186,7 +186,9 @@ name-or-ip-of-dns-serverN
 
 ## Initial Configuration: Creating Proxmox virtual machine templates from (cloud-init) images
 
-`netbox-proxmox-ansible` *only* supports cloud-init images.  The dynamic nature of Proxmox virtual machine automation requires this implementation to be able to set things, during the Proxmox virtual machine provisioning process, like network configuration, hostnames, and more.  While it's *possible* that `netbox-proxmox-ansible` *might* support your existing Proxmox virtual machine templates, it's *highly* recommended that you follow the procedure below -- for the best results.  
+`netbox-proxmox-ansible` *only* supports cloud-init images.  The dynamic nature of Proxmox virtual machine automation requires this implementation to be able to set things, during the Proxmox virtual machine provisioning process, like network configuration, hostnames, and more.  While it's *possible* that `netbox-proxmox-ansible` *might* support your existing Proxmox virtual machine templates, it's *highly* recommended that you follow the procedure below -- for the best results.
+
+As a cloud-init image is basically "blank", meaning that there is not broad network or SSH key configuration, this allows us to have total flexibility in the way that this automation takes a *desired* Proxmox virtual machine state from NetBox and generates anticipated changes in Proxmox.
 
 This process is [well documented](https://pve.proxmox.com/wiki/Cloud-Init_Support) by the Proxmox team.  In the end it comes down to:
 - logging into your Proxmox node(s) and running these commands as the 'root' user, or as a user who has adequate permissions to modify Proxmox virtual machines and the underlying storage
