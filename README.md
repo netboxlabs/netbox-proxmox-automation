@@ -387,6 +387,8 @@ proxmox-ve-node# qm set 9000 --agent enabled=1
 update VM 9000: -agent enabled=1
 ```
 
+Second, convert the Proxmox virtual machine into a template.  You can then use this Proxmox virtual machine template in your `netbox-proxmox-ansible` automation.
+
 Now convert the Proxmox virtual machine to a template.  *Note that this cannot be undone!*
 
 ```
@@ -395,8 +397,7 @@ proxmox-ve-node# qm template 9000
   Logical volume pve/base-9000-disk-0 changed.
 ```
 
-Second, convert the Proxmox virtual machine into a template.  You can then use this Proxmox virtual machine template in your `netbox-proxmox-ansible` automation.
-
+You should now be able to use your Proxmox virtual machine template, with a virtual machine id (vmid) of 9000 (or whatever you choose) in your `netbox-proxmox-ansible` automation.
 
 ## Initial Configuration: NetBox objects + dependencies
 
