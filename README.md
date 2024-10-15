@@ -300,10 +300,102 @@ guest
 [   3.8] Finishing off
 ```
 
-Now we are ready to create a Proxmox virtual machine from the Ubuntu ('jammy') cloud-init image -- that we have modified.  This breaks down into two steps:
+Now we are ready to create a Proxmox virtual machine from the Ubuntu ('jammy') cloud-init image -- that we have modified.  This breaks down into two (high-level) steps:
 1. Create a Proxmox virtual machine, with a unique id, with various configuration options
 2. Convert the Proxmox virtual machine into a Proxmox virtual machine template
 
+First, create the Proxmox virtual machine, with a unique id, and configure its attributes.  We tend to use unique ids >= 9000 for Proxmox virtual machine templates, but you do as you will.  *Note that you cannot use duplicate virtual machine ids in Proxmox.*  You will need to run the `qm` command, as the 'root' user, on your Proxmox node, to configure the following Proxmox virtual machine attributes:
+
+- create the Proxmox virtual machine
+- import the cloud-init image to the Proxmox virtual machine
+- set the SCSI (disk) hardware attributes for the Proxmox virtual machine root disk
+- map an IDE disk to the cloud-init image
+- define a boot disk for the Proxmox virtual machine
+- define a serial port such that the Proxmox virtual machine is accessible through the Proxmox console
+- set the QEMU agent to be enabled such that you can access various information from `qemu-guest-agent` when the Proxmox virtual machine is running
+
+Regarding where you store the Ubuntu ('jammy') cloud-init image, you likely have options between faster and slower disks on your Proxmox nodes.  It's recommended that you store the Ubuntu ('jammy') cloud-init image on faster disks; this will lead to better virtual machine cloning performance.  Let's see which disks are available to us in Proxmox; in this case an SSD comprises our root volume, which is called 'local-lvm'.  There is a slower spinning drive configuration that's called 'pve-hdd'.
+
+```
+proxmox-ve-node# pvesh get /storage --output-format yaml
+---
+- content: images,rootdir
+  digest: 0b59487c0e528e7eabc9293079ac26389ac1b91b
+  storage: local-lvm
+  thinpool: data
+  type: lvmthin
+  vgname: pve
+- content: iso,backup,vztmpl
+  digest: 0b59487c0e528e7eabc9293079ac26389ac1b91b
+  path: /var/lib/vz
+  storage: local
+  type: dir
+- content: rootdir,images
+  digest: 0b59487c0e528e7eabc9293079ac26389ac1b91b
+  nodes: proxmox-ve
+  shared: 0
+  storage: pve-hdd
+  type: lvm
+  vgname: pve-hdd
+```
+
+As noted, 'local-lvm' is our SSD storage, so let's use that.  We'll need to keep track of the name 'local-lvm' as it's required when running the `qm` commands.
+
+Here's the procedure to create a Proxmox virtual machine from the Ubuntu ('jammy') cloud-init image.
+
+```
+proxmox-ve-node# qm create 9000 --name jammy-server-cloudimg-amd64-template --ostype l26 --cpu cputype=host --cores 1 --sockets 1 --memory 1024 --net0 virtio,bridge=vmbr0
+
+proxmox-ve-node# # qm list | grep jammy
+      9000 jammy-server-cloudimg-amd64-template stopped    1024               0.00 0         
+
+
+proxmox-ve-node# qm importdisk 9000 jammy-server-cloudimg-amd64.img local-lvm -format qcow2
+importing disk 'jammy-server-cloudimg-amd64.img' to VM 9001 ...
+format 'qcow2' is not supported by the target storage - using 'raw' instead
+  Logical volume "vm-9001-disk-1" created.
+transferred 0.0 B of 2.2 GiB (0.00%)
+transferred 22.5 MiB of 2.2 GiB (1.00%)
+
+... etc ...
+
+transferred 2.2 GiB of 2.2 GiB (99.64%)
+transferred 2.2 GiB of 2.2 GiB (100.00%)
+Successfully imported disk as 'unused0:local-lvm:vm-9000-disk-0'
+
+
+proxmox-ve-node# qm set 9001 --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-9000-disk-0
+update VM 9000: -scsi0 local-lvm:vm-9000-disk-0 -scsihw virtio-scsi-pci
+
+
+proxmox-ve-node# qm set 9000 --ide2 local-lvm:cloudinit
+update VM 9000: -ide2 local-lvm:cloudinit
+  Logical volume "vm-9000-cloudinit" created.
+ide2: successfully created disk 'local-lvm:vm-9000-cloudinit,media=cdrom'
+generating cloud-init ISO
+
+
+proxmox-ve-node# qm set 9000 --boot c --bootdisk scsi0
+update VM 9000: -boot c -bootdisk scsi0
+
+
+proxmox-ve-node# qm set 9000 --serial0 socket --vga serial0
+update VM 9000: -serial0 socket -vga serial0
+
+
+proxmox-ve-node# qm set 9000 --agent enabled=1
+update VM 9000: -agent enabled=1
+```
+
+Now convert the Proxmox virtual machine to a template.  *Note that this cannot be undone!*
+
+```
+proxmox-ve-node# qm template 9000
+  Renamed "vm-9000-disk-0" to "base-9000-disk-0" in volume group "pve"
+  Logical volume pve/base-9000-disk-0 changed.
+```
+
+Second, convert the Proxmox virtual machine into a template.  You can then use this Proxmox virtual machine template in your `netbox-proxmox-ansible` automation.
 
 
 ## Initial Configuration: NetBox objects + dependencies
