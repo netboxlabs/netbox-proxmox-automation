@@ -106,9 +106,9 @@
         vcpus: "{{ item.vcpus | int }}"
         memory: "{{ (item.memory / (1024*1024)) | float | int }}"
         disk: "{{ (item.disk / (1024*1024*1024)) | int }}"
-#        custom_fields:
-#          proxmox_vmid: "{{ item.vmid | int }}"
-#          proxmox_node: "{{ item.node }}"
+        custom_fields:
+          proxmox_vmid: "{{ item.vmid | int }}"
+          proxmox_node: "{{ item.node }}"
       state: present
     loop: "{{ proxmox_discovered_running_vms_configuration }}"
 #      - "{{ proxmox_discovered_stopped_vms_configuration }}"
@@ -162,9 +162,9 @@
         vcpus: "{{ item.vcpus | int }}"
         memory: "{{ (item.memory / (1024*1024)) | float | int }}"
         disk: "{{ (item.disk / (1024*1024*1024)) | int }}"
-#        custom_fields:
-#          proxmox_vmid: "{{ item.vmid | int }}"
-#          proxmox_node: "{{ item.node }}"
+        custom_fields:
+          proxmox_vmid: "{{ item.vmid | int }}"
+          proxmox_node: "{{ item.node }}"
       state: present
     loop: "{{ proxmox_discovered_stopped_vms_configuration }}"
 
