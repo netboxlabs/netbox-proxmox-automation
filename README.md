@@ -524,6 +524,14 @@ netbox:
 4. Verify that `secrets.yml` has been encrypted: `head -1 secrets.yml`.  This should provide output like: `$ANSIBLE_VAULT;1.1;AES256`.
 5. To view (a decrypted) `secrets.yml`, run this command: `ansible-vault view secrets.yml`.  This will prompt you for your passphrase.
 
+# Configuring `vms.yml`
+
+here
+
+# `netbox-proxmox-ansible` Use Cases
+
+here
+
 # Authors
 - Nate Patwardhan <npatwardhan@netboxlabs.com>
 
