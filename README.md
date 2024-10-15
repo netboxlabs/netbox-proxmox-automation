@@ -364,7 +364,7 @@ transferred 2.2 GiB of 2.2 GiB (100.00%)
 Successfully imported disk as 'unused0:local-lvm:vm-9000-disk-0'
 
 
-proxmox-ve-node# qm set 9001 --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-9000-disk-0
+proxmox-ve-node# qm set 9000 --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-9000-disk-0
 update VM 9000: -scsi0 local-lvm:vm-9000-disk-0 -scsihw virtio-scsi-pci
 
 
