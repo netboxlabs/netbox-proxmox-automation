@@ -509,7 +509,7 @@ What you *will* need to do again (and again and again and again) is to modify `v
 
 ## Configuring 'default' values in `vms.yml`
 
-`vms.yml` starts with a series of 'default' values.  These default values reflect NetBox object types such as Sites or Tenants (etc), but they also reflect DNS-related items, and other items that set defaults for Proxmox virtual machine customization.  *Most* 'default' values are required to be set in `vms.yml`.  Here are the current required 'default' values, their purposes, and whether or not they are required to be set in `vms.yml`.
+`vms.yml` starts with a series of 'default' values.  These default values reflect NetBox object types such as Sites or Tenants (etc), but they also reflect DNS-related items, and other items that set defaults for Proxmox virtual machine customization.  *Most* 'default' values are required to be set in `vms.yml`.  Here are the current required 'default' values, their purposes, and whether or not they are required to be set in `vms.yml`.  Note that *you* will define the desired settings of the 'default' variables.
 
 Variable | Type | Purpose | Required
 --- | --- | --- | ---
