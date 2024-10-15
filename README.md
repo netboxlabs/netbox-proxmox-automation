@@ -512,6 +512,25 @@ What you *will* need to do again (and again and again and again) is to modify `v
 Variable | Type | Purpose | Required
 --- | --- | --- | ---
 foo | string | something | no
+default_storage | string | Define name of the default Proxmox storage volume to use for Proxmox VM provisioning | yes
+default_vm_cluster | string | Define name of the default Proxmox cluster | yes
+default_timezone | string | Define name of default timezone (used for things like Sites in NetBox) | yes
+default_site_group | string | Define name of default Site Group in NetBox | yes
+default_site | string | Define name of default Site in NetBox | yes
+default_region | string | Define name of default Region in NetBox | yes
+default_tenant | string | Define name of default Tenant in NetBox | yes
+default_location | string | Define name of default Location in NetBox | yes
+default_facility | string | Define name of default Facility in NetBox | yes
+default_vm_cluster_group | string | Define name of default Virtual Machine Cluster Group in NetBox | yes
+default_vm_cluster_type | string | Define name of default Proxmox Virtual Machine Cluster Type in NetBox | yes
+default_vm_device_role | string | Define name of default Virtual Machine Role in NetBox | yes
+default_network_prefix | string | Define name of default (network) Prefix in NetBox | yes
+default_dns_domainname | string | Define default DNS domain name (for Proxmox virtual machines) in NetBox | no, if update_dns is set to false
+update_dns | boolean | Define whether or not to provide DNS updates from NetBox | yes
+dns_integrations | list | Define list of underlying DNS integrations (e.g. bind9, etc) | no, if update_dns is set to false
+remote_bind9_zone_db_directory | string | Define location of bind9 zone db directory on remote DNS server | no, if update_dns is set to false
+default_vm_start_state | boolean | Define Proxmox virtual machine start state on virtual machine creation | yes
+default_service_check_port | integer | Define port number for service to check after Proxmox virtual machine has been started | yes
 
 
 # `netbox-proxmox-ansible` Use Cases
