@@ -32,8 +32,6 @@
       api_user: "{{ secrets_cfg.proxmox.api_user | default(omit) }}"
       api_token_id: "{{ secrets_cfg.proxmox.api_token_id | default(omit) }}"
       api_token_secret: "{{ secrets_cfg.proxmox.api_token_secret | default(omit) }}"
-      #node: "{{ secrets_cfg.proxmox.node }}"
-      #network: true
       config: current
     register: proxmox_discovered_vms
 
@@ -101,19 +99,16 @@
       data:
         name: "{{ item.name }}"
         status: "{{ pm_to_nb_status_mapping[item.status] }}"
-        #tenant: "{{ vm_config[item].tenant if vm_config[item].tenant is defined else proxmox_vm_cfg.default_tenant }}"
-        #virtual_machine_role: "{{ proxmox_vm_cfg.default_vm_device_role }}"
-        virtual_machine_role: "Proxmox VM"
-        #site: "{{ vm_config[item].site if vm_config[item].site is defined else proxmox_vm_cfg.default_site }}"
-        #cluster: "{{ vm_config[item].vm_cluster if vm_config[item].vm_cluster is defined else proxmox_vm_cfg.default_vm_cluster }}"
-        cluster: "proxmox-ve"
+        tenant: "{{ vm_config[item.name].tenant if vm_config[item.name].tenant is defined else proxmox_vm_cfg.default_tenant }}"
+        virtual_machine_role: "{{ proxmox_vm_cfg.default_vm_device_role }}"
+        site: "{{ vm_config[item.name].site if vm_config[item.name].site is defined else proxmox_vm_cfg.default_site }}"
+        cluster: "{{ vm_config[item.name].vm_cluster if vm_config[item.name].vm_cluster is defined else proxmox_vm_cfg.default_vm_cluster }}"
         vcpus: "{{ item.vcpus | int }}"
         memory: "{{ (item.memory / (1024*1024)) | float | int }}"
         disk: "{{ (item.disk / (1024*1024*1024)) | int }}"
-        #primary_ip4: "item.config.ipconfig0.split(',')[0] | regex_replace('^ip=', '')"
-        custom_fields:
-          vmid: "{{ item.vmid | int }}"
-          proxmox_node: "{{ item.node }}"
+#        custom_fields:
+#          proxmox_vmid: "{{ item.vmid | int }}"
+#          proxmox_node: "{{ item.node }}"
       state: present
     loop: "{{ proxmox_discovered_running_vms_configuration }}"
 #      - "{{ proxmox_discovered_stopped_vms_configuration }}"
@@ -160,19 +155,16 @@
       data:
         name: "{{ item.name }}"
         status: "{{ pm_to_nb_status_mapping[item.status] }}"
-        #tenant: "{{ vm_config[item].tenant if vm_config[item].tenant is defined else proxmox_vm_cfg.default_tenant }}"
-        #virtual_machine_role: "{{ proxmox_vm_cfg.default_vm_device_role }}"
-        virtual_machine_role: "Proxmox VM"
-        #site: "{{ vm_config[item].site if vm_config[item].site is defined else proxmox_vm_cfg.default_site }}"
-        #cluster: "{{ vm_config[item].vm_cluster if vm_config[item].vm_cluster is defined else proxmox_vm_cfg.default_vm_cluster }}"
-        cluster: "proxmox-ve"
+        tenant: "{{ vm_config[item.name].tenant if vm_config[item.name].tenant is defined else proxmox_vm_cfg.default_tenant }}"
+        virtual_machine_role: "{{ proxmox_vm_cfg.default_vm_device_role }}"
+        site: "{{ vm_config[item.name].site if vm_config[item.name].site is defined else proxmox_vm_cfg.default_site }}"
+        cluster: "{{ vm_config[item.name].vm_cluster if vm_config[item.name].vm_cluster is defined else proxmox_vm_cfg.default_vm_cluster }}"
         vcpus: "{{ item.vcpus | int }}"
         memory: "{{ (item.memory / (1024*1024)) | float | int }}"
         disk: "{{ (item.disk / (1024*1024*1024)) | int }}"
-        #primary_ip4: "item.config.ipconfig0.split(',')[0] | regex_replace('^ip=', '')"
-        custom_fields:
-          vmid: "{{ item.vmid | int }}"
-          proxmox_node: "{{ item.node }}"
+#        custom_fields:
+#          proxmox_vmid: "{{ item.vmid | int }}"
+#          proxmox_node: "{{ item.node }}"
       state: present
     loop: "{{ proxmox_discovered_stopped_vms_configuration }}"
 
@@ -200,5 +192,4 @@
         name: "{{ item.name }}"
       state: absent
     loop: "{{ vms.json.results }}"
-    when: item.custom_fields.vmid | int not in proxmox_discovered_running_vms and item.custom_fields.vmid | int not in proxmox_discovered_stopped_vms
-
+    when: item.custom_fields.proxmox_vmid | int not in proxmox_discovered_running_vms and item.custom_fields.proxmox_vmid | int not in proxmox_discovered_stopped_vms
