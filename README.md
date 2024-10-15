@@ -95,7 +95,7 @@ Further, `netbox-proxmox-ansible` does *not* deploy a future state for any Proxm
   2. You have created an encrypted configuration file which holds your API tokens and related information: `secrets.yml`.
   3. You are running a current version of Ansible (2.17.4 was used for developing `netbox-proxmox-ansible`), preferably with the ability to have elevated permissions (i.e. root) should you want to automate DNS changes -- and can install any dependencies required by `netbox-proxmox-ansible`.
 
-While the subsequent initial configuration notes might seem like a heavy lift, your initial configuration of `netbox-proxmox-ansible` should take less than an hour.  Plus, you will likely need to run these configuration steps only once.
+While the subsequent initial configuration notes might seem like a heavy lift, your initial configuration of `netbox-proxmox-ansible` should take less than an hour.  Plus, you will likely need to run the following initial configuration steps only once.
 
 ## Initial Configuration: Python
 
