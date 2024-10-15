@@ -511,7 +511,6 @@ What you *will* need to do again (and again and again and again) is to modify `v
 
 Variable | Type | Purpose | Required
 --- | --- | --- | ---
-foo | string | something | no
 default_storage | string | Define name of the default Proxmox storage volume to use for Proxmox VM provisioning | yes
 default_vm_cluster | string | Define name of the default Proxmox cluster | yes
 default_timezone | string | Define name of default timezone (used for things like Sites in NetBox) | yes
