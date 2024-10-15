@@ -9,6 +9,7 @@
       name: "{{ item }}"
       agent: 'enabled=1'
       storage: "{{ vm_config_create[item].storage if vm_config_create[item].storage is defined else proxmox_vm_cfg.default_storage }}"
+      onboot: "{{ vm_config_create[item].auto_start }}"
       state: present
       timeout: 120
     with_items: "{{ vm_config_create }}"
