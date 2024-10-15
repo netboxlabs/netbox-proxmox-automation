@@ -599,7 +599,7 @@ disks | list | Size of each disk (GB) to be attached to Proxmox virtual machine 
 primary_network_interface | string | Name of primary network interface to configure in Proxmox virtual machine (typically eth0) | yes
 network_interfaces | list | List of dictionaries, where each dictionary contains the 'name' of each network interface and either a static IP address ('ip' setting) or dynamic IP address from a given prefix ('prefix' setting) | yes
 sshkey | string | Name of SSH key that will be used to for logins to Proxmox virtual machine | yes
-gw | string | Set last quad of gateway that is configured into 'ipconfig0' option of Proxmox virtual machine (default: 1) | no
+gw | integer | Set last quad of gateway that is configured into 'ipconfig0' option of Proxmox virtual machine (default: 1) | no
 tenant | string | Set name of tenant that is mapped to Proxmox virtual machine (otherwise uses default tenant for Proxmox virtual machine) | no
 exists | boolean | Define whether or not Proxmox virtual machine should exist (in NetBox and Proxmox) | yes
 start | boolean | Define whether or not Proxmox virtual machine should be started upon creation | yes
