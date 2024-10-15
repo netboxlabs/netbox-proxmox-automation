@@ -507,6 +507,8 @@ What you *will* need to do again (and again and again and again) is to modify `v
 
 `netbox-proxmox-ansible` ships with a file called `vms.yml-sample`.  Run the following command to generate a (starting) `vms.yml` -- if `vms.yml` doesn't already exist: `cp -pi vms.yml-sample vms.yml`.
 
+## Configuring 'default' values in `vms.yml`
+
 `vms.yml` starts with a series of 'default' values.  These default values reflect NetBox object types such as Sites or Tenants (etc), but they also reflect DNS-related items, and other items that set defaults for Proxmox virtual machine customization.  *Most* 'default' values are required to be set in `vms.yml`.  Here are the current required 'default' values, their purposes, and whether or not they are required to be set in `vms.yml`.
 
 Variable | Type | Purpose | Required
@@ -530,6 +532,60 @@ dns_integrations | list | Define list of underlying DNS integrations (e.g. bind9
 remote_bind9_zone_db_directory | string | Define location of bind9 zone db directory on remote DNS server | no, if update_dns is set to false
 default_vm_start_state | boolean | Define Proxmox virtual machine start state on virtual machine creation | yes
 default_service_check_port | integer | Define port number for service to check after Proxmox virtual machine has been started | yes
+
+## Configuring 'vms' section in `vms.yml`.
+
+As noted earlier, `vms.yml` implements a 'vms' section -- which is used to define the characteristics of each Proxmox virtual machine.  The 'vms' section in `vms.yml` is defined right after the 'default' variables.  Each Proxmox virtual machine that is defined in the 'vms' section looks something like this:
+
+```
+  - name: vm1
+    template: jammy-server-cloudimg-amd64-template
+    vcpus: 2
+    memory: 2048
+    disk0: scsi0
+    disks:
+      - 20
+      - 10
+      - 5
+    primary_network_interface: eth0
+    network_interfaces:
+    - name: eth0
+      prefix: 192.168.80.0/24
+    - name: eth1
+      ip: 192.168.1.2/24
+    sshkey: ~/.ssh/identity-proxmox-vm.pub
+    gw: 80
+    tenant: NOTTHEDEFAULTTENANT
+    exists: false
+    start: true
+```
+
+The above configuration, when applied through running `netbox-proxmox-ansible` automation, will induce the following in NetBox:
+
+- A virtual machine called 'vm1' will be created in NetBox, with the following attributes:
+  - name: vm1
+  - status: Staged
+  - vcpus: 2
+  - memory: 2048
+  - disks:
+    - scsi0: 20 (GB)
+    - scsi1: 10 (GB)
+    - scsi2: 5 (GB)
+  - network interfaces:
+    - eth0: get next available IP from 192.168.80.0/24 and register interface with IPAM
+    - eth1: set interface IP to 192.168.1.2/24 and register interface with IPAM
+  - tenant: NOTTHEDEFAULTTENANT overrides the tenant name that was set in the 'defaults' section of `vms.yml` -- such that virtual machine would be tied to a tenant in NetBox called NOTTHEDEFAULTTENANT
+
+- A virtual machine called 'vm1' will be created in Proxmox, using the *desired* state that was defined in NetBox, with the following attributes:
+  - name: vm1
+  - vcpus: 2
+  - memory: 2048 (MB)
+  - disk0 (scsi0): create and resize OS disk in Proxmox -- to specified size (from NetBox)
+  - disk1 - disk2 (scsi1, scsi2): add and attach additional disks to Proxmox virtual machine, as they were defined in NetBox
+  - interface0: Take the IP address for 'eth0' from NetBox and combine it with the gateway 'last quad' from `vms.yml` to define IP address and gateway settings for interface in Proxmox
+  - if 'start' is set to true in `vms.yml`, start Proxmox virtual machine after it has been created
+
+Had 'exists' been set to *false* in `vms.yml`, NetBox would have set the Proxmox virtual machine state to decommissioning, and ultimately the virtual machine would have been stopped in / removed from Proxmox.  Then NetBox, upon virtual machine removal from Proxmox, would have deleted the *desired* Proxmox virtual machine object.
 
 
 # `netbox-proxmox-ansible` Use Cases
