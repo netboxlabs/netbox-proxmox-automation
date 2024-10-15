@@ -531,6 +531,7 @@ update_dns | boolean | Define whether or not to provide DNS updates from NetBox 
 dns_integrations | list | Define list of underlying DNS integrations (e.g. bind9, etc) | no, if update_dns is set to false
 remote_bind9_zone_db_directory | string | Define location of bind9 zone db directory on remote DNS server | no, if update_dns is set to false
 default_vm_start_state | boolean | Define Proxmox virtual machine start state on virtual machine creation | yes
+default_vm_auto_start_state | boolean | Define Proxmox virtual machine start state on Proxmox node boot/reboot | yes
 default_service_check_port | integer | Define port number for service to check after Proxmox virtual machine has been started | yes
 
 ## Configuring 'vms' section in `vms.yml`.
@@ -603,6 +604,8 @@ gw | integer | Set last quad of gateway that is configured into 'ipconfig0' opti
 tenant | string | Set name of tenant that is mapped to Proxmox virtual machine (otherwise uses default tenant for Proxmox virtual machine) | no
 exists | boolean | Define whether or not Proxmox virtual machine should exist (in NetBox and Proxmox) | yes
 start | boolean | Define whether or not Proxmox virtual machine should be started upon creation | yes
+auto_start | boolean | Define whether or not Proxmox virtual machine should start upon boot/reboot of Proxmox node | no
+
 
 # `netbox-proxmox-ansible` Use Cases
 
