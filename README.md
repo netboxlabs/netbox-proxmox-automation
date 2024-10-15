@@ -419,6 +419,59 @@ In the NetBox UI:
 
 Once you've created a NetBox API token, store it some place safe in the meantime; most NetBox installations will obscure the API token once it's been created.
 
+## Initial Configuration: NetBox Custom Fields
+
+You will want to use NetBox to keep track of Proxmox virtual machine ids (called 'vmid' in Proxmox), the node where Proxmox virtual machines are running, and the Proxmox virtual machine template that was used to create the Proxmox virtual machine.  This is highly important so that when you use `netbox-proxmox-ansible` for automation -- that you are able to induce configuration in changes to Proxmox around items like vmids and such.  To do so, you will need to do some customizations to NetBox before you start importing this data.
+
+### NetBox Customization: Proxmox virtual machine id (vmid) configuration
+
+In the NetBox UI, navigate to Customization > Custom Fields
+  - click the '+' button
+    - Set 'Content Types' to 'Virtualization > Virtual Machine'
+    - Set 'Name' to 'proxmox_vmid'
+    - Set 'Label' to 'Proxmox Virtual Machine ID (vmid)'
+    - Set 'Group Name' to 'Proxmox'
+    - Set 'Type' to Text
+    - *Make sure that Required is NOT checked*
+    - Click 'Save'
+
+### NetBox Customization: Proxmox virtual machine node configuration
+
+In the NetBox UI, navigate to Customization > Custom Fields
+  - click the '+' button
+    - Set 'Content Types' to 'Virtualization > Virtual Machine'
+    - Set 'Name' to 'proxmox_node'
+    - Set 'Label' to 'Proxmox node'
+    - Set 'Group Name' to 'Proxmox'
+    - Set 'Type' to Text
+    - *Make sure that Required is NOT checked*
+    - Click 'Save'
+
+### NetBox Customization: Proxmox virtual machine template configuration
+
+In the NetBox UI, navigate to Customization > Custom Field Choices
+  - click the '+' button
+    - Set 'Name' to 'Proxmox VM Templates'
+    - Set 'Extra choices' to something like:
+    ```
+    jammy-server-cloudimg-amd64-template:jammy-server-cloudimg-amd64-template
+    focal-server-cloudimg-amd64-template:focal-server-cloudimg-amd64-template
+    noble-server-cloudimg-amd64-template:noble-server-cloudimg-amd64-template
+    ```
+    
+    These will reflect your template choices in Proxmox.
+
+In the NetBox UI, navigate to Customization > Custom Fields
+  - click the '+' button
+    - Set 'Content Types' to 'Virtualization > Virtual Machine'
+    - Set 'Name' to 'proxmox_vm_template'
+    - Set 'Label' to 'Proxmox VM template'
+    - Set 'Group Name' to 'Proxmox'
+    - Set 'Type' to Selection
+    - *Make sure that Required is NOT checked*
+    - Set 'Choice set' to 'Proxmox VM Templates'
+    - Click 'Save'
+
 ## Initial Configuration: Proxmox API user + key
 
 While the Proxmox implementation that's part of the Ansible community.general collection allows you to use passwords when doing Proxmox automation, `netbox-proxmox-ansible` does not allow this behavior.
