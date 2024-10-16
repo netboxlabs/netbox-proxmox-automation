@@ -2,7 +2,7 @@
 
 [NetBox](https://github.com/netbox-community/netbox) is a widely used tool for documenting/modeling networks (network devices, virtual machines, etc), and also provides a great IPAM solution.  [Proxmox](https://www.proxmox.com/en/) is a freely available virtualization technology that allows you to deploy virtual machines at scale, and perhaps in a clustered configuration.  NetBox has approximately 15,000 users in its open source community.  Proxmox has approximately 900,000 users in its open source community.
 
-When you think of the challenges of a widely used network documentation solution and a widely used virtualization technology, this implementation represents the marriage between virtual machine documentation (NetBox) and the automation of virtual machine configurations (Proxmox).
+When you think of the challenges of a widely used network documentation solution and a widely used virtualization technology, this implementation is an integration between virtual machine documentation (NetBox) and the automation of virtual machine configurations (Proxmox).
 
 `netbox-proxmox-ansible` uses [Ansible](https://www.ansible.com/) to automate management of your Proxmox VMs: With NetBox as your [*Network Source of Truth (NSoT)*](https://netboxlabs.com/blog/what-is-a-network-source-of-truth/), as NetBox was designed.  In other words, this automation will collect the *desired* (documented) state of (Proxmox) virtual machines in Netbox -- and deploy identical virtual machine configurations to Proxmox.
 
@@ -31,6 +31,10 @@ Creating and deleting virtual machines in NetBox will both update virtual machin
 When you discover virtual machines in Proxmox, this will create/merge virtual machine changes in NetBox.
 
 ## Usage
+
+`netbox-proxmox-ansible` currently implements two key use cases:
+- Deploy a Proxmox virtual machine through the desired Proxmox virtual machine state in NetBox.  This is done through `proxmox-vm-manager.yml`.
+- "Discover" Proxmox virtual machine state from Proxmox node(s) and define Proxmox virtual state in NetBox.  Additionally, synchronize Proxmox virtual machine state with desired Proxmox virtual machine state in NetBox (mac addresses, active interfaces, etc).  This is done through `netbox-vm-discover-vms.yml`.
 
 Basic usage of `netbox-proxmox-ansible`, to provision Proxmox virtual machines to their desired state(s), is as follows:
 
