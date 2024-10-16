@@ -10,6 +10,12 @@
     proxmox_discovered_running_vms_network_interface_mapping: []
     proxmox_discovered_running_vms: []
     proxmox_discovered_stopped_vms: []
+    proxmox_discovered_vms_configurations_raw: []
+    proxmox_vm_disk_names: {}
+    proxmox_vm_collected_disks: []
+    proxmox_vm_collected_disks_gb: []
+    proxmox_vm_collected_disks_mb: []
+    proxmox_vm_collected_disks_all: []
 
     pm_to_nb_status_mapping:
       'stopped': 'Offline'
@@ -35,15 +41,15 @@
       config: current
     register: proxmox_discovered_vms
 
-  - name: "Proxmox: Collect all running VMs"
+  - name: "Proxmox: Collect all running VMs (excluding templates)"
     set_fact:
-      proxmox_discovered_running_vms: "{{ proxmox_discovered_running_vms + [item.vmid] }}"
+      proxmox_discovered_running_vms: "{{ proxmox_discovered_running_vms | combine({item.name: item.vmid}) }}"
     loop: "{{ proxmox_discovered_vms.proxmox_vms }}"
     when: not item.template and item.status == "running"
 
-  - name: "Proxmox: Collect all stopped VMs"
+  - name: "Proxmox: Collect all stopped VMs (excluding templates)"
     set_fact:
-      proxmox_discovered_stopped_vms: "{{ proxmox_discovered_stopped_vms + [item.vmid] }}"
+      proxmox_discovered_stopped_vms: "{{ proxmox_discovered_stopped_vms | combine({item.name: item.vmid}) }}"
     loop: "{{ proxmox_discovered_vms.proxmox_vms }}"
     when: not item.template and item.status == "stopped"
 
@@ -53,10 +59,10 @@
       api_user: "{{ secrets_cfg.proxmox.api_user | default(omit) }}"
       api_token_id: "{{ secrets_cfg.proxmox.api_token_id | default(omit) }}"
       api_token_secret: "{{ secrets_cfg.proxmox.api_token_secret | default(omit) }}"
-      vmid: "{{ item }}"
+      vmid: "{{ proxmox_discovered_running_vms[item] }}"
       network: true
       config: current
-    loop: "{{ proxmox_discovered_running_vms }}"
+    with_items: "{{ proxmox_discovered_running_vms }}"
     register: proxmox_discovered_vms_cfg
 
   - name: "Proxmox: Collect Proxmox running VM configurations"
@@ -70,9 +76,9 @@
       api_user: "{{ secrets_cfg.proxmox.api_user | default(omit) }}"
       api_token_id: "{{ secrets_cfg.proxmox.api_token_id | default(omit) }}"
       api_token_secret: "{{ secrets_cfg.proxmox.api_token_secret | default(omit) }}"
-      vmid: "{{ item }}"
+      vmid: "{{ proxmox_discovered_stopped_vms[item] }}"
       config: current
-    loop: "{{ proxmox_discovered_stopped_vms }}"
+    with_items: "{{ proxmox_discovered_stopped_vms }}"
     register: proxmox_discovered_stopped_vms_cfg
 
   - name: "Proxmox: Collect Proxmox stopped VM configurations"
@@ -92,6 +98,39 @@
     loop: "{{ proxmox_discovered_running_vms_networking | subelements('ip-addresses') }}"
     when: item.1['ip-address-type'] == "ipv4" # Only collect ipv4 addresses for this example
 
+# Collect Proxmox VM disks
+  - name: "Proxmox: Discover VM (raw) disk configurations"
+    set_fact:
+      proxmox_discovered_vms_configurations_raw: "{{ proxmox_discovered_vms_configurations_raw + [ item.1.config | ansible.utils.keep_keys(target=['scsi', 'name'], matching_parameter= 'starts_with') ] }}"
+    loop: "{{ proxmox_discovered_vms_cfg.results | subelements('proxmox_vms') }}"
+
+  - name: Gather Proxmox disk names from collected output
+    set_fact:
+      proxmox_vm_disk_names: "{{ proxmox_vm_disk_names | combine({item.name: {'name': item.name, 'disks': item.keys() | map('regex_search', '^scsi[0-9]+') | select('string') | list}}) }}"
+    loop: "{{ proxmox_discovered_vms_configurations_raw }}"
+
+  - name: Categorize collected Proxmox disk names
+    set_fact:
+      proxmox_vm_collected_disks: "{{ proxmox_vm_collected_disks + [ {'name': item.0.name, 'disk_name': item.1, 'disk_config': (proxmox_discovered_vms_configurations_raw | selectattr('name', 'equalto', item.0.name) | first)[item.1]} ] }}"
+    loop: "{{ proxmox_vm_disk_names | subelements('disks') }}"
+    when: proxmox_discovered_vms_configurations_raw | selectattr('name', 'equalto', item.0.name)
+
+  - name: Categorize collected Proxmox disk names by disk size in GB
+    set_fact:
+      proxmox_vm_collected_disks_gb: "{{ proxmox_vm_collected_disks_gb + [ {'name': item.name, 'disk_name': item.disk_name, 'disk_size': item.disk_config | regex_replace('^.*,size=([0-9]+)G$', '\\1') } ] }}"
+    loop: "{{ proxmox_vm_collected_disks }}"
+    when: item.disk_config | regex_search(',size=\d+G$')
+
+  - name: Categorize collected Proxmox disk names by disk size in MB
+    set_fact:
+      proxmox_vm_collected_disks_mb: "{{ proxmox_vm_collected_disks_mb + [ {'name': item.name, 'disk_name': item.disk_name, 'disk_size': (item.disk_config | regex_replace('^.*,size=([0-9]+)M$', '\\1') | int / 1024) | int } ] }}"
+    loop: "{{ proxmox_vm_collected_disks }}"
+    when: item.disk_config | regex_search(',size=\d+M$')
+
+  - name: Merge collected Proxmox VM disk information
+    set_fact:
+      proxmox_vm_collected_disks_all: "{{ proxmox_vm_collected_disks_gb + proxmox_vm_collected_disks_mb }}"
+
   - name: "NetBox: Add VM entries for running Proxmox VM(s)"
     netbox.netbox.netbox_virtual_machine:
       netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
@@ -105,13 +144,11 @@
         cluster: "{{ vm_config[item.name].vm_cluster if vm_config[item.name].vm_cluster is defined else proxmox_vm_cfg.default_vm_cluster }}"
         vcpus: "{{ item.vcpus | int }}"
         memory: "{{ (item.memory / (1024*1024)) | float | int }}"
-        disk: "{{ (item.disk / (1024*1024*1024)) | int }}"
         custom_fields:
           proxmox_vmid: "{{ item.vmid | int }}"
           proxmox_node: "{{ item.node }}"
       state: present
     loop: "{{ proxmox_discovered_running_vms_configuration }}"
-#      - "{{ proxmox_discovered_stopped_vms_configuration }}"
 
   - name: "Proxmox: VM create interface(s)"
     netbox.netbox.netbox_vm_interface:
@@ -161,12 +198,22 @@
         cluster: "{{ vm_config[item.name].vm_cluster if vm_config[item.name].vm_cluster is defined else proxmox_vm_cfg.default_vm_cluster }}"
         vcpus: "{{ item.vcpus | int }}"
         memory: "{{ (item.memory / (1024*1024)) | float | int }}"
-        disk: "{{ (item.disk / (1024*1024*1024)) | int }}"
         custom_fields:
           proxmox_vmid: "{{ item.vmid | int }}"
           proxmox_node: "{{ item.node }}"
       state: present
     loop: "{{ proxmox_discovered_stopped_vms_configuration }}"
+
+  - name: "NetBox: Add collected disks for Proxmox VMs"
+    netbox.netbox.netbox_virtual_disk:
+      netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
+      netbox_token: "{{ secrets_cfg.netbox.api_token }}"
+      data:
+        virtual_machine: "{{ item.name }}"
+        name: "{{ item.disk_name }}"
+        size: "{{ item.disk_size }}"
+      state: present
+    loop: "{{ proxmox_vm_collected_disks_all }}"
 
   - name: Find VMs in Netbox
     local_action:
@@ -179,11 +226,6 @@
       validate_certs: no
     register: vms
 
-  - name: Show VMs
-    debug:
-      msg: "NB VM {{ item }} ||| {{ item.name }}"
-    loop: "{{ vms.json.results }}"
-
   - name: "NetBox: Remove VM(s) that no longer exist in Proxmox"
     netbox.netbox.netbox_virtual_machine:
       netbox_url: "{{ secrets_cfg.netbox.api_proto }}://{{ secrets_cfg.netbox.api_host }}:{{ secrets_cfg.netbox.api_port}}"
@@ -192,4 +234,4 @@
         name: "{{ item.name }}"
       state: absent
     loop: "{{ vms.json.results }}"
-    when: item.custom_fields.proxmox_vmid | int not in proxmox_discovered_running_vms and item.custom_fields.proxmox_vmid | int not in proxmox_discovered_stopped_vms
+    when: (proxmox_discovered_running_vms[item.name] is not defined) and (proxmox_discovered_stopped_vms[item.name] is not defined)
