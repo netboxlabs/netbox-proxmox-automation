@@ -677,7 +677,7 @@ here
 here
 
 # Authors
-- Nate Patwardhan <npatwardhan@netboxlabs.com>
+- Nate Patwardhan &lt;npatwardhan@netboxlabs.com&gt;
 
 # Known Issues / Roadmap
 
