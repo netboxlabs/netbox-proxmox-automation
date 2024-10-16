@@ -670,6 +670,12 @@ auto_start | boolean | Define whether or not Proxmox virtual machine should star
 
 here
 
+# `netbox-proxmox-ansible` DNS Integrations
+
+## BIND9
+
+here
+
 # Authors
 - Nate Patwardhan <npatwardhan@netboxlabs.com>
 
