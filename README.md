@@ -54,6 +54,8 @@ shell$ source venv/bin/activate
 
 The above will prompt you for a SSH password, the password that you would use for `sudo` commands, and finally your Ansible vault passphrase.
 
+More detailed examples are covered in the [Use Cases](#netbox-proxmox-ansible-use-cases) section of this document.
+
 ## What this implementation *is*
 
 `netbox-proxmox-ansible` is a client-based implementation where you define virtual machine configurations (in YAML) then create your *desired* virtual machine states in NetBox.  Ansible then synchronizes your *desired* virtual machine states from NetBox to Proxmox by way of automation with Ansible.  The same can also be done in reverse: Where Proxmox holds your initial virtual machine states -- that you want to "discover" in Proxmox then document/merge in/into NetBox.
