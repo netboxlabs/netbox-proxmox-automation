@@ -1,0 +1,76 @@
+---
+# Proxmox defaults
+default_storage: local-lvm # collected this by running 'pvesh get /storage', as root, on your Proxmox VM node(s)
+default_vm_cluster: "proxmox-ve" # this is probably the name of your Proxmox node
+
+# NetBox defaults
+default_timezone: "America/New York" # season to taste
+
+default_site_group: "my-default-site-group"
+default_site: My-City
+default_region: My State (US)
+default_tenant: "my-default-tenant"
+default_location: where-my-proxmox-nodes-and-cluster-live
+default_facility: "up-to-you"
+
+default_vm_cluster_group: "my-default-vm-cluster-group"
+default_vm_cluster_type: Proxmox
+
+default_vm_device_role: "Proxmox VM" # Or call this whatever you want; bear in mind that you should probably only set this once.  Else the values of your Proxmox VMs will change in NetBox
+
+# IPAM prefix default
+default_network_prefix: "10.0.0.0/24" # Set this to whatever you want
+
+# DNS defaults
+default_dns_domainname: "home-lab.tld" # Set this to whatever you want
+
+update_dns: true # Set this to true if your BIND9 server(s) match the criteria set in README.md
+dns_integrations:
+  - bind9
+remote_bind9_zone_db_directory: /etc/bind/zones/vms # Should match whatever is in your BIND9 server
+
+# Misc defaults
+default_vm_start_state: false
+default_vm_auto_start_state: false
+default_service_check_port: 22
+
+# You will need to fix all of these VM settings
+
+vms:
+  - name: vm1
+    template: jammy-server-cloudimg-amd64-template
+    vcpus: 2
+    memory: 2048
+    disk0: scsi0
+    disks:
+      - 20
+      - 10
+      - 5
+    primary_network_interface: eth0
+    network_interfaces:
+    - name: eth0
+      prefix: 192.168.80.0/24
+    - name: eth1
+      prefix: 192.168.1.0/24
+    sshkey: ~/.ssh/identity-proxmox-vm.pub
+    gw: 80 # the default last quad of our gateway is 1, which is probably the most common
+    exists: false
+    start: true
+    auto_start: true
+  - name: vm2
+    template: focal-server-cloudimg-amd64-template
+    vcpus: 1
+    memory: 512
+    storage: pve-hdd # use alternate storage to local-lvm, if you want to
+    disk0: scsi0
+    disks:
+      - 10
+      - 20
+    primary_network_interface: eth0
+    network_interfaces:
+    - name: eth0
+      #prefix: 192.168.80.0/24
+      ip: 192.168.80.20/24
+    sshkey: ~/.ssh/identity-proxmox-vm.pub
+    exists: false
+    start: true
