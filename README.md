@@ -693,8 +693,6 @@ vms:
     - name: eth0
       prefix: 192.168.80.0/24
     sshkey: ~/.ssh/identity-proxmox-vm.pub
-    #gw: 80
-    #tenant: YOUR
     exists: true
     start: true
     auto_start: true
@@ -702,9 +700,14 @@ vms:
 
 Once Proxmox has successfully provisioned the virtual machine, the virtual machine will be changed to an 'Active' status in NetBox.
 
-## Case 2: Create a single Proxmox virtual machien via `vms.yml`, but using a defined IP address
+## Case 2: Create a single Proxmox virtual machine via `vms.yml`, but using a defined IP address
 
-blah
+As documented earlier, `vms.yml` needs to contain a 'vms' section.  This 'vms' section, while a list, can contain but a single Proxmox virtual machine.  Let's say that you've already defined the 'default' variables in `vms.yml`, and now just want to create a Proxmox virtual machine, but with NetBox as your NSoT.  In addition, you want NetBox's IPAM to map the IP address to the 'eth0' network interface on this newly-provisioned Proxmox virtual machine.
+
+The following configuration in `vms.yml` will configure/model a Proxmox virtual machine in Netbox with the initial status of 'Staged', and after the virtual machine configuration is complete in NetBox, `proxmox-vm-manager.yml` will handle the provisioning of the virtual machine in Proxmox.  Note that in `vms.yml`:
+- 'exists' is set to true, which will ensure that the virtual machine is provisioned in Proxmox
+- 'start' is set to true, which will ensure that the virtual machine will be started in Proxmox after it has been provisioned
+- 'auto_start' is set to true, which will ensure that the virtual machine is automatically started upon a restart of the Proxmox node and/or cluster
 
 ```
 vms:
@@ -722,12 +725,12 @@ vms:
     - name: eth0
       ip: 192.168.80.20/24
     sshkey: ~/.ssh/identity-proxmox-vm.pub
-    #gw: 80
-    #tenant: YOUR
-    exists: false
+    exists: true
     start: true
     auto_start: true
 ```
+
+Once Proxmox has successfully provisioned the virtual machine, the virtual machine will be changed to an 'Active' status in NetBox.
 
 ## Case 3: Create multiple Proxmox virtual machines via `vms.yml`.
 
