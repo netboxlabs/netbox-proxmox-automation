@@ -700,6 +700,16 @@ vms:
     auto_start: true
 ```
 
+Usage:
+
+```
+shell$ cd /path/to/netbox-proxmox-ansible
+
+shell$ source venv/bin/activate
+
+(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass
+```
+
 Once Proxmox has successfully provisioned the virtual machine, the virtual machine will be changed to an 'Active' status in NetBox.
 
 ## Case 2: Create a single Proxmox virtual machine via `vms.yml`, but using a defined IP address
@@ -734,6 +744,16 @@ vms:
     auto_start: true
 ```
 
+Usage:
+
+```
+shell$ cd /path/to/netbox-proxmox-ansible
+
+shell$ source venv/bin/activate
+
+(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass
+```
+
 Once Proxmox has successfully provisioned the virtual machine, the virtual machine will be changed to an 'Active' status in NetBox.
 
 ## Case 3: Create multiple Proxmox virtual machines via `vms.yml`.
@@ -746,9 +766,41 @@ blah
 
 ## Case 5: Discover virtual machines in Proxmox and synchronize them into Netbox (including `vms.yml`).
 
-blah
+While your future state might be to document/model your Proxmox virtual machines in NetBox, you likely already have running virtual machines in Proxmox -- that you want to document in NetBox, but without the overhead of capturing this information manually.  To this end, `netbox-proxmox-ansible` implements `netbox-proxmox-discover-vms.yml`.
 
-## Case 6: Create a Proxmox virtual machine(s) in NetBox, deploy them to Proxmox then sychronize Proxmox virtual machine changes back into NetBox (including `vms.yml`).
+`netbox-proxmox-discover-vms.yml` will collect *all* virtual machines from Proxmox then take this metadata and create corresponding Proxmox virtual machine entries in NetBox.  
+
+*Note this requires that qemu-guest-agent be installed on each Proxmox virtual machine; see cloud-init and templating documentation above.*
+
+For running Proxmox virtual machines, `netbox-proxmox-discover-vms.yml` will collect the following information:
+
+- name of virtual machine
+- virtual machine resources
+  - vcpu count
+  - memory count
+- network configuration
+  - name of network interface (*only* configured network interfaces will be collected)
+  - IP address for each network interface
+  - MAC address of each network interface
+- disk configuration: disk names and sizes
+
+For stopped Proxmox virtual machines, `netbox-proxmox-discover-vms.yml` will collect the following information:
+
+- name of virtual machine
+
+Usage:
+
+```
+shell$ cd /path/to/netbox-proxmox-ansible
+
+shell$ source venv/bin/activate
+
+(venv) shell$ ansible-playbook -i inventory netbox-proxmox-discover-vms.yml  --ask-vault-pass
+```
+
+`netbox-proxmox-discover-vms.yml` also reads `vms.yml` for default (or Proxmox VM-specific) settings such as for Sites and Tenants; each Proxmox virtual machine object that's added into NetBox will be related to the Tenant and Site that were specified in `vms.yml`.
+
+## Case 6: Create Proxmox virtual machine(s) in NetBox, deploy them to Proxmox then sychronize Proxmox virtual machine changes back into NetBox (including `vms.yml`).
 
 blah
 
