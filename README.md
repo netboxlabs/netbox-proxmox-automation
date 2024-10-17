@@ -44,7 +44,7 @@ shell$ source venv/bin/activate
 (venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass
 ```
 
-Should you want to update the DNS as well as provision Proxmox VMs to their desired state(s), use the following command:
+Should you want to update the DNS as well as provision Proxmox VMs to their desired state(s), make sure that 'update_dns' is set in `vms.yml`, then use the following command:
 
 ```
 shell$ source venv/bin/activate
