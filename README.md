@@ -877,6 +877,8 @@ shell$ source venv/bin/activate
 (venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass --ask-pass --ask-become-pass
 ```
 
+The `--ask-pass` option will ask for the SSH password of the user who will login to your BIND9 server.  The `--ask-become-pass` option will ask for the sudo password of the SSH user who has root privileges to modify records in the DNS.
+
 The above command and settings in `vms.yml` will:
   - Create Proxmox VM in NetBox
   - Take documented VM information from NetBox and create VM in Proxmox
@@ -920,9 +922,43 @@ shell$ source venv/bin/activate
 
 `netbox-proxmox-discover-vms.yml` also reads `vms.yml` for default (or Proxmox VM-specific) settings such as for Sites and Tenants; each Proxmox VM object that's added into NetBox will be related to the Tenant and Site that were specified in `vms.yml`.
 
-## Example 6: Create Proxmox VM(s) in NetBox, deploy them to Proxmox then sychronize Proxmox VM changes back into NetBox (including `vms.yml`).
+## Example 6: Create Proxmox VM(s) in NetBox, deploy them to Proxmox then synchronize Proxmox VM changes back into NetBox (including `vms.yml`).
 
-blah
+Assuming that you have seasoned `vms.yml` to taste for your 'vms', this is a two-step process.
+
+1. First, use `proxmox-vm-manager.yml` to create the Proxmox VMs.
+
+Usage (*without* DNS, make sure that 'update_dns' is set to false in `vms.yml`):
+
+```
+shell$ cd /path/to/netbox-proxmox-ansible
+
+shell$ source venv/bin/activate
+
+(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass
+```
+
+Usage (with DNS, make sure that 'update_dns' is set to true in `vms.yml` and that 'dns_integrations' includes 'bind9'):
+
+```
+shell$ cd /path/to/netbox-proxmox-ansible
+
+shell$ source venv/bin/activate
+
+(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass --ask-pass --ask-become-pass
+```
+
+2. Second, use `netbox-proxmox-discover-vms.yml` to discover and Proxmox VMs which aren't already in NetBox.  This procedure will also make incremental changes to existing Proxmox VMs in NetBox -- such as adding MAC address to network interfaces.
+
+Usage:
+
+```
+shell$ cd /path/to/netbox-proxmox-ansible
+
+shell$ source venv/bin/activate
+
+(venv) shell$ ansible-playbook -i inventory netbox-proxmox-discover-vms.yml --ask-vault-pass
+```
 
 # `netbox-proxmox-ansible` DNS Integrations
 
