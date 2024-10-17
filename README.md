@@ -962,21 +962,45 @@ shell$ source venv/bin/activate
 
 # `netbox-proxmox-ansible` DNS Integrations
 
+`netbox-proxmox-ansible` provides a *convenience* function that allows you to update your DNS given any changes to Proxmox VMs.  This is driven by the netbox-dns plugin and how you define and update your DNS records in NetBox.  In this context, NetBox becomes your NSoT for DNS -- in addition to how you are leveraging NetBox to document/model your Proxmox VMs.  In other words, when your modify DNS records in your NSoT, the desired state is to update the underlying DNS to reflect these changes.
+
+This implementation won't work for everyone.  Only BIND9 is currently supported.  You might not have appropriate privileges on your DNS server to make DNS changes.  Maybe you aren't able to migrate your DNS zone(s) data into the netbox-dns plugin.  There are myriad reasons why this functionality might not work for you, so before proceeding with a DNS integration you'll need to take into account how DNS is used in your environment and if this solution is a fit.
+
+Ultimately, in an environment where you are able to make DNS changes, the ultimate goal is to integrate as many DNS implementations as possible into `netbox-proxmox-ansible`.
+
 ## BIND9
 
-here
+For this DNS integration to be successful with BIND9, the following must be true in your environment.
 
-# Development Team
+- You have a running BIND9 installation that you use for your DNS service
+- You are able to become 'root' (or at least can escalate to 'root' privileges) on the system(s) where BIND9 is running
+- You are able to propagate DNS changes to your BIND9 server *and* are able to reload zones in BIND9
+- You are able to create *all* zones in netbox-dns plugin and have the permissions (CRUD) for DNS entries via netbox-dns plugin
+- You are able to migrate all of your existing BIND9 DNS records for each zone into netbox-dns
+- You are able to update BIND9 zone (db) files
+- You are able to reload BIND9 zones
+- You are able to restart the BIND9 service, as necessary
+
+Typically, BIND9 is deployed with a single (or series of) configuration(s).  In some instances named.conf will hold the entire BIND9 configuration for settings and zones.  In others, named.conf will include sub-configurations that are used for settings and others for zones.  Should you run BIND9 on your Proxmox cluster node(s), you'll want to define your zones somewhere under the `/etc/bind` directory.  It's up to you to decide whether or not you want to delegate a subdomain for your Proxmox VM(s) entry/ies (e.g. vms.my-domain.tld) or whether your VMs will be part of another zone.
+
+Ultimately you will need total access to the forward and reverse zones on your BIND9 server.  The BIND9 integration will pull DNS entries from the netbox-dns plugin through the NetBox API, expand these DNS entries, through Jinja2 templating into BIND9-formatted zone files, then propagate these changed zone files to your BIND9 server based on the specified location of the BIND9 (db) zone files: Before reloading in BIND9 each changed zone.
+
+This template is stored as `/path/to/netbox-proxmox-ansible/templates/dns/bind9/zone-template.j2`.
+
+When a Proxmox VM is created (in Proxmox) and 'update_dns' (and 'bind9' setting) is configured in `vms.yml`, the template will be expanded and DNS changes will be deployed.
+
+# Developers
 - Nate Patwardhan &lt;npatwardhan@netboxlabs.com&gt;
 
 # Known Issues / Roadmap
 
 ## Known Issues
-- Has not been tested with NetBox 4.0 or newer (it *should* work)
-- `vm-cluster-manager.py` should be more intuitive and complete
 - *Only* supports SCSI disk types (this is possibly fine as Proxmox predomininantly provisions disks as SCSI)
+- Needs better reconciliation on the NetBox end when Proxmox->NetBox discovery is used
+- DNS implementation only supports BIND9 currently
 
 ## Roadmap -- Delivery TBD
-- Support other DNS implementations than bind9: Gandi, Squarespace, etc
-- NetBox > 4.0 (transparent) support
+- Support other DNS implementations than BIND9: Gandi, Squarespace, etc
 - Easier configuration process
+- Maybe evolve into to a NetBox plugin for Proxmox
+- Integrate with Ansible Automation Platform (AAP) via event rules/webhook
