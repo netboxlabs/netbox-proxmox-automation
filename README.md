@@ -666,9 +666,9 @@ start | boolean | Define whether or not Proxmox VM should be started upon creati
 auto_start | boolean | Define whether or not Proxmox VM should start upon boot/reboot of Proxmox node | no
 
 
-# `netbox-proxmox-ansible` Use Cases
+# `netbox-proxmox-ansible` Examples
 
-## Case 1: Create a single Proxmox VM via `vms.yml`.
+## Example 1: Create a single Proxmox VM via `vms.yml`.
 
 As documented earlier, `vms.yml` needs to contain a 'vms' section.  This 'vms' section, while a list, can contain but a single Proxmox VM.  Let's say that you've already defined the 'default' variables in `vms.yml`, and now just want to create a Proxmox VM, but with NetBox as your NSoT.  In addition, you want NetBox's IPAM to provide the next available IP address to this newly-provisioned Proxmox VM.
 
@@ -712,7 +712,7 @@ shell$ source venv/bin/activate
 
 Once Proxmox has successfully provisioned the VM, the VM will be changed to an 'Active' status in NetBox.
 
-## Case 2: Create a single Proxmox VM via `vms.yml`, but using a defined IP address
+## Example 2: Create a single Proxmox VM via `vms.yml`, but using a defined IP address
 
 As documented earlier, `vms.yml` needs to contain a 'vms' section.  This 'vms' section, while a list, can contain but a single Proxmox VM.  Let's say that you've already defined the 'default' variables in `vms.yml`, and now just want to create a Proxmox VM, but with NetBox as your NSoT.  In addition, you want NetBox's IPAM to map the IP address to the 'eth0' network interface on this newly-provisioned Proxmox VM.
 
@@ -756,7 +756,7 @@ shell$ source venv/bin/activate
 
 Once Proxmox has successfully provisioned the VM, the VM will be changed to an 'Active' status in NetBox.
 
-## Case 3: Create multiple Proxmox VMs via `vms.yml`.
+## Example 3: Create multiple Proxmox VMs via `vms.yml`.
 
 As documented earlier, `vms.yml` needs to contain a 'vms' section.  This example illustrates how to create multiple Proxmox VMs via VM configurations in `vms.yml`.  Let's say that you've already defined the 'default' variables in `vms.yml`, and now just want to create a Proxmox VM, but with NetBox as your NSoT.  In addition, you want to both use NetBox's IPAM to map the IP address to the 'eth0' network interface on these newly-provisioned Proxmox VMs, and also to statically assign an IP address to the 'eth0' network interface (which will then be added to NetBox's IPAM).
 
@@ -831,7 +831,7 @@ shell$ source venv/bin/activate
 (venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass
 ```
 
-## Case 4: Create Proxmox VM(s) and update the DNS via `vms.yml`.
+## Example 4: Create Proxmox VM(s) and update the DNS via `vms.yml`.
 
 Regardless of whether VM(s) is/are set to 'exist' in `vms.yml`, you can leverage `netbox-proxmox-ansible` to do DNS updates when your Proxmox VMs change.
 
@@ -884,7 +884,7 @@ The above command and settings in `vms.yml` will:
   - Update netbox-dns with settings for new VM
   - Propagate changes to BIND9 server(s) specified in `inventory` file.
 
-## Case 5: Discover VMs in Proxmox and synchronize them into Netbox (including `vms.yml`).
+## Example 5: Discover VMs in Proxmox and synchronize them into Netbox (including `vms.yml`).
 
 While your future state might be to document/model your Proxmox VMs in NetBox, you likely already have running VMs in Proxmox -- that you want to document in NetBox, but without the overhead of capturing this information manually.  To this end, `netbox-proxmox-ansible` implements `netbox-proxmox-discover-vms.yml`.
 
@@ -920,7 +920,7 @@ shell$ source venv/bin/activate
 
 `netbox-proxmox-discover-vms.yml` also reads `vms.yml` for default (or Proxmox VM-specific) settings such as for Sites and Tenants; each Proxmox VM object that's added into NetBox will be related to the Tenant and Site that were specified in `vms.yml`.
 
-## Case 6: Create Proxmox VM(s) in NetBox, deploy them to Proxmox then sychronize Proxmox VM changes back into NetBox (including `vms.yml`).
+## Example 6: Create Proxmox VM(s) in NetBox, deploy them to Proxmox then sychronize Proxmox VM changes back into NetBox (including `vms.yml`).
 
 blah
 
