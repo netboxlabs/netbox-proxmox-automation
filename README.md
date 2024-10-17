@@ -677,8 +677,6 @@ The following configuration in `vms.yml` will configure/model a Proxmox virtual 
 - 'start' is set to true, which will ensure that the virtual machine will be started in Proxmox after it has been provisioned
 - 'auto_start' is set to true, which will ensure that the virtual machine is automatically started upon a restart of the Proxmox node and/or cluster
 
-Once Proxmox has successfully provisioned the virtual machine, the virtual machine will be changed to an 'Active' status in NetBox.
-
 ```
 vms:
   - name: vm1
@@ -701,6 +699,8 @@ vms:
     start: true
     auto_start: true
 ```
+
+Once Proxmox has successfully provisioned the virtual machine, the virtual machine will be changed to an 'Active' status in NetBox.
 
 ## Case 2: Create a single Proxmox virtual machien via `vms.yml`, but using a defined IP address
 
