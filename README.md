@@ -672,7 +672,7 @@ auto_start | boolean | Define whether or not Proxmox virtual machine should star
 
 As documented earlier, `vms.yml` needs to contain a 'vms' section.  This 'vms' section, while a list, can contain but a single Proxmox virtual machine.  Let's say that you've already defined the 'default' variables in `vms.yml`, and now just want to create a Proxmox virtual machine, but with NetBox as your NSoT.  In addition, you want NetBox's IPAM to provide the next available IP address to this newly-provisioned Proxmox virtual machine.
 
-The following configuration in `vms.yml` will configure/model a Proxmox virtual machine in Netbox with the initial status of 'Staged', and after the configuration is complete, `proxmox-vm-manager.yml` will handle the provisioning of the virtual machine in Proxmox.  Note that in `vms.yml`:
+The following configuration in `vms.yml` will configure/model a Proxmox virtual machine in Netbox with the initial status of 'Staged', and after the configuration is complete in NetBox, `proxmox-vm-manager.yml` will handle the provisioning of the virtual machine in Proxmox.  Note that in `vms.yml`:
 - 'exists' is set to true, which will ensure that the virtual machine is provisioned in Proxmox
 - 'start' is set to true, which will ensure that the virtual machine will be started in Proxmox after it has been provisioned
 - 'auto_start' is set to true, which will ensure that the virtual machine is automatically started upon a restart of the Proxmox node and/or cluster
