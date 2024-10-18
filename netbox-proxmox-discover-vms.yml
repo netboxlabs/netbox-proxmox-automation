@@ -90,7 +90,7 @@
     set_fact:
       proxmox_discovered_running_vms_networking: "{{ proxmox_discovered_running_vms_networking + [ { 'name': item.0.name, 'interface': item.1.name, 'mac-address': item.1['hardware-address'], 'ip-addresses': item.1['ip-addresses'] } ] }}"
     loop: "{{ proxmox_discovered_running_vms_configuration | subelements('network') }}"
-    when: item.1.name != "lo" # Exclude loopback interface
+    when: item.1.name != "lo" and item.1.name != "docker0" and not item.1.name | regex_search('^br\-') # Exclude loopback and docker interface(s)
 
   - name: "Proxmox: Collect network interface mappings for VM(s)"
     set_fact:
@@ -235,3 +235,4 @@
       state: absent
     loop: "{{ vms.json.results }}"
     when: (proxmox_discovered_running_vms[item.name] is not defined) and (proxmox_discovered_stopped_vms[item.name] is not defined)
+
