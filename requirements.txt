@@ -1,5 +1,5 @@
 ansible==10.4.0
-ansible-core==2.17.4
+ansible-core==2.17.6
 bcrypt==4.2.0
 certifi==2024.6.2
 cffi==1.16.0
