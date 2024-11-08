@@ -1,0 +1,35 @@
+- name: "Proxmox: remove VM disk"
+  connection: local
+  hosts: all
+  gather_facts: False
+
+  vars:
+    collected_proxmox_vms: {}
+
+  tasks:
+  - name: Include Proxmox common discovery
+    include_tasks: "ansible-tasks/collect-proxmox-vms.yml"
+
+  - name: Remove VM disk
+    community.general.proxmox_disk:
+      api_user: "{{ proxmox_env_info.api_user }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
+      api_host: "{{ proxmox_env_info.api_host }}"
+      name: "{{ vm_config['name'] }}"
+      disk: "{{ vm_config['remove_disk'] }}"
+      state: absent
+    when: vm_config['name'] in collected_proxmox_vms
+    register: vm_remove_disk_job
+    async: 180
+    poll: 0
+
+  - name: Wait for VM disk removal process to finish
+    async_status:
+      jid: "{{ vm_remove_disk_job.ansible_job_id }}"
+    when: vm_config['name'] in collected_proxmox_vms
+    register: _ujobs_alias_vc_0
+    until: _ujobs_alias_vc_0.finished
+    retries: 60
+    delay: 10
+
