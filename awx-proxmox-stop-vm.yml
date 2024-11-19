@@ -1,0 +1,36 @@
+- name: "Proxmox: stop VM"
+  connection: local
+  hosts: all
+  gather_facts: False
+
+  vars:
+    collected_proxmox_vms: {}
+
+  tasks:
+  - name: Include Proxmox common discovery
+    include_tasks: "ansible-tasks/collect-proxmox-vms.yml"
+
+  - name: Stop specified VM
+    community.general.proxmox_kvm:
+      #node: "{{ proxmox_env_info.node }}"
+      api_user: "{{ proxmox_env_info.api_user }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
+      api_host: "{{ proxmox_env_info.api_host }}"
+      name: "{{ vm_config['name'] }}"
+      state: stopped
+      force: true
+    when: vm_config['name'] in collected_proxmox_vms
+    register: stop_vm_job
+    async: 180
+    poll: 0
+
+  - name: Wait for VM stop process to finish
+    async_status:
+      jid: "{{ stop_vm_job.ansible_job_id }}"
+    when: vm_config['name'] in collected_proxmox_vms
+    register: _sjobs_alias_vc_0
+    until: _sjobs_alias_vc_0.finished
+    retries: 100
+    delay: 10
+
