@@ -1,0 +1,85 @@
+- name: "Proxmox: Clone VM and set VM resources"
+  connection: local
+  hosts: all
+  gather_facts: False
+
+  vars:
+    collected_proxmox_vms: {}
+
+  tasks:
+  - name: Include Proxmox common discovery
+    include_tasks: "ansible-tasks/collect-proxmox-vms.yml"
+
+  - name: Create VM from a full clone of template
+    community.general.proxmox_kvm:
+      node: "{{ proxmox_env_info.node }}"
+      api_user: "{{ proxmox_env_info.api_user }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
+      api_host: "{{ proxmox_env_info.api_host }}"
+      clone: "{{ vm_config['template'] }}"
+      name: "{{ vm_config['name'] }}"
+      agent: 'enabled=1'
+      storage: "{{ vm_config['storage'] }}"
+      #onboot: "{{ vm_config_create[item].auto_start }}"
+      state: present
+      timeout: 120
+    when: not vm_config['name'] in collected_proxmox_vms
+    register: clone_vm_job
+    async: 180
+    poll: 0
+
+  - name: Wait for VM cloning processes to finish
+    async_status:
+      jid: "{{ clone_vm_job.ansible_job_id }}"
+    register: _jobs_alias_vc_0
+    until: _jobs_alias_vc_0.finished
+    retries: 60
+    delay: 5
+    when: not vm_config['name'] in collected_proxmox_vms
+
+  - name: Update Proxmox VMs resource settings
+    community.general.proxmox_kvm:
+      node: "{{ proxmox_env_info.node }}"
+      api_user: "{{ proxmox_env_info.api_user }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
+      api_host: "{{ proxmox_env_info.api_host }}"
+      name: "{{ vm_config['name'] }}"
+      cores: "{{ vm_config['vcpus'] | int }}"
+      vcpus: "{{ vm_config['vcpus'] | int }}"
+      memory: "{{ vm_config['memory'] }}"
+      update: true
+    register: update_vms_settings_job
+    async: 180
+    poll: 0
+
+  - name: Wait for VM settings updates processes to finish
+    async_status:
+      jid: "{{ update_vms_settings_job.ansible_job_id }}"
+    register: _ujobs_alias_vc_0
+    until: _ujobs_alias_vc_0.finished
+    retries: 60
+    delay: 10
+
+  - name: "Discover information for newly-created Proxmox VM"
+    community.general.proxmox_vm_info:
+      api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
+      api_user: "{{ proxmox_env_info.api_user | default(omit) }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
+      node: "{{ proxmox_env_info.node }}"
+      name: "{{ vm_config['name'] }}"
+    register: new_proxmox_vm
+
+  - name: "Update proxmox_vmid in NetBox"
+    netbox.netbox.netbox_virtual_machine:
+      netbox_url: "{{ netbox_env_info.api_proto }}://{{ netbox_env_info.api_host }}:{{ netbox_env_info.api_port}}"
+      netbox_token: "{{ netbox_env_info.api_token }}"
+      data:
+        name: "{{ vm_config['name'] }}"
+        custom_fields:
+          proxmox_vmid: "{{ new_proxmox_vm.proxmox_vms[0].vmid }}"
+      state: present
+    when: new_proxmox_vm is defined and new_proxmox_vm.proxmox_vms is defined and new_proxmox_vm.proxmox_vms | length > 0
+

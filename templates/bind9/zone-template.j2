@@ -1,0 +1,37 @@
+;
+; Auto generated -- DO NOT EDIT!
+;
+$ORIGIN {{ dns_zone_origin }}.
+$TTL {{ dns_zone_ttl }}
+@        IN        SOA        {{ collected_soa['mname'] }} {{ collected_soa['rname'] }} (
+                              {{ collected_soa['serial'] }}   ; serial, today's date + today's serial #
+                              {{ collected_soa['refresh'] }}        ; refresh, seconds
+                              {{ collected_soa['retry'] }}         ; retry, seconds
+                              {{ collected_soa['expire'] }}      ; expire,seconds
+                              {{ collected_soa['minimum'] }} )      ; minimum TTL, seconds
+
+;
+                   {% for ns in collected_ns %}
+                   NS    {{ ns }}.
+                   {% endfor %}
+
+;
+
+                   {% for mx in collected_mx %}
+                   MX    {{ mx }}.
+                   {% endfor %}
+
+;
+; DNS entries
+;
+{% for dns_entry in collected_rr|sort(attribute='name') %}
+{% if dns_entry['type'] != 'PTR' %}
+{{ "{:<24} {:<10} {:<8} {}".format(dns_entry['name'], dns_entry['ttl'], dns_entry['type'], dns_entry['value']) }}
+{% else %}
+{{ "{:<4} {:<10} {:<8} {}".format(dns_entry['name'], dns_entry['ttl'], dns_entry['type'], dns_entry['value']) }}
+{% endif %}
+{% endfor %}
+;
+; end DNS entries
+;
+

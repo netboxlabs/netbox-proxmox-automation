@@ -1,0 +1,40 @@
+- name: "Proxmox: add VM disk"
+  connection: local
+  hosts: all
+  gather_facts: False
+
+  vars:
+    collected_proxmox_vms: {}
+
+  tasks:
+  - name: Include Proxmox common discovery
+    include_tasks: "ansible-tasks/collect-proxmox-vms.yml"
+
+  - name: Add VM disk
+    community.general.proxmox_disk:
+      api_user: "{{ proxmox_env_info.api_user }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
+      api_host: "{{ proxmox_env_info.api_host }}"
+      name: "{{ vm_config['name'] }}"
+      disk: "{{ vm_config['add_disk'] }}"
+      size: "{{ (vm_config['add_disk_size']|int / 1024) | round | int }}"
+      storage: "{{ vm_config['storage_volume'] }}"
+      backup: false
+      ssd: false
+      create: regular
+      state: present
+    when: vm_config['name'] in collected_proxmox_vms
+    register: vm_add_disk_job
+    async: 180
+    poll: 0
+
+  - name: Wait for VM disk add process to finish
+    async_status:
+      jid: "{{ vm_add_disk_job.ansible_job_id }}"
+    when: vm_config['name'] in collected_proxmox_vms
+    register: _ujobs_alias_vc_0
+    until: _ujobs_alias_vc_0.finished
+    retries: 60
+    delay: 10
+

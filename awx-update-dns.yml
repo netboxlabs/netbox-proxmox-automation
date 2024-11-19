@@ -1,0 +1,117 @@
+- name: "Proxmox: DNS"
+  connection: local
+  hosts: all
+  gather_facts: False
+
+  vars:
+    collected_dns_integrations: []
+    dns_zone_origin: null
+    dns_zone_ttl: 0
+    collected_soa: {}
+    collected_ns: []
+    collected_mx: []
+    collected_rr: []
+
+  tasks:
+#  - name: Show DNS stuff
+#    debug:
+#      msg: "DNS stuff zone: {{ dns_zone }} ||| soa: {{ dns_soa }} ||| dns integrations: {{ dns_integrations }} -> {{ dns_integrations | length }}"
+
+  - name: Collected DNS integrations
+    set_fact:
+      collected_dns_integrations: "{{ collected_dns_integrations + [ item ] }}"
+    loop: "{{ dns_integrations }}"
+
+#  - name: show dns integrations
+#    debug:
+#      msg: "hey: {{ collected_dns_integrations }} ||| {{ collected_dns_integrations | length }}"
+
+  - name: Set DNS zone origin
+    set_fact:
+      dns_zone_origin: "{{ dns_zone['name'] }}"
+    when: dns_integrations | length > 0
+
+  - name: Set DNS zone TTL
+    set_fact:
+      dns_zone_ttl: "{{ dns_soa['default_ttl'] }}"
+    when: dns_integrations | length > 0
+
+  - name: Set SOA entries
+    set_fact:
+      collected_soa:
+        expire: "{{ dns_soa['soa_expire'] }}"
+        minimum: "{{ dns_soa['soa_minimum'] }}"
+        mname: "{{ dns_soa['soa_mname'] }}"
+        refresh: "{{ dns_soa['soa_refresh'] }}"
+        retry: "{{ dns_soa['soa_retry'] }}"
+        rname: "{{ dns_soa['soa_rname'] }}"
+        serial: "{{ dns_soa['soa_serial'] }}"
+        ttl: "{{ dns_soa['soa_ttl'] }}"
+    when: dns_integrations | length > 0
+
+  - name: Collect NS
+    set_fact:
+      collected_ns: "{{ collected_ns + [ item.name ] }}"
+    loop: "{{ dns_ns }}"
+    when: dns_integrations | length > 0
+
+  - name: Get DNS records for zone by id
+    local_action:
+      module: uri
+      url: "{{ netbox_env_info.api_proto }}://{{ netbox_env_info.api_host }}:{{ netbox_env_info.api_port}}/api/plugins/netbox-dns/records/?zone_id={{ dns_zone['id'] }}"
+      method: GET
+      headers:
+        Authorization: "Token {{ netbox_env_info.api_token }}"
+        Accept: application/json
+        Content-Type: application/json
+      status_code: 200
+      validate_certs: no
+    register: dns_records
+    when: dns_integrations | length > 0
+
+  - name: Collect all MX records
+    set_fact:
+      collected_mx: "{{ collected_mx + [ item.value ] }}"
+    loop: "{{ dns_records.json.results }}"
+    when: item.type == 'MX'
+
+  - name: Collect DNS entries
+    set_fact:
+      collected_rr: "{{ collected_rr + [{'name': item.name, 'value': item.value, 'type': item.type, 'ttl': item.ttl or ''}] }}"
+    loop: "{{ dns_records.json.results }}"
+    when: item.type not in ['SOA', 'MX', 'NS']
+
+  - name: Show DNS zone origin
+    debug:
+      msg: "DNS zone origin: {{ dns_zone_origin }}"
+    when: dns_integrations | length > 0
+
+  - name: Show DNS zone TTL
+    debug:
+      msg: "DNS zone TTL: {{ dns_zone_ttl }}"
+    when: dns_integrations | length > 0
+
+  - name: Show collected SOA
+    debug:
+      msg: "collected: {{ collected_soa }}"
+    when: dns_integrations | length > 0
+
+  - name: Show collected NS
+    debug:
+      msg: "collected: {{ collected_ns }}"
+    when: dns_integrations | length > 0
+
+  - name: Show collected MX
+    debug:
+      msg: "collected: {{ collected_mx }}"
+    when: dns_integrations | length > 0
+
+  - name: Show collected DNS entries
+    debug:
+      msg: "collected DNS entries: {{ collected_rr }}"
+    when: dns_integrations | length > 0
+
+  - name: Show expanded template for DNS zone
+    debug:
+      msg: "{{ lookup('ansible.builtin.template', './templates/bind9/zone-template.j2') }}"
+
