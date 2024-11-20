@@ -171,3 +171,6 @@ vms.yml.*
 
 inventory
 tests/
+
+app_config.yml
+
