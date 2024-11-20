@@ -4,9 +4,7 @@
 
 When you think of the challenges of a widely used network documentation solution and a widely used virtualization technology, this implementation is an integration between virtual machine documentation (NetBox) and the automation of virtual machine (VM) configurations (Proxmox).
 
-`netbox-proxmox-ansible` uses [Ansible](https://www.ansible.com/) to automate management of your Proxmox VMs: With NetBox as your [*Network Source of Truth (NSoT)*](https://netboxlabs.com/blog/what-is-a-network-source-of-truth/), as NetBox was designed.  In other words, this automation will collect the *desired* (documented) state of (Proxmox) VMs in Netbox -- and deploy identical VM configurations to Proxmox.
-
-This automation handles both the creation and removal of Proxmox VMs.
+This automation handles creation, removal, and changes of/to Proxmox VMs.  The underlying automation uses [webhooks](https://demo.netbox.dev/static/docs/additional-features/webhooks/) and [event rules](https://netboxlabs.com/docs/netbox/en/stable/features/event-rules/) in NetBox.  When you induce a change in NetBox, this will set the desired VM state(s) in Proxmox.
 
 When you create VM objects in NetBox, the following will take place in Proxmox:
 - when you create a VM object in NetBox (name, status == Staged, chosen Proxmox VM template name), this will clone a VM in Proxmox of the same name, from the defined template
@@ -15,8 +13,6 @@ When you create VM objects in NetBox, the following will take place in Proxmox:
   - resize scsi0 on the Proxmox VM to the size that was defined in NetBox
   - create scsi1 - scsiN on the Proxmox VM and set them to their specified sizes
 - when you remove a disk or disks from a NetBox VM object, this will remove the corresponding disks from the Proxmox VM (*NOTE: this does not include scsi0 as that is the OS disk*)
-
-The underlying automation uses [webhooks](https://demo.netbox.dev/static/docs/additional-features/webhooks/) and [event rules](https://netboxlabs.com/docs/netbox/en/stable/features/event-rules/) in NetBox.  When you induce a change in NetBox, this will set the desired VM state(s) in Proxmox.
 
 Further:
 - when you set a VM's state to 'active' in NetBox, this will start a VM in Proxmox
