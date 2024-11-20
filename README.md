@@ -416,6 +416,10 @@ shell$ source venv/bin/activate
 (venv) shell$ ansible-playbook -i inventory netbox-proxmox-discover-vms.yml --ask-vault-pass
 ```
 
+## Initial Configuration: AWX (Tower, AAP)
+
+Put steps here
+
 ## Initial Configuration: Flask Application (Python)
 
 *You only need to do this configuration step if you intend to use the example Flask application to handle your Proxmox automation.*
@@ -473,6 +477,10 @@ Press CTRL+C to quit
  * Debugger is active!
  * Debugger PIN: 134-610-085
 ```
+
+## Initial Configuration: NetBox Event Rules and webhooks
+
+Put steps here
 
 # Developers
 - Nate Patwardhan &lt;npatwardhan@netboxlabs.com&gt;
