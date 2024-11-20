@@ -8,16 +8,15 @@ When you think of the challenges of a widely used network documentation solution
 
 This automation handles both the creation and removal of Proxmox VMs.
 
-*This implementation also supports discovering VMs in Proxmox, should you want to document and/or merge your (Proxmox) operational state into NetBox.*
+When you create VM objects in NetBox, the following will take place in Proxmox:
+- when you create a VM object in NetBox (name, status == Staged, chosen Proxmox VM template name), this will clone a VM in Proxmox of the same name, from the defined template
+- when you add a SSH key and/or primary IP address to a NetBox VM object (status == Staged), this will update the VM settings in Proxmox -- adding ipconfig0 and ssh key settings
+- when you add disks (scsi0 - scsiN) to a NetBox VM object (status == Staged), this will:
+  - resize scsi0 on the Proxmox VM to the size that was defined in NetBox
+  - create scsi1 - scsiN on the Proxmox VM and set them to their specified sizes
+- when you remove a disk or disks from a NetBox VM object, this will remove the corresponding disks from the Proxmox VM (*NOTE: this does not include scsi0 as that is the OS disk*)
 
-When you use NetBox to create VMs in Proxmox, their *desired* state will be generated, including:
-- hostname
-- initial vm state (Staged)
-- network interface(s)
-- primary network interface for each VM
-- state of each VM disk (disk name and size)
-
-The background automation uses [webhooks](https://demo.netbox.dev/static/docs/additional-features/webhooks/) and [event rules](https://netboxlabs.com/docs/netbox/en/stable/features/event-rules/) in NetBox.  When you induce a change in NetBox, this will set the desired VM state(s) in Proxmox.
+The underlying automation uses [webhooks](https://demo.netbox.dev/static/docs/additional-features/webhooks/) and [event rules](https://netboxlabs.com/docs/netbox/en/stable/features/event-rules/) in NetBox.  When you induce a change in NetBox, this will set the desired VM state(s) in Proxmox.
 
 Further:
 - when you set a VM's state to 'active' in NetBox, this will start a VM in Proxmox
@@ -45,18 +44,14 @@ NetBox models VMs in an intuitive way.  You can define roles for VMs, such as fo
 
 This automation is based on the premise(s) that:
   1. You are using Python (version 3)
-  2. You are using a Python `venv`
+  2. You are using NetBox 4.1.0 or newer (NetBox 3.7.x should also work)
   3. You have a running Proxmox instance or cluster
-  4. You have a running NetBox instance
+  4. You have a running [AWX](https://github.com/ansible/awx) instance or are running [your own web service](./example-netbox-webhook-flask-app) to handle webhooks and event rules
   5. You have converted a cloud-init image to a Proxmox VM template
   6. Your Promox VM template(s) has/have qemu-guest-agent installed, and that qemu-guest-agent has been enabled via cloud-init
   7. You have access to the NetBox and Proxmox APIs (via API tokens, respectively)
   8. Your NetBox API token and its underlying privileges can create, modify, and delete objects in NetBox
   9. Your Proxmox API token and its underlying privileges can both manage VMs and storage (query, create, delete, etc)
-  10. If you want to make DNS changes:
-  - You have installed the netbox-dns plugin in your NetBox instance (OPTIONAL)
-  - You are running bind9 as your DNS server and have "admin" rights to make DNS changes (OPTIONAL)
-  - You are able to run Ansible with elevated privileges (i.e. root, OPTIONAL, for DNS changes)
 
 ## What this implementation *is not*
 
@@ -68,13 +63,12 @@ Further, `netbox-proxmox-ansible` does *not* deploy a future state for any Proxm
 
 # Installation
 
-`netbox-proxmox-ansible` is intended to make your life as simple as possible.  Once you have a working Proxmox node (or cluster), have provisioned a Proxmox API token with the permissions noted above, a NetBox instance, a NetBox API token, and have (optionally) installed the `netbox-dns` plugin and a name server (which you have permissions to manage), the entire process of managing Proxmox VMs via NetBox involves three simple requirements.
+`netbox-proxmox-ansible` is intended to make your life as simple as possible.  Once you have a working Proxmox node (or cluster), have provisioned a Proxmox API token with the permissions noted above, a NetBox instance, a NetBox API token, the entire process of managing Proxmox VMs via NetBox involves three simple requirements.
 
-  1. You have created a configuration file which holds your environment and VM configurations: `vms.yml`
-  2. You have created an encrypted configuration file which holds your API tokens and related information: `secrets.yml`.
-  3. You are running a current version of Ansible (2.17.4 was used for developing `netbox-proxmox-ansible`), preferably with the ability to have elevated permissions (i.e. root) should you want to automate DNS changes -- and can install any dependencies required by `netbox-proxmox-ansible`.
+  1. You have defined event rules and webhooks for VM operations in NetBox
+  2. You are running a web service that handles events via webhooks, e.g. [example-netbox-webhook-flask-app](example-netbox-webhook-flask-app) *-or-*
+  3. You are running AWX and have created templates to handle events via webhooks
 
-While the subsequent initial configuration notes might seem like a heavy lift, your initial configuration of `netbox-proxmox-ansible` should take less than an hour.  Plus, you will likely need to run the following initial configuration steps only once.
 
 ## Initial Configuration: Python
 
@@ -514,35 +508,6 @@ shell$ source venv/bin/activate
 (venv) shell$ ansible-playbook -i inventory netbox-proxmox-discover-vms.yml --ask-vault-pass
 ```
 
-# `netbox-proxmox-ansible` DNS Integrations
-
-`netbox-proxmox-ansible` provides a *convenience* function that allows you to update your DNS given any changes to Proxmox VMs.  This is driven by the netbox-dns plugin and how you define and update your DNS records in NetBox.  In this context, NetBox becomes your NSoT for DNS -- in addition to how you are leveraging NetBox to document/model your Proxmox VMs.  In other words, when your modify DNS records in your NSoT, the desired state is to update the underlying DNS to reflect these changes.
-
-This implementation won't work for everyone.  Only BIND9 is currently supported.  You might not have appropriate privileges on your DNS server to make DNS changes.  Maybe you aren't able to migrate your DNS zone(s) data into the netbox-dns plugin.  There are myriad reasons why this functionality might not work for you, so before proceeding with a DNS integration you'll need to take into account how DNS is used in your environment and if this solution is a fit.
-
-Ultimately, in an environment where you are able to make DNS changes, the ultimate goal is to integrate as many DNS implementations as possible into `netbox-proxmox-ansible`.
-
-## BIND9
-
-For this DNS integration to be successful with BIND9, the following must be true in your environment.
-
-- You have a running BIND9 installation that you use for your DNS service
-- You are able to become 'root' (or at least can escalate to 'root' privileges) on the system(s) where BIND9 is running
-- You are able to propagate DNS changes to your BIND9 server *and* are able to reload zones in BIND9
-- You are able to create *all* zones in netbox-dns plugin and have the permissions (CRUD) for DNS entries via netbox-dns plugin
-- You are able to migrate all of your existing BIND9 DNS records for each zone into netbox-dns
-- You are able to update BIND9 zone (db) files
-- You are able to reload BIND9 zones
-- You are able to restart the BIND9 service, as necessary
-
-Typically, BIND9 is deployed with a single (or series of) configuration(s).  In some instances named.conf will hold the entire BIND9 configuration for settings and zones.  In others, named.conf will include sub-configurations that are used for settings and others for zones.  Should you run BIND9 on your Proxmox cluster node(s), you'll want to define your zones somewhere under the `/etc/bind` directory.  It's up to you to decide whether or not you want to delegate a subdomain for your Proxmox VM(s) entry/ies (e.g. vms.my-domain.tld) or whether your VMs will be part of another zone.
-
-Ultimately you will need total access to the forward and reverse zones on your BIND9 server.  The BIND9 integration will pull DNS entries from the netbox-dns plugin through the NetBox API, expand these DNS entries, through Jinja2 templating into BIND9-formatted zone files, then propagate these changed zone files to your BIND9 server based on the specified location of the BIND9 (db) zone files: Before reloading in BIND9 each changed zone.
-
-This template is stored as `/path/to/netbox-proxmox-ansible/templates/dns/bind9/zone-template.j2`.
-
-When a Proxmox VM is created (in Proxmox) and 'update_dns' (and 'bind9' setting) is configured in `vms.yml`, the template will be expanded and DNS changes will be deployed.
-
 # Developers
 - Nate Patwardhan &lt;npatwardhan@netboxlabs.com&gt;
 
@@ -551,10 +516,7 @@ When a Proxmox VM is created (in Proxmox) and 'update_dns' (and 'bind9' setting)
 ## Known Issues
 - *Only* supports SCSI disk types (this is possibly fine as Proxmox predomininantly provisions disks as SCSI)
 - Needs better reconciliation on the NetBox end when Proxmox->NetBox discovery is used
-- DNS implementation only supports BIND9 currently
 
 ## Roadmap -- Delivery TBD
-- Support other DNS implementations than BIND9: Gandi, Squarespace, etc
-- Easier configuration process
+- DNS update support (requires NetBox `netbox-dns` plugin)
 - Maybe evolve into to a NetBox plugin for Proxmox
-- Integrate with Ansible Automation Platform (AAP) via event rules/webhook
