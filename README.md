@@ -19,24 +19,22 @@ Further:
 - when you set a VM's state to 'offline' in NetBox, this still stop a VM in Proxmox
 - when you remove a VM from NetBox, this will stop and remove a VM in Proxmox.
 
-When you discover VMs in Proxmox, this will create/merge VM changes in NetBox.
 
 ## Usage
 
-`netbox-proxmox-ansible` currently implements three automation use cases:
+`netbox-proxmox-ansible` currently implements two automation use cases:
 1. NetBox webhooks and event rules will use AWX (Tower, AAP) to induce Proxmox automation
 2. NetBox webhooks and event rules will use a Flask web service to induce Proxmox automation
-3. "Discover" Proxmox VM state from Proxmox node(s) and define Proxmox virtual state in NetBox.  Additionally, synchronize Proxmox VM state with desired Proxmox VM state in NetBox (mac addresses, active interfaces, etc).  This is done through `netbox-vm-discover-vms.yml`.
 
 ## What this implementation *is*
 
-`netbox-proxmox-ansible` is an implementation where you defined your *desired* VM states in NetBox.  Your desired VM state in NetBox then gets synchronized toProxmox.  The same can also be done in reverse: Where Proxmox holds your initial VM states -- that you want to "discover" in Proxmox then document/merge in/into NetBox.
+`netbox-proxmox-ansible` is an implementation where you defined your *desired* VM states in NetBox.  Your desired VM state in NetBox then gets synchronized to Proxmox.
 
-`netbox-proxmox-ansible` uses cloud-init images to induce VM changes on Proxmox based on the *desired* state in NetBox (and vice versa).  Almost always these cloud-init images will be Debian or Debian-derived images (e.g. Debian or Ubuntu), RHEL-derived images (e.g. Rocky Linux), or maybe even Windows-based cloud-init images.  *(Windows cloud-init images are currently un-tested.)*  While you should be able to use a cloud-init image of choice with this automation, and due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.  We welcome any reports around other cloud-init images, and will merge in this functionality as we are able.
+`netbox-proxmox-ansible` uses cloud-init images to induce VM changes on Proxmox based on the *desired* state in NetBox.  Almost always these cloud-init images will be Debian or Debian-derived images (e.g. Debian or Ubuntu), RHEL-derived images (e.g. Rocky Linux), or maybe even Windows-based cloud-init images.  *(Windows cloud-init images are currently un-tested.)*  While you should be able to use a cloud-init image of choice with this automation, and due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.  We welcome any reports around other cloud-init images, and will merge in this functionality as we are able.
 
-Proxmox is highly conducive to using cloud-init images -- when cloud-init images are converted to templates.  You can define items like ssh keys and network configurations in Proxmox by way of using cloud-init images, and cloud-init will cascade these settings into your Proxmox VMs: *Dynamically*.  Further, Proxmox has a comprehensive API -- you can define VM resources, plus disk configurations and more -- where you can leverage automation, in this case Ansible, to lay down your desired VM states in Proxmox with little effort.
+Proxmox is highly conducive to using cloud-init images -- when cloud-init images are converted to templates.  You can define items like ssh keys and network configurations in Proxmox by way of using cloud-init images, and cloud-init will cascade these settings into your Proxmox VMs: *Dynamically*.  Further, Proxmox has a comprehensive API -- you can define VM resources, plus disk configurations and more -- where you can leverage automation to lay down your desired VM states in Proxmox with little effort.
 
-NetBox models VMs in an intuitive way.  You can define roles for VMs, such as for Proxmox, and from there you can define both VM state (Active, Offline, etc) and other resources like vcpus, memory, network configuration, disks, and more (perhaps, also, through customizations in NetBox).
+NetBox models VMs in an intuitive way.  You can define roles for VMs, such as for Proxmox, and from there you can define both VM state (Active, Offline, etc) and other resources like vcpus, memory, network configuration, disks, and more (through customizations in NetBox).
 
 This automation is based on the premise(s) that:
   1. You are using Python (version 3)
@@ -62,8 +60,9 @@ Further, `netbox-proxmox-ansible` does *not* deploy a future state for any Proxm
 `netbox-proxmox-ansible` is intended to make your life as simple as possible.  Once you have a working Proxmox node (or cluster), have provisioned a Proxmox API token with the permissions noted above, a NetBox instance, a NetBox API token, the entire process of managing Proxmox VMs via NetBox involves three simple requirements.
 
   1. You have defined event rules and webhooks for VM operations in NetBox
-  2. You are running a web service that handles events via webhooks, e.g. [example-netbox-webhook-flask-app](example-netbox-webhook-flask-app) *-or-*
-  3. You are running AWX and have created templates to handle events via webhooks
+  2. You have a web service that handles events via webhooks
+  - You are running a web service that handles events via webhooks, e.g. [example-netbox-webhook-flask-app](example-netbox-webhook-flask-app) *-or-*
+  - You are running AWX and have created templates to handle events via webhooks
 
 
 ## Initial Configuration: Python
@@ -133,24 +132,6 @@ shell$ source venv/bin/activate
 name-or-ip-of-proxmox-node1
 ... etc ...
 name-or-ip-of-proxmox-nodeN
-```
-
-If you need DNS support, do this:
-
-```
-shell$ cd /path/to/netbox-proxmox-ansible
-
-shell$ source venv/bin/activate
-
-(venv) shell$ cat inventory
-[proxmox]
-name-or-ip-of-proxmox-node1
-... etc ...
-name-or-ip-of-proxmox-nodeN
-[dns]
-name-or-ip-of-dns-server1
-... etc ...
-name-or-ip-of-dns-serverN
 ```
 
 ## Initial Configuration: Creating Proxmox VM templates from (cloud-init) images
