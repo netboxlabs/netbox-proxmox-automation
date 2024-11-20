@@ -24,7 +24,7 @@ Further:
 
 `netbox-proxmox-ansible` currently implements two automation use cases:
 1. NetBox webhooks and event rules will use AWX (Tower, AAP) to induce Proxmox automation
-2. NetBox webhooks and event rules will use a Flask web service to induce Proxmox automation
+2. NetBox webhooks and event rules will use a Flask application to induce Proxmox automation
 
 ## What this implementation *is*
 
@@ -64,75 +64,6 @@ Further, `netbox-proxmox-ansible` does *not* deploy a future state for any Proxm
   - You are running a web service that handles events via webhooks, e.g. [example-netbox-webhook-flask-app](example-netbox-webhook-flask-app) *-or-*
   - You are running AWX and have created templates to handle events via webhooks
 
-
-## Initial Configuration: Python
-
-Open a shell on your local system.  *Do not* run these commands as the 'root' user.  The following commands should run on MacOS, Linux, and UNIX-like systems; you will need to run these commands during initial installation or upgrades of `netbox-proxmox-ansible`.
-
-```
-shell$ cd /path/to/netbox-proxmox-ansible
-
-shell$ deactivate # this will fail if there is no configured venv
-
-shell$ rm -rf venv
-
-shell$ python3 -m venv venv
-
-shell$ source venv/bin/activate
-
-(venv) shell$ pip install -r requirements.txt # this will install all of the dependencies
-```
-
-To leave `venv`, simply type 'deactivate'.
-
-```
-(venv) shell$ deactivate
-shell$
-```
-
-With each usage of `netbox-proxmox-ansible`, make sure that you enter `venv` before running any Ansible commands.  Else this automation will not work.
-
-```
-shell$ cd /path/to/netbox-proxmox-ansible
-
-shell$ source venv/bin/activate
-
-(venv) shell$  # <--- this is the desired result
-```
-
-## Initial Configuration: Netbox collection for Ansible
-
-```
-shell$ source venv/bin/activate
-
-(venv) shell$ ansible-galaxy collection install netbox.netbox
-```
-
-## Initial Configuration: Proxmox for Ansible via community.general collection
-
-```
-shell$ source venv/bin/activate
-
-(venv) shell$ ansible-galaxy collection install community.general
-```
-
-## Initial Configuration: Ansible inventory file
-
-You will need to create an inventory file to be able to use `netbox-proxmox-ansible`.
-
-If you do not need DNS support, do this.
-
-```
-shell$ cd /path/to/netbox-proxmox-ansible
-
-shell$ source venv/bin/activate
-
-(venv) shell$ cat inventory
-[proxmox]
-name-or-ip-of-proxmox-node1
-... etc ...
-name-or-ip-of-proxmox-nodeN
-```
 
 ## Initial Configuration: Creating Proxmox VM templates from (cloud-init) images
 
@@ -483,6 +414,64 @@ shell$ cd /path/to/netbox-proxmox-ansible
 shell$ source venv/bin/activate
 
 (venv) shell$ ansible-playbook -i inventory netbox-proxmox-discover-vms.yml --ask-vault-pass
+```
+
+## Initial Configuration: Flask Application (Python)
+
+*You only need to do this configuration step if you intend to use the example Flask application to handle your Proxmox automation.*
+
+Open a shell on your local system.  *Do not* run these commands as the 'root' user.  The following commands should run on MacOS, Linux, and UNIX-like systems; you will need to run these commands during initial installation or upgrades of `netbox-proxmox-ansible`.
+
+```
+shell$ cd /path/to/netbox-proxmox-ansible
+
+shell$ deactivate # this will fail if there is no configured venv
+
+shell$ rm -rf venv
+
+shell$ python3 -m venv venv
+
+shell$ source venv/bin/activate
+
+(venv) shell$ pip install -r requirements.txt # this will install all of the dependencies
+```
+
+To leave `venv`, simply type 'deactivate'.
+
+```
+(venv) shell$ deactivate
+shell$
+```
+
+With each usage of `netbox-proxmox-ansible`, make sure that you enter `venv` before running any Ansible commands.  Else this automation will not work.
+
+```
+shell$ cd /path/to/netbox-proxmox-ansible
+
+shell$ source venv/bin/activate
+
+(venv) shell$  # <--- this is the desired result
+```
+
+When in `venv`, you will need to create `app_config.yml`.
+
+```
+(venv) shell$ cd example-netbox-webhook-flask-app
+
+(venv) shell$ cp -pi app_config.yml-sample app_config.yml
+```
+
+Then season `app_config.yml` to taste.  When you are ready to test your Flask application, do this:
+
+```
+(venv) shell$ flask run --debug
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 134-610-085
 ```
 
 # Developers
