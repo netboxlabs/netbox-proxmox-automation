@@ -14,53 +14,28 @@ When you use NetBox to create VMs in Proxmox, their *desired* state will be gene
 - hostname
 - initial vm state (Staged)
 - network interface(s)
-- IP(s) for each network interface(s)
 - primary network interface for each VM
 - state of each VM disk (disk name and size)
-- update netbox-dns plugin for each VM (if enabled)
 
-When you use NetBox to remove VMs from Proxmox, their *desired* state will be generated, including:
-- initial vm state (Decommissioning)
-- identify Proxmox VMs that need to be removed
-- desired vm state ahead of removal (Offline)
-- update netbox-dns plugin for each VM (if enabled)
-- remove non-existent VM objects in Netbox
+The background automation uses [webhooks](https://demo.netbox.dev/static/docs/additional-features/webhooks/) and [event rules](https://netboxlabs.com/docs/netbox/en/stable/features/event-rules/) in NetBox.  When you induce a change in NetBox, this will set the desired VM state(s) in Proxmox.
 
-Creating and deleting VMs in NetBox will both update VM state in Proxmox *and* update your DNS, if your DNS implementation is supported by this automation.  *You will need the [netbox-dns plugin](https://github.com/peteeckel/netbox-plugin-dns) if you want to manage your DNS records in NetBox.*
+Further:
+- when you set a VM's state to 'active' in NetBox, this will start a VM in Proxmox
+- when you set a VM's state to 'offline' in NetBox, this still stop a VM in Proxmox
+- when you remove a VM from NetBox, this will stop and remove a VM in Proxmox.
 
 When you discover VMs in Proxmox, this will create/merge VM changes in NetBox.
 
 ## Usage
 
-`netbox-proxmox-ansible` currently implements two key use cases:
-- Deploy a Proxmox VM through the desired Proxmox VM state in NetBox.  This is done through `proxmox-vm-manager.yml`.
-- "Discover" Proxmox VM state from Proxmox node(s) and define Proxmox virtual state in NetBox.  Additionally, synchronize Proxmox VM state with desired Proxmox VM state in NetBox (mac addresses, active interfaces, etc).  This is done through `netbox-vm-discover-vms.yml`.
-
-Basic usage of `netbox-proxmox-ansible`, to provision Proxmox VMs to their desired state(s), is as follows:
-
-```
-shell$ source venv/bin/activate
-
-(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass
-```
-
-Should you want to update the DNS as well as provision Proxmox VMs to their desired state(s), make sure that 'update_dns' is set in `vms.yml`, then use the following command:
-
-```
-shell$ source venv/bin/activate
-
-(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass --ask-pass --ask-become-pass
-```
-
-The above will prompt you for a SSH password, the password that you would use for `sudo` commands, and finally your Ansible vault passphrase.
-
-More detailed examples are covered in the [Use Cases](#netbox-proxmox-ansible-use-cases) section of this document.
+`netbox-proxmox-ansible` currently implements three automation use cases:
+1. NetBox webhooks and event rules will use AWX (Tower, AAP) to induce Proxmox automation
+2. NetBox webhooks and event rules will use a Flask web service to induce Proxmox automation
+3. "Discover" Proxmox VM state from Proxmox node(s) and define Proxmox virtual state in NetBox.  Additionally, synchronize Proxmox VM state with desired Proxmox VM state in NetBox (mac addresses, active interfaces, etc).  This is done through `netbox-vm-discover-vms.yml`.
 
 ## What this implementation *is*
 
-`netbox-proxmox-ansible` is a client-based implementation where you define VM configurations (in YAML) then create your *desired* VM states in NetBox.  Ansible then synchronizes your *desired* VM states from NetBox to Proxmox by way of automation with Ansible.  The same can also be done in reverse: Where Proxmox holds your initial VM states -- that you want to "discover" in Proxmox then document/merge in/into NetBox.
-
-You *should* be able to run `netbox-proxmox-ansible` from *any* Windows, MacOS, or Linux/UNIX-like system -- so long as you have both Ansible and Python (version 3) installed.  (*Python 2 is long dead, so it is not supported here.*)
+`netbox-proxmox-ansible` is an implementation where you defined your *desired* VM states in NetBox.  Your desired VM state in NetBox then gets synchronized toProxmox.  The same can also be done in reverse: Where Proxmox holds your initial VM states -- that you want to "discover" in Proxmox then document/merge in/into NetBox.
 
 `netbox-proxmox-ansible` uses cloud-init images to induce VM changes on Proxmox based on the *desired* state in NetBox (and vice versa).  Almost always these cloud-init images will be Debian or Debian-derived images (e.g. Debian or Ubuntu), RHEL-derived images (e.g. Rocky Linux), or maybe even Windows-based cloud-init images.  *(Windows cloud-init images are currently un-tested.)*  While you should be able to use a cloud-init image of choice with this automation, and due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.  We welcome any reports around other cloud-init images, and will merge in this functionality as we are able.
 
@@ -68,10 +43,8 @@ Proxmox is highly conducive to using cloud-init images -- when cloud-init images
 
 NetBox models VMs in an intuitive way.  You can define roles for VMs, such as for Proxmox, and from there you can define both VM state (Active, Offline, etc) and other resources like vcpus, memory, network configuration, disks, and more (perhaps, also, through customizations in NetBox).
 
-In this context, `netbox-proxmox-ansible` takes VM configurations from NetBox then applies their (running) states to Proxmox.  Of course, it works in the opposite way as well.
-
 This automation is based on the premise(s) that:
-  1. You are using Python (version 3) on your client
+  1. You are using Python (version 3)
   2. You are using a Python `venv`
   3. You have a running Proxmox instance or cluster
   4. You have a running NetBox instance
@@ -87,7 +60,7 @@ This automation is based on the premise(s) that:
 
 ## What this implementation *is not*
 
-`netbox-proxmox-ansible` is *not* a NetBox plugin; nor is it a script or a webhook (at this point in time).  And this is by design.
+`netbox-proxmox-ansible` is *not* a NetBox plugin, and this is by design.
 
 [ProxBox](https://github.com/netdevopsbr/netbox-proxbox) is a neat implementation of pulling information from Proxmox into NetBox.  ProxBox has its place, most certainly, but what it does is *not* the aim of `netbox-proxmox-ansible`.
 
