@@ -22,15 +22,15 @@ Further:
 
 ## Usage
 
-`netbox-proxmox-ansible` currently implements two automation use cases:
+`netbox-proxmox-automation` currently implements two automation use cases:
 1. NetBox webhooks and event rules will use AWX (Tower, AAP) to induce Proxmox automation
 2. NetBox webhooks and event rules will use a Flask application to induce Proxmox automation
 
 ## What this implementation *is*
 
-`netbox-proxmox-ansible` is an implementation where you defined your *desired* VM states in NetBox.  Your desired VM state in NetBox then gets synchronized to Proxmox.
+`netbox-proxmox-automation` is an implementation where you defined your *desired* VM states in NetBox.  Your desired VM state in NetBox then gets synchronized to Proxmox.
 
-`netbox-proxmox-ansible` uses cloud-init images to induce VM changes on Proxmox based on the *desired* state in NetBox.  Almost always these cloud-init images will be Debian or Debian-derived images (e.g. Debian or Ubuntu), RHEL-derived images (e.g. Rocky Linux), or maybe even Windows-based cloud-init images.  *(Windows cloud-init images are currently un-tested.)*  While you should be able to use a cloud-init image of choice with this automation, and due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.  We welcome any reports around other cloud-init images, and will merge in this functionality as we are able.
+`netbox-proxmox-automation` uses cloud-init images to induce VM changes on Proxmox based on the *desired* state in NetBox.  Almost always these cloud-init images will be Debian or Debian-derived images (e.g. Debian or Ubuntu), RHEL-derived images (e.g. Rocky Linux), or maybe even Windows-based cloud-init images.  *(Windows cloud-init images are currently un-tested.)*  While you should be able to use a cloud-init image of choice with this automation, and due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.  We welcome any reports around other cloud-init images, and will merge in this functionality as we are able.
 
 Proxmox is highly conducive to using cloud-init images -- when cloud-init images are converted to templates.  You can define items like ssh keys and network configurations in Proxmox by way of using cloud-init images, and cloud-init will cascade these settings into your Proxmox VMs: *Dynamically*.  Further, Proxmox has a comprehensive API -- you can define VM resources, plus disk configurations and more -- where you can leverage automation to lay down your desired VM states in Proxmox with little effort.
 
@@ -49,15 +49,15 @@ This automation is based on the premise(s) that:
 
 ## What this implementation *is not*
 
-`netbox-proxmox-ansible` is *not* a NetBox plugin, and this is by design.
+`netbox-proxmox-automation` is *not* a NetBox plugin, and this is by design.
 
-[ProxBox](https://github.com/netdevopsbr/netbox-proxbox) is a neat implementation of pulling information from Proxmox into NetBox.  ProxBox has its place, most certainly, but what it does is *not* the aim of `netbox-proxmox-ansible`.
+[ProxBox](https://github.com/netdevopsbr/netbox-proxbox) is a neat implementation of pulling information from Proxmox into NetBox.  ProxBox has its place, most certainly, but what it does is *not* the aim of `netbox-proxmox-automation`.
 
-Further, `netbox-proxmox-ansible` does *not* deploy a future state for any Proxmox VM.  For example, let's say you deploy a Proxmox VM called 'vm1' and it's intended to be a(n) LDAP server.  The scope of `netbox-proxmox-ansible` is to ensure that each VM that you document/model and deploy to Proxmox has a consistent baseline configuration, from which you can take future automation steps.  NetBox will document/model your *desired* Proxmox VM state, but additional automation states like package installations and configurations are left up to further automation that you might choose to do once your vitual machine is running in Proxmox.  As `netbox-proxmox-ansible` is free for you to use and/or modify, you are welcome to introduce subsequent automations to `netbox-proxmox-ansible` in your own environment.
+Further, `netbox-proxmox-automation` does *not* deploy a future state for any Proxmox VM.  For example, let's say you deploy a Proxmox VM called 'vm1' and it's intended to be a(n) LDAP server.  The scope of `netbox-proxmox-automation` is to ensure that each VM that you document/model and deploy to Proxmox has a consistent baseline configuration, from which you can take future automation steps.  NetBox will document/model your *desired* Proxmox VM state, but additional automation states like package installations and configurations are left up to further automation that you might choose to do once your vitual machine is running in Proxmox.  As `netbox-proxmox-automation` is free for you to use and/or modify, you are welcome to introduce subsequent automations to `netbox-proxmox-automation` in your own environment.
 
 # Installation
 
-`netbox-proxmox-ansible` is intended to make your life as simple as possible.  Once you have a working Proxmox node (or cluster), have provisioned a Proxmox API token with the permissions noted above, a NetBox instance, a NetBox API token, the entire process of managing Proxmox VMs via NetBox involves three simple requirements.
+`netbox-proxmox-automation` is intended to make your life as simple as possible.  Once you have a working Proxmox node (or cluster), have provisioned a Proxmox API token with the permissions noted above, a NetBox instance, a NetBox API token, the entire process of managing Proxmox VMs via NetBox involves three simple requirements.
 
   1. You have defined event rules and webhooks for VM operations in NetBox
   2. You have a web service that handles events via webhooks
@@ -67,7 +67,7 @@ Further, `netbox-proxmox-ansible` does *not* deploy a future state for any Proxm
 
 ## Initial Configuration: Creating Proxmox VM templates from (cloud-init) images
 
-`netbox-proxmox-ansible` *only* supports cloud-init images.  The dynamic nature of Proxmox VM automation requires this implementation to be able to set things, during the Proxmox VM provisioning process, like network configuration, hostnames, and more.  While it's *possible* that `netbox-proxmox-ansible` *might* support your existing Proxmox VM templates, it's *highly* recommended that you follow the procedure below -- for the best results.
+`netbox-proxmox-automation` *only* supports cloud-init images.  The dynamic nature of Proxmox VM automation requires this implementation to be able to set things, during the Proxmox VM provisioning process, like network configuration, hostnames, and more.  While it's *possible* that `netbox-proxmox-automation` *might* support your existing Proxmox VM templates, it's *highly* recommended that you follow the procedure below -- for the best results.
 
 As a cloud-init image is basically "blank", meaning that there is not broad network or SSH key configuration, this allows us to have total flexibility in the way that this automation takes a *desired* Proxmox VM state from NetBox and generates anticipated changes to VMs -- in Proxmox.
 
@@ -241,7 +241,7 @@ proxmox-ve-node# qm set 9000 --agent enabled=1
 update VM 9000: -agent enabled=1
 ```
 
-Second, convert the Proxmox VM into a template.  You can then use this Proxmox VM template in your `netbox-proxmox-ansible` automation.
+Second, convert the Proxmox VM into a template.  You can then use this Proxmox VM template in your `netbox-proxmox-automation` automation.
 
 Now convert the Proxmox VM to a template.  *Note that this cannot be undone!*
 
@@ -251,13 +251,13 @@ proxmox-ve-node# qm template 9000
   Logical volume pve/base-9000-disk-0 changed.
 ```
 
-You should now be able to use your Proxmox VM template, with a VM id (vmid) of 9000 (or whatever you choose) in your `netbox-proxmox-ansible` automation.
+You should now be able to use your Proxmox VM template, with a VM id (vmid) of 9000 (or whatever you choose) in your `netbox-proxmox-automation` automation.
 
 ## Initial Configuration: NetBox objects + dependencies
 
-Given the heirarchical nature of NetBox, you will need to create the following objects before using `netbox-proxmox-ansible` automation.  You should refer to the [NetBox planning guide](https://netboxlabs.com/docs/netbox/en/stable/getting-started/planning/) to address these dependencies before proceeding with `netbox-proxmox-ansible`.
+Given the heirarchical nature of NetBox, you will need to create the following objects before using `netbox-proxmox-automation` automation.  You should refer to the [NetBox planning guide](https://netboxlabs.com/docs/netbox/en/stable/getting-started/planning/) to address these dependencies before proceeding with `netbox-proxmox-automation`.
 
-Using NetBox's IPAM is a *requirement* of `netbox-proxmox-ansible`.  This is because `netbox-proxmox-ansible` is going to either assign a defined IP address to a specified inteface (or interfaces) on a Proxmox VM, or it's going to request an available IP address from NetBox's IPAM -- and assign the requested IP address to an interface (or interfaces) on a Proxmox VM.
+Using NetBox's IPAM is a *requirement* of `netbox-proxmox-automation`.  This is because `netbox-proxmox-automation` is going to either assign a defined IP address to a specified inteface (or interfaces) on a Proxmox VM, or it's going to request an available IP address from NetBox's IPAM -- and assign the requested IP address to an interface (or interfaces) on a Proxmox VM.
 
 Ahead of using this automation, make sure to create the following IPAM-related objects in NetBox:
 - IPAM > RIRs
@@ -291,7 +291,7 @@ In the Netbox UI:
 
 ### Create NetBox API Token
 
-While it is possible to use passwords with the Netbox Ansible collection, `netbox-proxmox-ansible` does not allow this behavior.  Instead a NetBox API token is required.
+While it is possible to use passwords with the Netbox Ansible collection, `netbox-proxmox-automation` does not allow this behavior.  Instead a NetBox API token is required.
 
 In the NetBox UI:
 
@@ -302,7 +302,7 @@ Once you've created a NetBox API token, store it some place safe in the meantime
 
 ## Initial Configuration: NetBox Custom Fields
 
-You will want to use NetBox to keep track of Proxmox VM ids (called 'vmid' in Proxmox), the node where Proxmox VMs are running, and the Proxmox VM template that was used to create the Proxmox VM.  This is highly important so that when you use `netbox-proxmox-ansible` for automation -- that you are able to induce configuration in changes to Proxmox around items like vmids and such.  To do so, you will need to do some customizations to NetBox before you start importing this data.
+You will want to use NetBox to keep track of Proxmox VM ids (called 'vmid' in Proxmox), the node where Proxmox VMs are running, and the Proxmox VM template that was used to create the Proxmox VM.  This is highly important so that when you use `netbox-proxmox-automation` for automation -- that you are able to induce configuration in changes to Proxmox around items like vmids and such.  To do so, you will need to do some customizations to NetBox before you start importing this data.
 
 ### NetBox Customization: Proxmox VM id (vmid) configuration
 
@@ -355,7 +355,7 @@ In the NetBox UI, navigate to Customization > Custom Fields
 
 ## Initial Configuration: Proxmox API user + key
 
-While the Proxmox implementation that's part of the Ansible community.general collection allows you to use passwords when doing Proxmox automation, `netbox-proxmox-ansible` does not allow this behavior.
+While the Proxmox implementation that's part of the Ansible community.general collection allows you to use passwords when doing Proxmox automation, `netbox-proxmox-automation` does not allow this behavior.
 
 It is recommended that you do *not* create an API token for the Proxmox 'root' user.  Instead, create an `api_user` and an API token.  Then assign the required permissions to the `api_user`.  This procedure uses a combination of the Proxmox UI and the command line.  You need to be able to access Proxmox via and UI and SSH and become the 'root' user.  You will need to create an `api_user` in Proxmox, an API token, and set the requisite permissions in Proxmox so that the `api_user` can:
 
@@ -409,7 +409,7 @@ Use `netbox-proxmox-discover-vms.yml` to discover and Proxmox VMs which aren't a
 Usage:
 
 ```
-shell$ cd /path/to/netbox-proxmox-ansible
+shell$ cd /path/to/netbox-proxmox-automation
 
 shell$ source venv/bin/activate
 
@@ -418,16 +418,18 @@ shell$ source venv/bin/activate
 
 ## Initial Configuration: AWX (Tower, AAP)
 
+*You only need to do this configuration step if you intend to use AWX (Tower, AAP) to handle your Proxmox automation.*
+
 Put steps here
 
 ## Initial Configuration: Flask Application (Python)
 
 *You only need to do this configuration step if you intend to use the example Flask application to handle your Proxmox automation.*
 
-Open a shell on your local system.  *Do not* run these commands as the 'root' user.  The following commands should run on MacOS, Linux, and UNIX-like systems; you will need to run these commands during initial installation or upgrades of `netbox-proxmox-ansible`.
+Open a shell on your local system.  *Do not* run these commands as the 'root' user.  The following commands should run on MacOS, Linux, and UNIX-like systems; you will need to run these commands during initial installation or upgrades of `netbox-proxmox-automation`.
 
 ```
-shell$ cd /path/to/netbox-proxmox-ansible
+shell$ cd /path/to/netbox-proxmox-automation
 
 shell$ deactivate # this will fail if there is no configured venv
 
@@ -447,10 +449,10 @@ To leave `venv`, simply type 'deactivate'.
 shell$
 ```
 
-With each usage of `netbox-proxmox-ansible`, make sure that you enter `venv` before running any Ansible commands.  Else this automation will not work.
+With each usage of `netbox-proxmox-automation`, make sure that you enter `venv` before running any Ansible commands.  Else this automation will not work.
 
 ```
-shell$ cd /path/to/netbox-proxmox-ansible
+shell$ cd /path/to/netbox-proxmox-automation
 
 shell$ source venv/bin/activate
 
@@ -478,7 +480,7 @@ Press CTRL+C to quit
  * Debugger PIN: 134-610-085
 ```
 
-## Initial Configuration: NetBox Event Rules and webhooks
+## Initial Configuration: NetBox Event Rules and Webhooks
 
 Put steps here
 
