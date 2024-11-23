@@ -5,7 +5,7 @@ import urllib
 from proxmoxer import ProxmoxAPI
 
 class NetBoxProxmoxHelper:
-    def __init__(self, cfg_data):
+    def __init__(self, cfg_data, proxmox_node):
         self.netbox_api_config = {
             'api_proto': cfg_data['netbox_api_config']['api_proto'],
             'api_host': cfg_data['netbox_api_config']['api_host'],
@@ -15,7 +15,7 @@ class NetBoxProxmoxHelper:
         }
 
         self.proxmox_api_config = {
-            'node': cfg_data['proxmox_api_config']['node'],
+            'node': proxmox_node,
             'api_host': cfg_data['proxmox_api_config']['api_host'],
             'api_port': cfg_data['proxmox_api_config']['api_port'],
             'api_user': cfg_data['proxmox_api_config']['api_user'],
