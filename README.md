@@ -49,7 +49,7 @@ This automation is based on the premise(s) that:
 
 ## What this implementation *is not*
 
-`netbox-proxmox-automation` is *not* a NetBox plugin, and this is by design.
+`netbox-proxmox-automation` is not currently a NetBox plugin, but this may change.
 
 [ProxBox](https://github.com/netdevopsbr/netbox-proxbox) is a neat implementation of pulling information from Proxmox into NetBox.  ProxBox has its place, most certainly, but what it does is *not* the aim of `netbox-proxmox-automation`.
 
