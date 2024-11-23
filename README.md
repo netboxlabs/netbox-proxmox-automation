@@ -556,7 +556,7 @@ You need to create the webhook, in NetBox, first.  Navigate over to Operations >
 netbox_webhook_name: "netbox-proxmox-webhook"
 ```
 
-In this case, our URI will be `netbox-proxmox-webhook`, and our webhook will be listening on the public interface and port that were specified when we started our Flask application.  When you add the webhook to NetBox (use the '+' button), it should look something like this.
+In this case, our URI will be `netbox-proxmox-webhook` (the trailing slash is critical!), and our webhook will be listening on the public interface and port that were specified when we started our Flask application.  When you add the webhook to NetBox (use the '+' button), it should look something like this.
 
 ![netbox-proxmox-flask-app-webhook-image](./images/netbox-proxmox-flask-app-webhook.png)
 
