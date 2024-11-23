@@ -591,7 +591,7 @@ You will need to add the following event rules to NetBox to update Proxmox when 
 
 ![NetBox Proxmox VM stopped image](./images/proxmox-vm-stopped.png)
 
-8. `proxmox-vm-update-network-config` takes a Proxmox virtual machine whose network configuration was changed in NetBox (IP address, SSH public key) and adds those network configuration settings to Proxmox
+8. `proxmox-vm-update-network-config` takes a Proxmox virtual machine whose network configuration was changed in NetBox (IP address, SSH public key), with the NetBox status set to 'Staged', and adds those network configuration settings to Proxmox
 
 ![NetBox Proxmox VM update network config image](./images/proxmox-vm-update-network-config.png)
 
