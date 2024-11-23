@@ -304,6 +304,36 @@ Once you've created a NetBox API token, store it some place safe in the meantime
 
 You will want to use NetBox to keep track of Proxmox VM ids (called 'vmid' in Proxmox), the node where Proxmox VMs are running, and the Proxmox VM template that was used to create the Proxmox VM.  This is highly important so that when you use `netbox-proxmox-automation` for automation -- that you are able to induce configuration in changes to Proxmox around items like vmids and such.  To do so, you will need to do some customizations to NetBox before you start importing this data.
 
+### NetBox Customization: Custon Fields Choices (for Proxmox)
+
+In the NetBox UI, you will need to create two custom field choices.
+1. `proxmox-vm-templates` will be used to correlate a Proxmox VM template with the Proxmox VM that you will provision
+2. `proxmox-vm-storage` will be used to correlate an underlying Proxmox VM storage volume with the Proxmox VM you will provision
+
+In the NetBox UI, navigate to Customization > Custom Field Choices
+
+#### proxmox-vm-templates
+
+Create custom field choices for Proxmox VM Templates.  When you click the '+' button, you will be presented with an Edit screen.  Fill the form as shown below.  Note that your choices will have a (Proxmox) VMID to name-of-template mapping.  You will need to login to the Proxmox UI to get the VMID to name-of-template mappings.
+
+![Screenshot of Proxmox VM Templates Edit screen](./images/proxmox-vm-templates-edit.png)
+
+When you are done, your Custom Field Choices for Proxmox VM templates should look like this.
+
+![Screenshot of Proxmox VM Templates View screen](./images/proxmox-vm-templates-saved.png)
+
+
+#### proxmox-vm-storage
+
+Create custom field choices for Proxmox VM Storage.  When you click the '+' button, you will be presented with an Edit screen.  Fill the form as shown below.  Note that your choices will represent the name/value of each Proxmox storage volume.  You will need to login to the Proxmox UI to get a list of Proxmox storage volumes.
+
+![Screenshot of Proxmox VM Storage Edit screen](./images/proxmox-vm-storage-edit.png)
+
+When you are done, your Custom Field Choices for Proxmox VM storage should look like this.
+
+![Screenshot of Proxmox VM Storage View screen](./images/proxmox-vm-storage-saved.png)
+
+
 ### NetBox Customization: Proxmox VM id (vmid) configuration
 
 In the NetBox UI, navigate to Customization > Custom Fields
@@ -327,20 +357,6 @@ In the NetBox UI, navigate to Customization > Custom Fields
     - Set 'Type' to Text
     - *Make sure that Required is NOT checked*
     - Click 'Save'
-
-### NetBox Customization: Proxmox VM template configuration
-
-In the NetBox UI, navigate to Customization > Custom Field Choices
-  - click the '+' button
-    - Set 'Name' to 'Proxmox VM Templates'
-    - Set 'Extra choices' to something like:
-    ```
-    jammy-server-cloudimg-amd64-template:jammy-server-cloudimg-amd64-template
-    focal-server-cloudimg-amd64-template:focal-server-cloudimg-amd64-template
-    noble-server-cloudimg-amd64-template:noble-server-cloudimg-amd64-template
-    ```
-    
-    These will reflect your template choices in Proxmox.
 
 In the NetBox UI, navigate to Customization > Custom Fields
   - click the '+' button
