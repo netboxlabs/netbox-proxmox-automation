@@ -474,7 +474,7 @@ Put steps here
 Open a shell on your local system.  *Do not* run these commands as the 'root' user.  The following commands should run on MacOS, Linux, and UNIX-like systems; you will need to run these commands during initial installation or upgrades of `netbox-proxmox-automation`.
 
 ```
-shell$ cd /path/to/netbox-proxmox-automation
+shell$ cd /path/to/netbox-proxmox-automation/example-netbox-webhook-flask-app
 
 shell$ deactivate # this will fail if there is no configured venv
 
@@ -497,7 +497,7 @@ shell$
 With each usage of `netbox-proxmox-automation`, make sure that you enter `venv` before running any Ansible commands.  Else this automation will not work.
 
 ```
-shell$ cd /path/to/netbox-proxmox-automation
+shell$ cd /path/to/netbox-proxmox-automation/example-netbox-webhook-flask-app
 
 shell$ source venv/bin/activate
 
@@ -507,7 +507,7 @@ shell$ source venv/bin/activate
 When in `venv`, you will need to create `app_config.yml`.
 
 ```
-(venv) shell$ cd example-netbox-webhook-flask-app
+(venv) shell$ cd /path/to/netbox-proxmox-automation/example-netbox-webhook-flask-app
 
 (venv) shell$ cp -pi app_config.yml-sample app_config.yml
 ```
