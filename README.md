@@ -306,7 +306,7 @@ You will need to do some customization to NetBox to define the underlying Proxmo
 
 ### NetBox Customization: Custom Field Choices (for Proxmox VM templates and storage)
 
-In the NetBox UI, you will need to create two custom field choices.
+In the NetBox UI, you will need to create the following custom field choices.
 1. `proxmox-node` will be used to correlate a Proxmox node to the Proxmox VM that you will provision
 2. `proxmox-vm-templates` will be used to correlate a Proxmox VM template with the Proxmox VM that you will provision
 3. `proxmox-vm-storage` will be used to correlate an underlying Proxmox VM storage volume with the Proxmox VM you will provision
@@ -349,7 +349,7 @@ When you are done, your Custom Field Choices for Proxmox VM storage should look 
 
 ### NetBox Customization: Custom Fields (for Proxmox VMs)
 
-In the NetBox UI, you will need to create a series of custom fields.
+In the NetBox UI, you will need to create a series of custom fields, as noted below.
 1. `proxmox_node` will be used to correlate a Proxmox cluster node with the Proxmox VM that you want to create
 2. `proxmox_vm_template` will be used to correlate a Proxmox VM template with the Proxmox VM that you want to create
 3. `proxmox_vm_storage` will be used to correlate a Proxmox VM storage volume with the Proxmox VM that you want to create
