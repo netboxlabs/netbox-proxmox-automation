@@ -300,17 +300,30 @@ In the NetBox UI:
 
 Once you've created a NetBox API token, store it some place safe in the meantime; most NetBox installations will obscure the API token once it's been created.
 
-## Initial Configuration: NetBox Custom Fields
+## Initial Configuration: NetBox Customization
 
 You will want to use NetBox to keep track of Proxmox VM ids (called 'vmid' in Proxmox), the node where Proxmox VMs are running, and the Proxmox VM template that was used to create the Proxmox VM.  This is highly important so that when you use `netbox-proxmox-automation` for automation -- that you are able to induce configuration in changes to Proxmox around items like vmids and such.  To do so, you will need to do some customizations to NetBox before you start importing this data.
 
-### NetBox Customization: Custon Fields Choices (for Proxmox)
+### NetBox Customization: Custom Fields Choices (for Proxmox VM templates and storage)
 
 In the NetBox UI, you will need to create two custom field choices.
-1. `proxmox-vm-templates` will be used to correlate a Proxmox VM template with the Proxmox VM that you will provision
-2. `proxmox-vm-storage` will be used to correlate an underlying Proxmox VM storage volume with the Proxmox VM you will provision
+1. `proxmox-node` will be used to correlate a Proxmox node to the Proxmox VM that you will provision
+2. `proxmox-vm-templates` will be used to correlate a Proxmox VM template with the Proxmox VM that you will provision
+3. `proxmox-vm-storage` will be used to correlate an underlying Proxmox VM storage volume with the Proxmox VM you will provision
 
 In the NetBox UI, navigate to Customization > Custom Field Choices
+
+
+#### proxmox-node
+
+Create custom field choices for Proxmox VM Node(s).  When you click the '+' button, you will be presented with an Edit screen.  Fill the form as shown below.  Note that your choices will represent a list of Proxmox cluster nodes.  You will need to login to the Proxmox UI to get the list of Proxmox cluster nodes.
+
+![Screenshot of Proxmox VM Cluster Nodes Edit screen](./images/proxmox-cluster-nodes-edit.png)
+
+When you are done, your Custom Field Choices for Proxmox VM templates should look like this.
+
+![Screenshot of Proxmox VM Cluster Nodes View screen](./images/proxmox-cluster-nodes-saved.png)
+
 
 #### proxmox-vm-templates
 
@@ -334,17 +347,33 @@ When you are done, your Custom Field Choices for Proxmox VM storage should look 
 ![Screenshot of Proxmox VM Storage View screen](./images/proxmox-vm-storage-saved.png)
 
 
-### NetBox Customization: Proxmox VM id (vmid) configuration
+### NetBox Customization: Custom Fields (for Proxmox VMs)
 
-In the NetBox UI, navigate to Customization > Custom Fields
-  - click the '+' button
-    - Set 'Content Types' to 'Virtualization > Virtual Machines'
-    - Set 'Name' to 'proxmox_vmid'
-    - Set 'Label' to 'Proxmox Virtual Machine ID (vmid)'
-    - Set 'Group Name' to 'Proxmox'
-    - Set 'Type' to Text
-    - *Make sure that Required is NOT checked*
-    - Click 'Save'
+In the NetBox UI, you will need to create a series of custom fields.
+1. `proxmox_node` will blahblah
+2. `proxmox_vm_template` will be used to correlate a Proxmox VM template with the Proxmox VM that you want to create
+3. `proxmox_vm_storage` will be used to correlate a Proxmox VM storage volume with the Proxmox VM that you want to create
+4. `proxmox_disk_storage_volume` will be used to correlate a Proxmox VM storage volume with each Proxmox VM disk that you want to create
+5. `proxmox_public_ssh_key` will be used to assign a public SSH key that you will use to login to a Proxmox VM
+6. `proxmox_vmid` will be used to document the Proxmox `vmid` that was created when the Proxmox VM was created
+
+In the NetBox UI, navigate to Customization > Custom Field Choices
+
+
+#### proxmox_vm_template
+
+
+#### proxmox_vm_storage
+
+
+#### proxmox_disk_storage_volume
+
+
+#### proxmox_public_ssh_key
+
+
+#### proxmox_vmid
+
 
 ### NetBox Customization: Proxmox VM node configuration
 
