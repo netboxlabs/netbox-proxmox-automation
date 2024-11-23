@@ -562,7 +562,42 @@ In this case, our URI will be `netbox-proxmox-webhook` (the trailing slash is cr
 
 #### Flask Application: Event Rules
 
-blah
+You will need to add the following event rules to NetBox to update Proxmox when virtual machines have been created, updated, and/or deleted.
+1. `proxmox-vm-add-disk` takes a Proxmox virtual machine disk that was added to NetBox then automates disk addition in Proxmox
+
+![Netbox Proxmox VM add disk image](./images/proxmox-vm-add-disk.png)
+
+2. `proxmox-vm-created` takes a Proxmox virtual machine that was created in NetBox then automates Proxmox VM cloning; the Proxmox VM in NetBox status should be set to 'Staged', and the selected Proxmox VM template cannot be null
+
+![NetBox Proxmox VM created image](./images/proxmox-vm-created.png)
+
+3. `proxmox-vm-delete-disk` takes a Proxmox virtual machine disk that was removed from NetBox then removes the non-OS disk from Proxmox; this *does not* include `scsi0`, which is the OS disk that's been provisioned in Proxmox
+
+![NetBox Proxmox VM delete disk image](./images/proxmox-vm-delete-disk.png)
+
+4. `proxmox-vm-deleted` takes a Proxmox virtual machine that was deleted from NetBox then stops/removes the VM from Proxmox
+
+![NetBox Proxmox VM deleted image](./images/proxmox-vm-deleted.png)
+
+5. `proxmox-vm-resize-disk` takes a Proxmox virtual machine disk that was changed in NetBox then resizes the disk in Proxmox (*cannot downsize a disk, by design*); this can be used for *any* Proxmox VM disk
+
+![NetBox Proxmox VM resize disk image](./images/proxmox-vm-resize-disk.png)
+
+6. `proxmox-vm-started` takes a Proxmox virtual machine whose state was changed to 'Active' in NetBox and starts the VM in Proxmox
+
+![NetBox Proxmox VM started image](./images/proxmox-vm-started.png)
+
+7. `proxmox-vm-stopped` takes a Proxmox virtual machine whose state was changed to 'Offline' in NetBox and stops the VM in Proxmox
+
+![NetBox Proxmox VM stopped image](./images/proxmox-vm-stopped.png)
+
+8. `proxmox-vm-update-network-config` takes a Proxmox virtual machine whose network configuration was changed in NetBox (IP address, SSH public key) and adds those network configuration settings to Proxmox
+
+![NetBox Proxmox VM update network config image](./images/proxmox-vm-update-network-config.png)
+
+9. `proxmox-vm-updated` takes any Proxmox virtual machine updates (vcpus, memory, etc) in NetBox and changes those settings in Proxmox
+
+![NetBox Proxmox VM updated](./images/proxmox-vm-updated.png)
 
 
 ### AWX (AWX/Tower/AAP)
