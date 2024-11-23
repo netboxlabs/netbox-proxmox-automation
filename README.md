@@ -613,6 +613,15 @@ You will need to add the following event rules to NetBox to update Proxmox when 
 
 blahblah
 
+#### AWX (AWX/Tower/AAP) Webhook
+
+blah
+
+#### AWX (AWX/Tower/AAP) Event Rules
+
+blahblahblah
+
+
 # Developers
 - Nate Patwardhan &lt;npatwardhan@netboxlabs.com&gt;
 
