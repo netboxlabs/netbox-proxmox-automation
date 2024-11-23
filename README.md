@@ -527,7 +527,13 @@ Press CTRL+C to quit
 
 ## Initial Configuration: NetBox Event Rules and Webhooks
 
-Put steps here
+### Custom Webhooks
+
+blah
+
+### AWX (AWX/Tower/AAP)
+
+blahblah
 
 # Developers
 - Nate Patwardhan &lt;npatwardhan@netboxlabs.com&gt;
@@ -536,8 +542,9 @@ Put steps here
 
 ## Known Issues
 - *Only* supports SCSI disk types (this is possibly fine as Proxmox predomininantly provisions disks as SCSI)
+- Does not currently support Proxmox VM creation to a Proxmox cluster, but is only node-based
 - Needs better reconciliation on the NetBox end when Proxmox->NetBox discovery is used
 
-## Roadmap -- Delivery TBD
+## Roadmap -- Delivery
 - DNS update support (requires NetBox `netbox-dns` plugin)
 - Maybe evolve into to a NetBox plugin for Proxmox
