@@ -515,19 +515,24 @@ When in `venv`, you will need to create `app_config.yml`.
 Then season `app_config.yml` to taste.  When you are ready to test your Flask application, do this:
 
 ```
-(venv) shell$ flask run --debug
+(venv) shell$ flask run -h 0.0.0.0 -p 8000 --debug 
  * Debug mode: on
 WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
- * Running on http://127.0.0.1:5000
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8000
+ * Running on http://X.X.X.X:8000
 Press CTRL+C to quit
  * Restarting with stat
  * Debugger is active!
- * Debugger PIN: 134-610-085
+ * Debugger PIN: XXX-XXX-XXX
 ```
+
+The above `flask` command will start the Flask application on port 8000 (or whatever you specify with the `-p` argument) and will bind on the IP address (or IP addresses) that were specified with the `-h` argument.  In this case, we used 0.0.0.0 with the `-h` argument, so the Flask application will listen on all interfaces.  The `--debug` argument indicates that we will run a single-threaded web service and that we will show output to stdout.  *You will want to use `gunicorn.py` or some other WSGI to run the Flask application in production.*
+
 
 ## Initial Configuration: NetBox Event Rules and Webhooks
 
-### Custom Webhooks
+### Flask Application
 
 blah
 
