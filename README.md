@@ -542,9 +542,9 @@ For the sake of automation, every event rule that you create in NetBox requires 
 
 Regardless of whether you are using a Flask (or other) application for Proxmox automation, or you are using AWX (or Tower/AAP), this automation should trigger anytime that a Proxmox VM is changed in NetBox such that:
 - a Proxmox VM has been created in NetBox with a status of 'Staged'
-- a Proxmox VM in NetBox has a changed network configuration
-- a Proxmox VM in NetBox adds new disks
-- a Proxmox VM in NetBox has a changed disk configuration
+- a Proxmox VM in NetBox (with a status of 'Staged') has a changed network configuration
+- a Proxmox VM in NetBox (with a status of 'Staged') adds new disks
+- a Proxmox VM in NetBox (with a status of 'Staged') has a changed disk configuration
 - a Proxmox VM in NetBox has been set to a status of 'Active'
 - a Proxmox VM in NetBox has been set to a status of 'Offline'
 - a Proxmox VM in NetBox has been removed
