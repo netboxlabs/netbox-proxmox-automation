@@ -595,7 +595,7 @@ You will need to add the following event rules to NetBox to update Proxmox when 
 
 ![NetBox Proxmox VM update network config image](./images/proxmox-vm-update-network-config.png)
 
-9. `proxmox-vm-updated` takes any Proxmox virtual machine updates (vcpus, memory, etc) in NetBox and changes those settings in Proxmox
+9. `proxmox-vm-updated` takes any Proxmox virtual machine updates (vcpus, memory, etc) in NetBox, where the Proxmox VM status is set to 'Staged', and changes those settings in Proxmox
 
 ![NetBox Proxmox VM updated](./images/proxmox-vm-updated.png)
 
