@@ -545,8 +545,24 @@ For the sake of automation, every event rule that you create in NetBox requires 
 
 As noted [here](#initial-configuration-flask-application-python), you will need to have a running Flask application *before* you can start handling events (i.e. object changes) inside of NetBox.
 
+#### Flask Application: Webhook
+
 `example-netbox-webhook-flask-app` implements a catch-all for virtual machine events that happen in NetBox.  Events will call the webhook, and in turn the webhook will discern what changed, and how to implement these changes by way of Proxmox automation via its API.
 
+You need to create the webhook, in NetBox, first.  Navigate over to Operations > Integrations > Webhooks, and add something like the following.  *This, and the IP address of where you are running the Flask application, needs to match what you defined `netbox_webhook_name` in `app_config.yml`.*
+
+```
+(venv) shell$ grep netbox_webhook_name app_config.yml
+netbox_webhook_name: "netbox-proxmox-webhook"
+```
+
+In this case, our URI will be `netbox-proxmox-webhook`, and our webhook will be listening on the public interface and port that were specified when we started our Flask application.  When you add the webhook to NetBox (use the '+' button), it should look something like this.
+
+![netbox-proxmox-flask-app-webhook-image](./images/netbox-proxmox-flask-app-webhook.png)
+
+#### Flask Application: Event Rules
+
+blah
 
 
 ### AWX (AWX/Tower/AAP)
