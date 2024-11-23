@@ -532,9 +532,22 @@ The above `flask` command will start the Flask application on port 8000 (or what
 
 ## Initial Configuration: NetBox Event Rules and Webhooks
 
+There are two key components to automating Proxmox VM management in NetBox.
+1. webhooks
+2. event rules
+
+A webhook in NetBox will consume the payload of data from an event rule.  An event rule announces changes to an object type inside of NetBox (in this case, a Virtual Machine and its related object types) -- then sends the payload of data around those changes to a webhook.  The webhook will handle the Proxmox automation(s) as you've defined it/them.
+
+For the sake of automation, every event rule that you create in NetBox requires either a Webhook or a Script.
+
+
 ### Flask Application
 
-blah
+As noted [here](#initial-configuration-flask-application-python), you will need to have a running Flask application *before* you can start handling events (i.e. object changes) inside of NetBox.
+
+`example-netbox-webhook-flask-app` implements a catch-all for virtual machine events that happen in NetBox.  Events will call the webhook, and in turn the webhook will discern what changed, and how to implement these changes by way of automating these changes in Proxmox.
+
+
 
 ### AWX (AWX/Tower/AAP)
 
