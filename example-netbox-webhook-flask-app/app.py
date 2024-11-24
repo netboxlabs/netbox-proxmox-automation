@@ -25,6 +25,13 @@ api = Api(app, version="1.0.0", title="NetBox-Proxmox Webhook Listener",
         description="NetBox-Proxmox Webhook Listener")
 ns = api.namespace(app_config['netbox_webhook_name'])
 
+# set debug (enabled/disabled)
+DEBUG = False
+
+if app.debug:
+    DEBUG = True
+
+
 APP_NAME = "netbox-proxmox-webhook-listener"
 
 logger = logging.getLogger(APP_NAME)
@@ -58,9 +65,10 @@ class WebhookListener(Resource):
         if not webhook_json_data or "model" not in webhook_json_data or "event" not in webhook_json_data:
             return {"result":"invalid input"}, 400
 
-        print("INCOMING DATA FOR WEBHOOK", webhook_json_data)
+        if DEBUG:
+            print("INCOMING DATA FOR WEBHOOK", webhook_json_data)
 
-        tc = NetBoxProxmoxHelper(app_config)
+        tc = NetBoxProxmoxHelper(app_config, webhook_json_data['data']['custom_fields']['proxmox_node'])
 
         if webhook_json_data['event'] == 'created' and webhook_json_data['model'] == 'virtualmachine' and webhook_json_data['data']['status']['value'] == 'staged':
             tc.proxmox_clone_vm(webhook_json_data)

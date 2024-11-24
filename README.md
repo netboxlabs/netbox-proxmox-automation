@@ -4,195 +4,70 @@
 
 When you think of the challenges of a widely used network documentation solution and a widely used virtualization technology, this implementation is an integration between virtual machine documentation (NetBox) and the automation of virtual machine (VM) configurations (Proxmox).
 
-`netbox-proxmox-ansible` uses [Ansible](https://www.ansible.com/) to automate management of your Proxmox VMs: With NetBox as your [*Network Source of Truth (NSoT)*](https://netboxlabs.com/blog/what-is-a-network-source-of-truth/), as NetBox was designed.  In other words, this automation will collect the *desired* (documented) state of (Proxmox) VMs in Netbox -- and deploy identical VM configurations to Proxmox.  Ansible when then enforce the desired Proxmox VM(s) state/states when deploying VMs in Proxmox.
+This automation handles creation, removal, and changes of/to Proxmox VMs.  The underlying automation uses [webhooks](https://demo.netbox.dev/static/docs/additional-features/webhooks/) and [event rules](https://netboxlabs.com/docs/netbox/en/stable/features/event-rules/) in NetBox.  When you induce a change in NetBox, this will set the desired VM state(s) in Proxmox.
 
-This automation handles both the creation and removal of Proxmox VMs.
+When you create VM objects in NetBox, the following will take place in Proxmox:
+- when you create a VM object in NetBox (name, status == Staged, chosen Proxmox VM template name), this will clone a VM in Proxmox of the same name, from the defined template
+- when you add a SSH key and/or primary IP address to a NetBox VM object (status == Staged), this will update the VM settings in Proxmox -- adding ipconfig0 and ssh key settings
+- when you add disks (scsi0 - scsiN) to a NetBox VM object (status == Staged), this will:
+  - resize scsi0 on the Proxmox VM to the size that was defined in NetBox
+  - create scsi1 - scsiN on the Proxmox VM and set them to their specified sizes
+- when you remove a disk or disks from a NetBox VM object, this will remove the corresponding disks from the Proxmox VM (*NOTE: this does not include scsi0 as that is the OS disk*)
 
-*This implementation also supports discovering VMs in Proxmox, should you want to document and/or merge your (Proxmox) operational state into NetBox.*
+Further:
+- when you set a VM's state to 'active' in NetBox, this will start a VM in Proxmox
+- when you set a VM's state to 'offline' in NetBox, this still stop a VM in Proxmox
+- when you remove a VM from NetBox, this will stop and remove a VM in Proxmox.
 
-When you use NetBox to create VMs in Proxmox, their *desired* state will be generated, including:
-- hostname
-- initial vm state (Staged)
-- network interface(s)
-- IP(s) for each network interface(s)
-- primary network interface for each VM
-- state of each VM disk (disk name and size)
-- update netbox-dns plugin for each VM (if enabled)
-
-When you use NetBox to remove VMs from Proxmox, their *desired* state will be generated, including:
-- initial vm state (Decommissioning)
-- identify Proxmox VMs that need to be removed
-- desired vm state ahead of removal (Offline)
-- update netbox-dns plugin for each VM (if enabled)
-- remove non-existent VM objects in Netbox
-
-Creating and deleting VMs in NetBox will both update VM state in Proxmox *and* update your DNS, if your DNS implementation is supported by this automation.  *You will need the [netbox-dns plugin](https://github.com/peteeckel/netbox-plugin-dns) if you want to manage your DNS records in NetBox.*
-
-When you discover VMs in Proxmox, this will create/merge VM changes in NetBox.
 
 ## Usage
 
-`netbox-proxmox-ansible` currently implements two key use cases:
-- Deploy a Proxmox VM through the desired Proxmox VM state in NetBox.  This is done through `proxmox-vm-manager.yml`.
-- "Discover" Proxmox VM state from Proxmox node(s) and define Proxmox virtual state in NetBox.  Additionally, synchronize Proxmox VM state with desired Proxmox VM state in NetBox (mac addresses, active interfaces, etc).  This is done through `netbox-vm-discover-vms.yml`.
-
-Basic usage of `netbox-proxmox-ansible`, to provision Proxmox VMs to their desired state(s), is as follows:
-
-```
-shell$ source venv/bin/activate
-
-(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass
-```
-
-Should you want to update the DNS as well as provision Proxmox VMs to their desired state(s), make sure that 'update_dns' is set in `vms.yml`, then use the following command:
-
-```
-shell$ source venv/bin/activate
-
-(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass --ask-pass --ask-become-pass
-```
-
-The above will prompt you for a SSH password, the password that you would use for `sudo` commands, and finally your Ansible vault passphrase.
-
-More detailed examples are covered in the [Use Cases](#netbox-proxmox-ansible-use-cases) section of this document.
+`netbox-proxmox-automation` currently implements two automation use cases:
+1. NetBox webhooks and event rules will use AWX or Tower/AAP to induce Proxmox automation
+2. NetBox webhooks and event rules will use a Flask application to induce Proxmox automation
 
 ## What this implementation *is*
 
-`netbox-proxmox-ansible` is a client-based implementation where you define VM configurations (in YAML) then create your *desired* VM states in NetBox.  Ansible then synchronizes your *desired* VM states from NetBox to Proxmox by way of automation with Ansible.  The same can also be done in reverse: Where Proxmox holds your initial VM states -- that you want to "discover" in Proxmox then document/merge in/into NetBox.
+`netbox-proxmox-automation` is an implementation where you defined your *desired* VM states in NetBox.  Your desired VM state in NetBox then gets synchronized to Proxmox.
 
-You *should* be able to run `netbox-proxmox-ansible` from *any* Windows, MacOS, or Linux/UNIX-like system -- so long as you have both Ansible and Python (version 3) installed.  (*Python 2 is long dead, so it is not supported here.*)
+`netbox-proxmox-automation` uses cloud-init images to induce VM changes on Proxmox based on the *desired* state in NetBox.  Almost always these cloud-init images will be Debian or Debian-derived images (e.g. Debian or Ubuntu), RHEL-derived images (e.g. Rocky Linux), or maybe even Windows-based cloud-init images.  *(Windows cloud-init images are currently un-tested.)*  While you should be able to use a cloud-init image of choice with this automation, and due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.  We welcome any reports around other cloud-init images, and will merge in this functionality as we are able.
 
-`netbox-proxmox-ansible` uses cloud-init images to induce VM changes on Proxmox based on the *desired* state in NetBox (and vice versa).  Almost always these cloud-init images will be Debian or Debian-derived images (e.g. Debian or Ubuntu), RHEL-derived images (e.g. Rocky Linux), or maybe even Windows-based cloud-init images.  *(Windows cloud-init images are currently un-tested.)*  While you should be able to use a cloud-init image of choice with this automation, and due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.  We welcome any reports around other cloud-init images, and will merge in this functionality as we are able.
+Proxmox is highly conducive to using cloud-init images -- when cloud-init images are converted to templates.  You can define items like ssh keys and network configurations in Proxmox by way of using cloud-init images, and cloud-init will cascade these settings into your Proxmox VMs: *Dynamically*.  Further, Proxmox has a comprehensive API -- you can define VM resources, plus disk configurations and more -- where you can leverage automation to lay down your desired VM states in Proxmox with little effort.
 
-Proxmox is highly conducive to using cloud-init images -- when cloud-init images are converted to templates.  You can define items like ssh keys and network configurations in Proxmox by way of using cloud-init images, and cloud-init will cascade these settings into your Proxmox VMs: *Dynamically*.  Further, Proxmox has a comprehensive API -- you can define VM resources, plus disk configurations and more -- where you can leverage automation, in this case Ansible, to lay down your desired VM states in Proxmox with little effort.
-
-NetBox models VMs in an intuitive way.  You can define roles for VMs, such as for Proxmox, and from there you can define both VM state (Active, Offline, etc) and other resources like vcpus, memory, network configuration, disks, and more (perhaps, also, through customizations in NetBox).
-
-In this context, `netbox-proxmox-ansible` takes VM configurations from NetBox then applies their (running) states to Proxmox.  Of course, it works in the opposite way as well.
+NetBox models VMs in an intuitive way.  You can define roles for VMs, such as for Proxmox, and from there you can define both VM state (Active, Offline, etc) and other resources like vcpus, memory, network configuration, disks, and more (through customizations in NetBox).
 
 This automation is based on the premise(s) that:
-  1. You are using Python (version 3) on your client
-  2. You are using a Python `venv`
+  1. You are using Python (version 3)
+  2. You are using NetBox 4.1.0 or newer (NetBox 3.7.x should also work)
   3. You have a running Proxmox instance or cluster
-  4. You have a running NetBox instance
+  4. You have a running [AWX](https://github.com/ansible/awx) instance or are running [your own web service](./example-netbox-webhook-flask-app) to handle webhooks and event rules
   5. You have converted a cloud-init image to a Proxmox VM template
   6. Your Promox VM template(s) has/have qemu-guest-agent installed, and that qemu-guest-agent has been enabled via cloud-init
   7. You have access to the NetBox and Proxmox APIs (via API tokens, respectively)
   8. Your NetBox API token and its underlying privileges can create, modify, and delete objects in NetBox
   9. Your Proxmox API token and its underlying privileges can both manage VMs and storage (query, create, delete, etc)
-  10. If you want to make DNS changes:
-  - You have installed the netbox-dns plugin in your NetBox instance (OPTIONAL)
-  - You are running bind9 as your DNS server and have "admin" rights to make DNS changes (OPTIONAL)
-  - You are able to run Ansible with elevated privileges (i.e. root, OPTIONAL, for DNS changes)
 
 ## What this implementation *is not*
 
-`netbox-proxmox-ansible` is *not* a NetBox plugin; nor is it a script or a webhook (at this point in time).  And this is by design.
+`netbox-proxmox-automation` is not currently a NetBox plugin, but this may change.
 
-[ProxBox](https://github.com/netdevopsbr/netbox-proxbox) is a neat implementation of pulling information from Proxmox into NetBox.  ProxBox has its place, most certainly, but what it does is *not* the aim of `netbox-proxmox-ansible`.
+[ProxBox](https://github.com/netdevopsbr/netbox-proxbox) is a neat implementation of pulling information from Proxmox into NetBox.  ProxBox has its place, most certainly, but what it does is *not* the aim of `netbox-proxmox-automation`.
 
-Further, `netbox-proxmox-ansible` does *not* deploy a future state for any Proxmox VM.  For example, let's say you deploy a Proxmox VM called 'vm1' and it's intended to be a(n) LDAP server.  The scope of `netbox-proxmox-ansible` is to ensure that each VM that you document/model and deploy to Proxmox has a consistent baseline configuration, from which you can take future automation steps.  NetBox will document/model your *desired* Proxmox VM state, but additional automation states like package installations and configurations are left up to further automation that you might choose to do once your vitual machine is running in Proxmox.  As `netbox-proxmox-ansible` is free for you to use and/or modify, you are welcome to introduce subsequent automations to `netbox-proxmox-ansible` in your own environment.
+Further, `netbox-proxmox-automation` does *not* deploy a future state for any Proxmox VM.  For example, let's say you deploy a Proxmox VM called 'vm1' and it's intended to be a(n) LDAP server.  The scope of `netbox-proxmox-automation` is to ensure that each VM that you document/model and deploy to Proxmox has a consistent baseline configuration, from which you can take future automation steps.  NetBox will document/model your *desired* Proxmox VM state, but additional automation states like package installations and configurations are left up to further automation that you might choose to do once your vitual machine is running in Proxmox.  As `netbox-proxmox-automation` is free for you to use and/or modify, you are welcome to introduce subsequent automations to `netbox-proxmox-automation` in your own environment.
 
 # Installation
 
-`netbox-proxmox-ansible` is intended to make your life as simple as possible.  Once you have a working Proxmox node (or cluster), have provisioned a Proxmox API token with the permissions noted above, a NetBox instance, a NetBox API token, and have (optionally) installed the `netbox-dns` plugin and a name server (which you have permissions to manage), the entire process of managing Proxmox VMs via NetBox involves three simple requirements.
+`netbox-proxmox-automation` is intended to make your life as simple as possible.  Once you have a working Proxmox node (or cluster), have provisioned a Proxmox API token with the permissions noted above, a NetBox instance, a NetBox API token, the entire process of managing Proxmox VMs via NetBox involves three simple requirements.
 
-  1. You have created a configuration file which holds your environment and VM configurations: `vms.yml`
-  2. You have created an encrypted configuration file which holds your API tokens and related information: `secrets.yml`.
-  3. You are running a current version of Ansible (2.17.4 was used for developing `netbox-proxmox-ansible`), preferably with the ability to have elevated permissions (i.e. root) should you want to automate DNS changes -- and can install any dependencies required by `netbox-proxmox-ansible`.
+  1. You have defined event rules and webhooks for VM operations in NetBox
+  2. You have a web service that handles events via webhooks
+  - You are running a web service that handles events via webhooks, e.g. [example-netbox-webhook-flask-app](example-netbox-webhook-flask-app) *-or-*
+  - You are running AWX and have created templates to handle events via webhooks
 
-While the subsequent initial configuration notes might seem like a heavy lift, your initial configuration of `netbox-proxmox-ansible` should take less than an hour.  Plus, you will likely need to run the following initial configuration steps only once.
-
-## Initial Configuration: Python
-
-Open a shell on your local system.  *Do not* run these commands as the 'root' user.  The following commands should run on MacOS, Linux, and UNIX-like systems; you will need to run these commands during initial installation or upgrades of `netbox-proxmox-ansible`.
-
-```
-shell$ cd /path/to/netbox-proxmox-ansible
-
-shell$ deactivate # this will fail if there is no configured venv
-
-shell$ rm -rf venv
-
-shell$ python3 -m venv venv
-
-shell$ source venv/bin/activate
-
-(venv) shell$ pip install -r requirements.txt # this will install all of the dependencies
-```
-
-To leave `venv`, simply type 'deactivate'.
-
-```
-(venv) shell$ deactivate
-shell$
-```
-
-With each usage of `netbox-proxmox-ansible`, make sure that you enter `venv` before running any Ansible commands.  Else this automation will not work.
-
-```
-shell$ cd /path/to/netbox-proxmox-ansible
-
-shell$ source venv/bin/activate
-
-(venv) shell$  # <--- this is the desired result
-```
-
-## Initial Configuration: Netbox collection for Ansible
-
-```
-shell$ source venv/bin/activate
-
-(venv) shell$ ansible-galaxy collection install netbox.netbox
-```
-
-## Initial Configuration: Proxmox for Ansible via community.general collection
-
-```
-shell$ source venv/bin/activate
-
-(venv) shell$ ansible-galaxy collection install community.general
-```
-
-## Initial Configuration: Ansible inventory file
-
-You will need to create an inventory file to be able to use `netbox-proxmox-ansible`.
-
-If you do not need DNS support, do this.
-
-```
-shell$ cd /path/to/netbox-proxmox-ansible
-
-shell$ source venv/bin/activate
-
-(venv) shell$ cat inventory
-[proxmox]
-name-or-ip-of-proxmox-node1
-... etc ...
-name-or-ip-of-proxmox-nodeN
-```
-
-If you need DNS support, do this:
-
-```
-shell$ cd /path/to/netbox-proxmox-ansible
-
-shell$ source venv/bin/activate
-
-(venv) shell$ cat inventory
-[proxmox]
-name-or-ip-of-proxmox-node1
-... etc ...
-name-or-ip-of-proxmox-nodeN
-[dns]
-name-or-ip-of-dns-server1
-... etc ...
-name-or-ip-of-dns-serverN
-```
 
 ## Initial Configuration: Creating Proxmox VM templates from (cloud-init) images
 
-`netbox-proxmox-ansible` *only* supports cloud-init images.  The dynamic nature of Proxmox VM automation requires this implementation to be able to set things, during the Proxmox VM provisioning process, like network configuration, hostnames, and more.  While it's *possible* that `netbox-proxmox-ansible` *might* support your existing Proxmox VM templates, it's *highly* recommended that you follow the procedure below -- for the best results.
+`netbox-proxmox-automation` *only* supports cloud-init images.  The dynamic nature of Proxmox VM automation requires this implementation to be able to set things, during the Proxmox VM provisioning process, like network configuration, hostnames, and more.  While it's *possible* that `netbox-proxmox-automation` *might* support your existing Proxmox VM templates, it's *highly* recommended that you follow the procedure below -- for the best results.
 
 As a cloud-init image is basically "blank", meaning that there is not broad network or SSH key configuration, this allows us to have total flexibility in the way that this automation takes a *desired* Proxmox VM state from NetBox and generates anticipated changes to VMs -- in Proxmox.
 
@@ -366,7 +241,7 @@ proxmox-ve-node# qm set 9000 --agent enabled=1
 update VM 9000: -agent enabled=1
 ```
 
-Second, convert the Proxmox VM into a template.  You can then use this Proxmox VM template in your `netbox-proxmox-ansible` automation.
+Second, convert the Proxmox VM into a template.  You can then use this Proxmox VM template in your `netbox-proxmox-automation` automation.
 
 Now convert the Proxmox VM to a template.  *Note that this cannot be undone!*
 
@@ -376,13 +251,13 @@ proxmox-ve-node# qm template 9000
   Logical volume pve/base-9000-disk-0 changed.
 ```
 
-You should now be able to use your Proxmox VM template, with a VM id (vmid) of 9000 (or whatever you choose) in your `netbox-proxmox-ansible` automation.
+You should now be able to use your Proxmox VM template, with a VM id (vmid) of 9000 (or whatever you choose) in your `netbox-proxmox-automation` automation.
 
 ## Initial Configuration: NetBox objects + dependencies
 
-Given the heirarchical nature of NetBox, you will need to create the following objects before using `netbox-proxmox-ansible` automation.  You should refer to the [NetBox planning guide](https://netboxlabs.com/docs/netbox/en/stable/getting-started/planning/) to address these dependencies before proceeding with `netbox-proxmox-ansible`.
+Given the heirarchical nature of NetBox, you will need to create the following objects before using `netbox-proxmox-automation` automation.  You should refer to the [NetBox planning guide](https://netboxlabs.com/docs/netbox/en/stable/getting-started/planning/) to address these dependencies before proceeding with `netbox-proxmox-automation`.
 
-Using NetBox's IPAM is a *requirement* of `netbox-proxmox-ansible`.  This is because `netbox-proxmox-ansible` is going to either assign a defined IP address to a specified inteface (or interfaces) on a Proxmox VM, or it's going to request an available IP address from NetBox's IPAM -- and assign the requested IP address to an interface (or interfaces) on a Proxmox VM.
+Using NetBox's IPAM is a *requirement* of `netbox-proxmox-automation`.  This is because `netbox-proxmox-automation` is going to either assign a defined IP address to a specified inteface (or interfaces) on a Proxmox VM, or it's going to request an available IP address from NetBox's IPAM -- and assign the requested IP address to an interface (or interfaces) on a Proxmox VM.
 
 Ahead of using this automation, make sure to create the following IPAM-related objects in NetBox:
 - IPAM > RIRs
@@ -416,71 +291,116 @@ In the Netbox UI:
 
 ### Create NetBox API Token
 
-While it is possible to use passwords with the Netbox Ansible collection, `netbox-proxmox-ansible` does not allow this behavior.  Instead a NetBox API token is required.
+While it is possible to use passwords with the Netbox Ansible collection, `netbox-proxmox-automation` does not allow this behavior.  Instead a NetBox API token is required.
 
 In the NetBox UI:
 
 1. Navigate to Admin > API Tokens
 2. Add a new token, associating it with `api_user`, with the following characteristics: Write enabled (you can select other characteristics if you wish)
 
-Once you've created a NetBox API token, store it some place safe in the meantime; most NetBox installations will obscure the API token once it's been created.
+Once you've created a NetBox API token, store it some place safe in the meantime; (most) NetBox installations will obscure the API token once it's been created.
 
-## Initial Configuration: NetBox Custom Fields
+## Initial Configuration: NetBox Customization
 
-You will want to use NetBox to keep track of Proxmox VM ids (called 'vmid' in Proxmox), the node where Proxmox VMs are running, and the Proxmox VM template that was used to create the Proxmox VM.  This is highly important so that when you use `netbox-proxmox-ansible` for automation -- that you are able to induce configuration in changes to Proxmox around items like vmids and such.  To do so, you will need to do some customizations to NetBox before you start importing this data.
+You will need to do some customization to NetBox to define the underlying Proxmox VM configuration(s).  This section covers the custom field choices and custom fields that you'll need to create in NetBox -- in order for you to facilitate automation.
 
-### NetBox Customization: Proxmox VM id (vmid) configuration
+### NetBox Customization: Custom Field Choices (for Proxmox VM templates and storage)
 
-In the NetBox UI, navigate to Customization > Custom Fields
-  - click the '+' button
-    - Set 'Content Types' to 'Virtualization > Virtual Machines'
-    - Set 'Name' to 'proxmox_vmid'
-    - Set 'Label' to 'Proxmox Virtual Machine ID (vmid)'
-    - Set 'Group Name' to 'Proxmox'
-    - Set 'Type' to Text
-    - *Make sure that Required is NOT checked*
-    - Click 'Save'
-
-### NetBox Customization: Proxmox VM node configuration
-
-In the NetBox UI, navigate to Customization > Custom Fields
-  - click the '+' button
-    - Set 'Content Types' to 'Virtualization > Virtual Machines'
-    - Set 'Name' to 'proxmox_node'
-    - Set 'Label' to 'Proxmox node'
-    - Set 'Group Name' to 'Proxmox'
-    - Set 'Type' to Text
-    - *Make sure that Required is NOT checked*
-    - Click 'Save'
-
-### NetBox Customization: Proxmox VM template configuration
+In the NetBox UI, you will need to create the following custom field choices.
+1. `proxmox-node` will be used to correlate a Proxmox node to the Proxmox VM that you will provision
+2. `proxmox-vm-templates` will be used to correlate a Proxmox VM template with the Proxmox VM that you will provision
+3. `proxmox-vm-storage` will be used to correlate an underlying Proxmox VM storage volume with the Proxmox VM you will provision
 
 In the NetBox UI, navigate to Customization > Custom Field Choices
-  - click the '+' button
-    - Set 'Name' to 'Proxmox VM Templates'
-    - Set 'Extra choices' to something like:
-    ```
-    jammy-server-cloudimg-amd64-template:jammy-server-cloudimg-amd64-template
-    focal-server-cloudimg-amd64-template:focal-server-cloudimg-amd64-template
-    noble-server-cloudimg-amd64-template:noble-server-cloudimg-amd64-template
-    ```
-    
-    These will reflect your template choices in Proxmox.
+
+
+#### proxmox-node
+
+Create custom field choices for Proxmox VM Node(s).  When you click the '+' button, you will be presented with an Edit screen.  Fill the form as shown below.  Note that your choices will represent a list of Proxmox cluster nodes.  You will need to login to the Proxmox UI to get the list of Proxmox cluster nodes.
+
+![Screenshot of Proxmox VM Cluster Nodes Edit screen](./images/proxmox-cluster-nodes-edit.png)
+
+When you are done, your Custom Field Choices for Proxmox VM node(s) should look like this.
+
+![Screenshot of Proxmox VM Cluster Nodes View screen](./images/proxmox-cluster-nodes-saved.png)
+
+
+#### proxmox-vm-templates
+
+Create custom field choices for Proxmox VM Templates.  When you click the '+' button, you will be presented with an Edit screen.  Fill the form as shown below.  Note that your choices will have a (Proxmox) VMID to name-of-template mapping.  You will need to login to the Proxmox UI to get the VMID to name-of-template mappings.
+
+![Screenshot of Proxmox VM Templates Edit screen](./images/proxmox-vm-templates-edit.png)
+
+When you are done, your Custom Field Choices for Proxmox VM templates should look like this.
+
+![Screenshot of Proxmox VM Templates View screen](./images/proxmox-vm-templates-saved.png)
+
+
+#### proxmox-vm-storage
+
+Create custom field choices for Proxmox VM Storage.  When you click the '+' button, you will be presented with an Edit screen.  Fill the form as shown below.  Note that your choices will represent the name/value of each Proxmox storage volume.  You will need to login to the Proxmox UI to get a list of Proxmox storage volumes.
+
+![Screenshot of Proxmox VM Storage Edit screen](./images/proxmox-vm-storage-edit.png)
+
+When you are done, your Custom Field Choices for Proxmox VM storage should look like this.
+
+![Screenshot of Proxmox VM Storage View screen](./images/proxmox-vm-storage-saved.png)
+
+
+### NetBox Customization: Custom Fields (for Proxmox VMs)
+
+In the NetBox UI, you will need to create a series of custom fields, as noted below.
+1. `proxmox_node` will be used to correlate a Proxmox cluster node with the Proxmox VM that you want to create
+2. `proxmox_vm_template` will be used to correlate a Proxmox VM template with the Proxmox VM that you want to create
+3. `proxmox_vm_storage` will be used to correlate a Proxmox VM storage volume with the Proxmox VM that you want to create
+4. `proxmox_disk_storage_volume` will be used to correlate a Proxmox VM storage volume with each Proxmox VM disk that you want to create
+5. `proxmox_public_ssh_key` will be used to assign a public SSH key that you will use to login to a Proxmox VM
+6. `proxmox_vmid` will be used to document the Proxmox `vmid` that was created when the Proxmox VM was created
 
 In the NetBox UI, navigate to Customization > Custom Fields
-  - click the '+' button
-    - Set 'Content Types' to 'Virtualization > Virtual Machines'
-    - Set 'Name' to 'proxmox_vm_template'
-    - Set 'Label' to 'Proxmox VM template'
-    - Set 'Group Name' to 'Proxmox'
-    - Set 'Type' to Selection
-    - *Make sure that Required is NOT checked*
-    - Set 'Choice set' to 'Proxmox VM Templates'
-    - Click 'Save'
+
+
+#### proxmox_node
+
+Create a custom field for Proxmox Node.  It will be called `proxmox_node`.  Here is what `proxmox_node` should look like after you've made your changes.
+
+![Screenshot of proxmox_node in NetBox UI](./images/proxmox-node.png)
+
+
+#### proxmox_vm_template
+
+Create a custom field for Proxmox VM template.  It will be called `proxmox_vm_template`.  Here is what `proxmox_vm_template` should look like after you've made your changes.
+
+![Screenshot of proxmox_vm_template in NetBox UI](./images/proxmox-vm-template.png)
+
+#### proxmox_vm_storage
+
+Create a custom field for Proxmox VM storage.  It will be called `proxmox_vm_storage`.  Here is what `proxmox_vm_storage` should look like after you've made your changes.
+
+![Screenshot of proxmox_vm_storage in NetBox UI](./images/proxmox-vm-storage.png)
+
+#### proxmox_disk_storage_volume
+
+Create a custom field for Proxmox disk storage volume.  It will be called `proxmox_disk_storage_volume`.  Here is what `proxmox_disk_storage_volume` should look like after you've made your changes.
+
+![Screenshot of proxmox_disk_storage_volume in NetBox UI](./images/proxmox-disk-storage-volume.png)
+
+#### proxmox_public_ssh_key
+
+Create a custom field for Proxmox VM public SSH key.  It will be called `proxmox_public_ssh_key`.  Here is what `proxmox_public_ssh_key` should look like after you've made your changes.
+
+![Screenshot of proxmox_public_ssh_key in NetBox UI](./images/proxmox-public-ssh-key.png)
+
+#### proxmox_vmid
+
+Create a custom field for Proxmox VMID.  It will be called `proxmox_vmid`.  Here is what `proxmox_vmid` should look like after you've made your changes.  *Note that `proxmox_vmid` is set automatically during the Proxmox VM provisioning process.  Any VMID that you specified will be discarded.*
+
+![Screenshot of proxmox_vmid in NetBox UI](./images/proxmox-vmid.png)
+
 
 ## Initial Configuration: Proxmox API user + key
 
-While the Proxmox implementation that's part of the Ansible community.general collection allows you to use passwords when doing Proxmox automation, `netbox-proxmox-ansible` does not allow this behavior.
+While the Proxmox implementation that's part of the Ansible community.general collection allows you to use passwords when doing Proxmox automation, `netbox-proxmox-automation` does not allow this behavior.
 
 It is recommended that you do *not* create an API token for the Proxmox 'root' user.  Instead, create an `api_user` and an API token.  Then assign the required permissions to the `api_user`.  This procedure uses a combination of the Proxmox UI and the command line.  You need to be able to access Proxmox via and UI and SSH and become the 'root' user.  You will need to create an `api_user` in Proxmox, an API token, and set the requisite permissions in Proxmox so that the `api_user` can:
 
@@ -529,465 +449,488 @@ proxmox-ve-shell# pveum acl modify / -user api_user@pve -role Administrator # al
 
 For the command line above, note that you *will get the Proxmox API token via stdout only once*.  Make sure to copy and store this token in a safe place.  You will need it when we generate the Ansible `secrets.yml` configuration in the next step.
 
-## Initial Configuration: Ansible vault and secrets
+Use `netbox-proxmox-discover-vms.yml` to discover and Proxmox VMs which aren't already in NetBox.  This procedure will also make incremental changes to existing Proxmox VMs in NetBox -- such as adding MAC address to network interfaces.
 
-`netbox-proxmox-ansible` requires that you store secrets in a file called `secrets.yml`.  While `secrets.yml` is excluded in .gitignore, it is best practice to encrypt any file where secrets live.  For this purpose we will use [Ansible vault](https://docs.ansible.com/ansible/latest/vault_guide/index.html).
-
-`secrets.yml` is used to store your Proxmox and NetBox authentication information (nodes, hosts, users, API tokens, etc) and must be in the following format:
+Usage:
 
 ```
+shell$ cd /path/to/netbox-proxmox-automation
+
+shell$ source venv/bin/activate
+
+(venv) shell$ ansible-playbook -i inventory netbox-proxmox-discover-vms.yml --ask-vault-pass
+```
+
+## Initial Configuration: Flask Application (Python)
+
+*You only need to do this configuration step if you intend to use the example Flask application to handle your Proxmox automation.*
+
+Open a shell on your local system.  *Do not* run these commands as the 'root' user.  The following commands should run on MacOS, Linux, and UNIX-like systems; you will need to run these commands during initial installation or upgrades of `netbox-proxmox-automation`.
+
+```
+shell$ cd /path/to/netbox-proxmox-automation/example-netbox-webhook-flask-app
+
+shell$ deactivate # this will fail if there is no configured venv
+
+shell$ rm -rf venv
+
+shell$ python3 -m venv venv
+
+shell$ source venv/bin/activate
+
+(venv) shell$ pip install -r requirements.txt # this will install all of the dependencies
+```
+
+To leave `venv`, simply type 'deactivate'.
+
+```
+(venv) shell$ deactivate
+shell$
+```
+
+With each usage of `netbox-proxmox-automation`, make sure that you enter `venv` before running any Ansible commands.  Else this automation will not work.
+
+```
+shell$ cd /path/to/netbox-proxmox-automation/example-netbox-webhook-flask-app
+
+shell$ source venv/bin/activate
+
+(venv) shell$  # <--- this is the desired result
+```
+
+When in `venv`, you will need to create `app_config.yml`.
+
+```
+(venv) shell$ cd /path/to/netbox-proxmox-automation/example-netbox-webhook-flask-app
+
+(venv) shell$ cp -pi app_config.yml-sample app_config.yml
+```
+
+Then season `app_config.yml` to taste.  When you are ready to test your Flask application, do this:
+
+```
+(venv) shell$ flask run -h 0.0.0.0 -p 8000 --debug 
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8000
+ * Running on http://X.X.X.X:8000
+Press CTRL+C to quit
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: XXX-XXX-XXX
+```
+
+The above `flask` command will start the Flask application on port 8000 (or whatever you specify with the `-p` argument) and will bind on the IP address (or IP addresses) that were specified with the `-h` argument.  In this case, we used 0.0.0.0 with the `-h` argument, so the Flask application will listen on all interfaces.  The `--debug` argument indicates that we will run a single-threaded web service and that we will show output to stdout.  *You will want to use `gunicorn.py` or some other WSGI server to run the Flask application in production.*
+
+## Initial Configuration: AWX or Tower/AAP
+
+*You only need to do this configuration step if you intend to use AWX or Tower/AAP to handle your Proxmox automation.*
+
+Certainly, you do not need to do Ansible automation by using webhooks and event rules (triggering) in NetBox.  [This weblog](https://netboxlabs.com/blog/getting-started-with-network-automation-netbox-ansible/) shows you how you can use [Ansible](https://www.ansible.com/) with NetBox, as network source of truth, to induce changes in your environment -- by using a pull method for your automation from any client on your network.  In this example, you'll be able to run `ansible-playbook`, alongside a dynamic inventory (NetBox) to induce automation, or in this case automating changes to Proxmox VMs.
+
+However, many other NetBox users want to use NetBox as NSoT (network source of truth) to facilitate their Proxmox VM automation.  Changes to Proxmox VMs in NetBox will result in automation being kicked off, in this case via [AWX](https://github.com/ansible/awx), or perhaps for a Red Hat commercial customer, through [Tower/AAP](https://www.redhat.com/en/solutions/it-automation?sc_cid=7015Y000003sm3kQAA&gad_source=1&gclid=CjwKCAiAl4a6BhBqEiwAqvrqugh1f-1RfeP-NQxOKYhSbwJqUPVqGqR1A0ScrGMdNhLUbdTayU-EOhoCg00QAvD_BwE&gclsrc=aw.ds).  By using webhooks and event rules in NetBox, AWX or Tower/AAP are more than capable of inducing Proxmox automation.  In fact, using AWX or Tower/AAP is the preferred method for large environments -- where Proxmox VM deployment is a part of an underlying CI/CD.
+
+For those who are unfamiliar, AWX is the upstream (community, i.e. free) version of AAP.  Functionally, AWX works the same way as Tower/AAP, but without the commercial support.  AWX is an excellent alternative as you work through NetBox/Proxmox automation, but there can be a heavy lift when it comes to configuring AWX for the first time.  This section talks through the steps you'll need to be able to run AWX and to begin your Proxmox VM automation journey with NetBox.
+
+### Installing AWX with docker-compose
+
+AWX (or Tower/AAP) are typically installed in an environment where Kuberenetes (k8s) is available.  However, should you have Docker/docker-compose running on your local system, you should be able to install AWX [this way](https://github.com/ansible/awx/blob/devel/tools/docker-compose/README.md).
+
+Once you have installed AWX (or Tower/AAP) in your environment, and are able to login, as an 'admin' user through the UI, you can start configuring AWX (or Tower/AAP) to facilitate your Proxmox VM automation.  *Note that you can add whatever user(s)/group(s) that you want to AWX, but make sure that whatever user(s)/group(s) you add to AWX have the appropriate permissions to manage the following.*
+
+#### Create Github (or your Git of choice) Credential in AWX
+
+1. Login to the AWX UI
+2. Navigate to Resources > Credentials
+3. Create a new credential, as specified below, of type 'Source Control'.  Call it whatever you want, then make sure to copy and paste your SSH private key and (if required) SSH passphrase here.
+
+![AWX image git credential image](./images/awx-scm-credential-new.png)
+
+#### Select Inventory in AWX
+
+Navigate to Resources > Inventories.  'Demo Inventory' should be sufficient for `netbox-promox-automation`.
+
+![AWX default inventory image](./images/awx-default-inventory.png)
+
+#### Create Execution Environment in AWX
+
+Typically, when `ansible` or `ansible-playbook` is/are executed from the command line, this is done via a Python3 `venv`.  However, with AWX, there is no such capability to interact with a command line to leverage `venv` to do a `pip install` of Python module dependencies.
+
+As a result, you will need to use an [Execution Environment](https://ansible.readthedocs.io/projects/awx/en/latest/userguide/execution_environments.html) in AWX.  Your Execution Environment is a container image that will include all of the (Python) module dependencies that you'll need to facilitate Proxmox automation, and this container image will live in your container registry of choice.  
+
+*You (probably) only need to create an Exection Environment once for `netbox-proxmox-automation` with AWX.*
+
+In the end, your Execution Environment should look like this in AWX.
+
+![AWX Execution Environment image](./images/awx-execution-environment.png)
+
+To create your Execution Environment, you need to do the following.
+
+1. On your AWX host, create a directory structure like this.
+
+![AWX Execution Environment directory tree image](./images/awx-execution-environment-tree.png)
+
+2. On your AWX host, create and change to the directory where your Execution Environment will live: `mkdir -p /home/ubuntu/awx/execution-environments/ubuntu-env1; cd /home/ubuntu/awx/execution-environments/ubuntu-env1`
+
+3. On your AWX host, setup a Python 3 `venv`: `cd /home/ubuntu/awx/execution-environments/ubuntu-env1 ; python3 -m venv venv ; source venv/bin/activate`
+
+4. On your AWX host, create a file called `execution-environment.yml`.  It should look like the following.
+
+![AWX Execution Environment config file image](./images/awx-execution-environment-yml.png)
+
+Note that `execution-environment.yml` contains two requirement lines.  One is for Ansible Galaxy, and the other is for Python 3.
+
+5. Create `dependencies/requirements.txt` and `dependencies/requirements.yml`.
+
+`requirements.txt` will include the Python 3 module dependencies.
+
+```
+(venv) shell$ mkdir dependencies
+
+(venv) shell$ cat dependencies/requirements.txt
+ansible
+ansible-core
+ansible-runner
+bcrypt
+certifi
+cffi
+charset-normalizer
+cryptography
+dnspython
+docutils
+idna
+Jinja2
+lockfile
+MarkupSafe
+packaging
+paramiko
+pexpect
+prompt-toolkit
+proxmoxer
+ptyprocess
+pycparser
+PyNaCl
+pynetbox
+python-daemon
+PyYAML
+questionary
+requests
+resolvelib
+six
+urllib3
+wcwidth
+```
+
+`requirements.yml` will define the Ansible collections to include.  In this case we want to include the awx collection, the community.general collection (where the Proxmox Ansible modules live), and the netbox.netbox collection, which will interface with the NetBox API.
+
+```
+(venv) shell$ mkdir dependencies
+
+(venv) shell$ cat dependencies/requirements.yml
 ---
-proxmox:
-  node: name-of-proxmox-node # (frequently proxmox-ve by default)
-  api_host: hostname-or-ip-of-proxmox-api-host
-  api_user: api_user@pve # season to taste
-  api_token_id: id-of-api-user-token
-  api_token_secret: some-api-token-secret-here
-netbox:
-  api_proto: http # or https, season to taste
-  api_host: hostname-or-ip-of-netbox-host
-  api_port: 80 # or season to taste
-  api_token: some-api-token-secret-here
+collections:
+  - awx.awx
+  - community.general
+  - netbox.netbox
 ```
 
-1. Copy `secrets.yml-sample` to `secrets.yml`: `cp -pi secrets.yml-sample secrets.yml`.
-2. Generate a clear text `secrets.yml` with the format noted above.
-3. Encrypt `secrets.yml` with the `ansible-vault` command: `ansible-vault encrypt secrets.yml`.  This will prompt you for a (new) passphrase and a passphrase confirmation.
-4. Verify that `secrets.yml` has been encrypted: `head -1 secrets.yml`.  This should provide output like: `$ANSIBLE_VAULT;1.1;AES256`.
-5. To view (a decrypted) `secrets.yml`, run this command: `ansible-vault view secrets.yml`.  This will prompt you for your passphrase.
+6. Finally, build the new Execution Environment image, and push to your container registry, which in this case lives on localhost (local to AWX)
 
-# Configuring `vms.yml`
+![AWX Build Execution Environment commands image](./images/awx-ansible-build-ee.png)
 
-As noted earlier, most configuration steps with `netbox-proxmox-ansible` are one and done.  Once you get NetBox and Proxmox in the operational states as noted above, and once you've generated and encrypted `secrets.yml`, you most likely won't need to run those configurations again.
+Once you have built your Execution Environment, which is based on the default AWX Execution Environment, you can proceed with Proxmox automation in AWX.
 
-What you *will* need to do again (and again and again and again) is to modify `vms.yml`.  `vms.yml` is where you define default NetBox and Proxmox VM settings -- as well as the Proxmox VM configurations themselves.  When you run `ansible-playbook` with `proxmox-vm-manager.yml` it implicitly pulls in `secrets.yml`, as noted above.  But it also reads `vms.yml` for default NetBox and Proxmox settings.
+#### Add NetBox and Proxmox Credential Types to AWX
 
-`vms.yml` also defines a 'vms' section which defines the characteristics of each (Proxmox) VM.  `netbox-proxmox-ansible` will combine default settings in `vms.yml` with each (Proxmox) VM in the 'vms' section of `vms.yml` before introducing changes to NetBox.  Once Ansible has completed documenting/modeling each (Proxmox) VM in NetBox, it will consult the NetBox API for (Proxmox) VMs and, optionally, DNS records -- before inducing changes in Proxmox (also through the Proxmox API).
+Navigate to Administration > Credential Types in AWX, and create a credential type called 'NetBox Proxmox Creds'.
 
-`netbox-proxmox-ansible` ships with a file called `vms.yml-sample`.  Run the following command to generate a (starting) `vms.yml` -- if `vms.yml` doesn't already exist: `cp -pi vms.yml-sample vms.yml`.
+![AWX Netbox Proxmox Creds image](./images/awx-netbox-proxmox-creds.png)
 
-## Configuring 'default' values in `vms.yml`
-
-`vms.yml` starts with a series of 'default' values.  These default values reflect NetBox object types such as Sites or Tenants (etc), but they also reflect DNS-related items, and other items that set defaults for Proxmox VM customization.  *Most* 'default' values are required to be set in `vms.yml`.  Here are the current required 'default' values, their purposes, and whether or not they are required to be set in `vms.yml`.  Note that *you* will define the desired settings of the 'default' variables.
-
-Variable | Type | Purpose | Required
---- | --- | --- | ---
-default_storage | string | Define name of the default Proxmox storage volume to use for Proxmox VM provisioning | yes
-default_vm_cluster | string | Define name of the default Proxmox cluster | yes
-default_timezone | string | Define name of default timezone (used for things like Sites in NetBox) | yes
-default_site_group | string | Define name of default Site Group in NetBox | yes
-default_site | string | Define name of default Site in NetBox | yes
-default_region | string | Define name of default Region in NetBox | yes
-default_tenant | string | Define name of default Tenant in NetBox | yes
-default_location | string | Define name of default Location in NetBox | yes
-default_facility | string | Define name of default Facility in NetBox | yes
-default_vm_cluster_group | string | Define name of default Virtual Machine Cluster Group in NetBox | yes
-default_vm_cluster_type | string | Define name of default Proxmox Virtual Machine Cluster Type in NetBox | yes
-default_vm_device_role | string | Define name of default Virtual Machine Role in NetBox | yes
-default_network_prefix | string | Define name of default (network) Prefix in NetBox | yes
-default_dns_domainname | string | Define default DNS domain name (for Proxmox VMs) in NetBox | no, if update_dns is set to false
-update_dns | boolean | Define whether or not to provide DNS updates from NetBox | yes
-dns_integrations | list | Define list of underlying DNS integrations (e.g. bind9, etc) | no, if update_dns is set to false
-remote_bind9_zone_db_directory | string | Define location of bind9 zone db directory on remote DNS server | no, if update_dns is set to false
-default_vm_start_state | boolean | Define Proxmox VM start state on VM creation | yes
-default_vm_auto_start_state | boolean | Define Proxmox VM start state on Proxmox node boot/reboot | yes
-default_service_check_port | integer | Define port number for service to check after Proxmox VM has been started | yes
-
-## Configuring 'vms' section in `vms.yml`.
-
-As noted earlier, `vms.yml` implements a 'vms' section -- which is used to define the characteristics of each Proxmox VM.  The 'vms' section in `vms.yml` is defined right after the 'default' variables.  Each Proxmox VM that is defined in the 'vms' section looks something like this:
+Input configuration should include the following:
 
 ```
-  - name: vm1
-    template: jammy-server-cloudimg-amd64-template
-    vcpus: 2
-    memory: 2048
-    disk0: scsi0
-    disks:
-      - 20
-      - 10
-      - 5
-    primary_network_interface: eth0
-    network_interfaces:
-    - name: eth0
-      prefix: 192.168.80.0/24
-    - name: eth1
-      ip: 192.168.1.2/24
-    sshkey: ~/.ssh/identity-proxmox-vm.pub
-    gw: 80
-    tenant: NOTTHEDEFAULTTENANT
-    exists: false
-    start: true
+fields:
+  - id: proxmox_api_host
+    type: string
+    label: Proxmox API Host
+  - id: proxmox_api_user
+    type: string
+    label: Proxmox API User
+  - id: proxmox_api_user_token
+    type: string
+    label: Proxmox API Token ID
+  - id: proxmox_node
+    type: string
+    label: Proxmox Node
+  - id: proxmox_api_token_secret
+    type: string
+    label: Proxmox API Token
+    secret: true
+  - id: netbox_api_proto
+    type: string
+    label: NetBox HTTP Protocol
+  - id: netbox_api_host
+    type: string
+    label: NetBox API host
+  - id: netbox_api_port
+    type: string
+    label: NetBox API port
+  - id: netbox_api_token
+    type: string
+    label: NetBox API token
+    secret: true
+required:
+  - proxmox_api_host
+  - proxmox_api_user
+  - proxmox_api_user_token
+  - proxmox_node
+  - proxmox_api_token_secret
+  - netbox_api_host
+  - netbox_api_port
+  - netbox_api_proto
+  - netbox_api_token
 ```
 
-The above configuration, when applied through running `netbox-proxmox-ansible` automation, will induce the following in NetBox:
-
-- A VM called 'vm1' will be created in NetBox, with the following attributes:
-  - name: vm1
-  - status: Staged
-  - vcpus: 2
-  - memory: 2048
-  - disks:
-    - scsi0: 20 (GB)
-    - scsi1: 10 (GB)
-    - scsi2: 5 (GB)
-  - network interfaces:
-    - eth0: get next available IP from 192.168.80.0/24 and register interface with IPAM
-    - eth1: set interface IP to 192.168.1.2/24 and register interface with IPAM
-  - tenant: NOTTHEDEFAULTTENANT overrides the tenant name that was set in the 'defaults' section of `vms.yml` -- such that VM would be tied to a tenant in NetBox called NOTTHEDEFAULTTENANT
-
-- A VM called 'vm1' will be created in Proxmox, using the *desired* state that was defined in NetBox, with the following attributes:
-  - name: vm1
-  - vcpus: 2
-  - memory: 2048 (MB)
-  - disk0 (scsi0): create and resize OS disk in Proxmox -- to specified size (from NetBox)
-  - disk1 - disk2 (scsi1, scsi2): add and attach additional disks to Proxmox VM, as they were defined in NetBox
-  - interface0: Take the IP address for 'eth0' from NetBox and combine it with the gateway 'last quad' from `vms.yml` to define IP address and gateway settings for interface in Proxmox
-  - if 'start' is set to true in `vms.yml`, start Proxmox VM after it has been created
-
-Had 'exists' been set to *false* in `vms.yml`, NetBox would have set the Proxmox VM state to decommissioning, and ultimately the VM would have been stopped in / removed from Proxmox.  Then NetBox, upon VM removal from Proxmox, would have deleted the *desired* Proxmox VM object.
-
-Here are the current valid values for Proxmox VM definitions in the 'vms' section of `vms.yml`.
-
-Variable | Type | Purpose | Required
---- | --- | --- | ---
-name | string | Name of the Proxmox VM | yes
-template | string | Name of Proxmox VM template to use for cloning Proxmox VMs | yes
-vcpus | integer | Virtual CPUs count for Proxmox VM | yes
-memory | integer | Memory size (MB) for Proxmox VM | yes
-disks | list | Size of each disk (GB) to be attached to Proxmox VM | yes
-primary_network_interface | string | Name of primary network interface to configure in Proxmox VM (typically eth0) | yes
-network_interfaces | list | List of dictionaries, where each dictionary contains the 'name' of each network interface and either a static IP address ('ip' setting) or retrieving a dynamic IP address from a given prefix ('prefix' setting) | yes
-sshkey | string | Name of SSH key that will be used to for logins to Proxmox VM | yes
-gw | integer | Set last quad of gateway that is configured into 'ipconfig0' option of Proxmox VM (default: 1) | no
-tenant | string | Set name of tenant that is mapped to Proxmox VM (otherwise uses default tenant for Proxmox VM) | no
-exists | boolean | Define whether or not Proxmox VM should exist (in NetBox and Proxmox) | yes
-start | boolean | Define whether or not Proxmox VM should be started upon creation | yes
-auto_start | boolean | Define whether or not Proxmox VM should start upon boot/reboot of Proxmox node | no
-
-
-# `netbox-proxmox-ansible` Examples
-
-## Example 1: Create a single Proxmox VM via `vms.yml`.
-
-As documented earlier, `vms.yml` needs to contain a 'vms' section.  This 'vms' section, while a list, can contain but a single Proxmox VM.  Let's say that you've already defined the 'default' variables in `vms.yml`, and now just want to create a Proxmox VM, but with NetBox as your NSoT.  In addition, you want NetBox's IPAM to provide the next available IP address to this newly-provisioned Proxmox VM.
-
-*NOTE: Make sure that 'update_dns' in `vms.yml` is set to false for this use case.*
-
-The following configuration in `vms.yml` will configure/model a Proxmox VM in Netbox with the initial status of 'Staged', and after the VM configuration is complete in NetBox, `proxmox-vm-manager.yml` will handle the provisioning of the VM in Proxmox.  Note that in `vms.yml`:
-- 'exists' is set to true, which will ensure that the VM is provisioned in Proxmox
-- 'start' is set to true, which will ensure that the VM will be started in Proxmox after it has been provisioned
-- 'auto_start' is set to true, which will ensure that the VM is automatically started upon a restart of the Proxmox node and/or cluster
+Injector configuration should include the following (yes, `extra_vars` is required, as is `netbox_env_info` and `proxmox_env_info`):
 
 ```
-vms:
-  - name: vm1
-    template: jammy-server-cloudimg-amd64-template
-    vcpus: 2
-    memory: 2048
-    disk0: scsi0
-    disks:
-      - 20
-      - 10
-      - 5
-    primary_network_interface: eth0
-    network_interfaces:
-    - name: eth0
-      prefix: 192.168.80.0/24
-    sshkey: ~/.ssh/identity-proxmox-vm.pub
-    exists: true
-    start: true
-    auto_start: true
+extra_vars:
+  netbox_env_info:
+    api_host: '{{ netbox_api_host }}'
+    api_port: '{{ netbox_api_port }}'
+    api_proto: '{{ netbox_api_proto }}'
+    api_token: '{{ netbox_api_token }}'
+  proxmox_env_info:
+    node: '{{ proxmox_node }}'
+    api_host: '{{ proxmox_api_host }}'
+    api_user: '{{ proxmox_api_user }}'
+    api_token_id: '{{ proxmox_api_user_token }}'
+    api_token_secret: '{{ proxmox_api_token_secret }}'
 ```
 
-Usage:
+#### Add NetBox/Proxmox Credentials to AWX
+
+Navigate to Resources > Credentials in AWX, and create a credential called 'NetBox Proxmox Credentials'.
+
+![NetBox Proxmox Credentials Image](./images/awx-netbox-proxmox-credentials.png)
+
+#### Add Project to AWX
+
+Navigate to Resources > Projects in AWX, and create a new Project called 'netbox-proxmox-ee-test1'.
+
+![NetBox Proxmox Create Project image](./images/awx-create-project.png)
+
+Click the 'Sync' button in the AWX UI to ensure that git synchronization is successful.  If this step is *not* successful, then *do not proceed* -- as you troubleshoot.  Otherwise, proceed.
+
+#### Add (project) Templates to AWX
+
+In AWX, a (project) template provides a web accessible means of triggering automation, i.e. via a webhook.  Each (project) template represents an Ansible playbook -- each Ansible playbook represents a file that was synchronized from git when you created the project in AWX -- where the playbook will perform Proxmox automation.
+
+For example, when you have defined a Proxmox VM in NetBox (alongside its default resources), you can use `awx-clone-vm-and-set-resources.yml` to automate the cloning of a VM and setting its resources in Proxmox.
+
+![NetBox Proxmox clone vm and set resources image](./images/awx-proxmox-clone-vm-and-set-resources.png)
+
+When you create *any* template in AWX for Proxmox automation, you will need to set 'Prompt on launch' to true (tick checkbox) for both 'Credentials' and 'Variables', as shown below.
+
+![NetBox Proxmox clone vm and set resources edit image](./images/awx-netbox-proxmox-template-clone-resources-edit.png)
+
+`netbox-proxmox-ansible` provides a series of Ansible playbooks that you can use to create fully-functioning Proxmox VMs based on their desired configuration states in NetBox.  You will need to create a (project) template for each playbook in AWX.
+
+`netbox-proxmox-automation` implements the following Ansible playbooks.
+
+| Ansible playbook | Purpose |
+| --- | --- |
+| awx-proxmox-add-vm-disk.yml | Adds a disk to Proxmox VM (*not* scsi0, which is the OS disk) |
+| awx-proxmox-clone-vm-and-set-resources.yml | Clones a Proxmox VM template to a Proxmox VM and sets resources like vcpu and memory |
+| awx-proxmox-remove-vm-disk.yml | Removes a non-OS disk (i.e. not scsi0) from a Proxmox VM |
+| awx-proxmox-remove-vm.yml | Removes a Proxmox VM |
+| awx-proxmox-resize-vm-disk.yml | Resizes a Proxmox VM disk |
+| awx-proxmox-set-ipconfig0.yml | Sets ipconfig0 for Proxmox VM and adds ssh key|
+| awx-proxmox-start-vm.yml | Starts Proxmox VM |
+| awx-proxmox-stop-vm.yml | Stops Proxmox VM |
+
+
+## Initial Configuration: NetBox Event Rules and Webhooks
+
+There are two key components to automating Proxmox VM management in NetBox.
+1. webhooks
+2. event rules
+
+A webhook in NetBox will consume the payload of data from an event rule.  An event rule announces changes to an object type inside of NetBox (in this case, a Virtual Machine and its related object types) -- then sends the payload of data around those changes to a webhook.  The webhook will handle the Proxmox automation(s) as you've defined it/them.
+
+For the sake of automation, every event rule that you create in NetBox requires either a Webhook or a Script.
+
+Regardless of whether you are using a Flask (or other) application for Proxmox automation, or you are using AWX or Tower/AAP, this automation should trigger anytime that a Proxmox VM is changed in NetBox such that:
+- a Proxmox VM has been created in NetBox with a status of 'Staged'
+- a Proxmox VM in NetBox (with a status of 'Staged') has a changed network configuration
+- a Proxmox VM in NetBox (with a status of 'Staged') adds new disks
+- a Proxmox VM in NetBox (with a status of 'Staged') has a changed disk configuration
+- a Proxmox VM in NetBox has been set to a status of 'Active'
+- a Proxmox VM in NetBox has been set to a status of 'Offline'
+- a Proxmox VM in NetBox has been removed
+
+
+### Flask Application
+
+As noted [here](#initial-configuration-flask-application-python), you will need to have a running Flask application *before* you can start handling events (i.e. object changes) inside of NetBox.
+
+#### Flask Application: Webhook
+
+`example-netbox-webhook-flask-app` implements a catch-all for virtual machine events that happen in NetBox.  Events will call the webhook, and in turn the webhook will dispatch Proxmox VM changes via the Proxmox API.
+
+You need to create the webhook, in NetBox, first.  Navigate over to Operations > Integrations > Webhooks, and add something like the following.  *This, and the IP address of where you are running the Flask application, needs to match what you defined `netbox_webhook_name` in `app_config.yml`.*
 
 ```
-shell$ cd /path/to/netbox-proxmox-ansible
-
-shell$ source venv/bin/activate
-
-(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass
+(venv) shell$ grep netbox_webhook_name app_config.yml
+netbox_webhook_name: "netbox-proxmox-webhook"
 ```
 
-Once Proxmox has successfully provisioned the VM, the VM will be changed to an 'Active' status in NetBox.
-
-## Example 2: Create a single Proxmox VM via `vms.yml`, but using a defined IP address
-
-As documented earlier, `vms.yml` needs to contain a 'vms' section.  This 'vms' section, while a list, can contain but a single Proxmox VM.  Let's say that you've already defined the 'default' variables in `vms.yml`, and now just want to create a Proxmox VM, but with NetBox as your NSoT.  In addition, you want NetBox's IPAM to map the IP address to the 'eth0' network interface on this newly-provisioned Proxmox VM.
-
-*NOTE: Make sure that 'update_dns' in `vms.yml` is set to false for this use case.*
-
-The following configuration in `vms.yml` will configure/model a Proxmox VM in Netbox with the initial status of 'Staged', and after the VM configuration is complete in NetBox, `proxmox-vm-manager.yml` will handle the provisioning of the VM in Proxmox.  Note that in `vms.yml`:
-- 'exists' is set to true, which will ensure that the VM is provisioned in Proxmox
-- 'start' is set to true, which will ensure that the VM will be started in Proxmox after it has been provisioned
-- 'auto_start' is set to true, which will ensure that the VM is automatically started upon a restart of the Proxmox node and/or cluster
-
-```
-vms:
-  - name: vm2
-    template: jammy-server-cloudimg-amd64-template
-    vcpus: 2
-    memory: 2048
-    disk0: scsi0
-    disks:
-      - 20
-      - 10
-      - 5
-    primary_network_interface: eth0
-    network_interfaces:
-    - name: eth0
-      ip: 192.168.80.20/24
-    sshkey: ~/.ssh/identity-proxmox-vm.pub
-    exists: true
-    start: true
-    auto_start: true
-```
-
-Usage:
-
-```
-shell$ cd /path/to/netbox-proxmox-ansible
-
-shell$ source venv/bin/activate
-
-(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass
-```
-
-Once Proxmox has successfully provisioned the VM, the VM will be changed to an 'Active' status in NetBox.
-
-## Example 3: Create multiple Proxmox VMs via `vms.yml`.
-
-As documented earlier, `vms.yml` needs to contain a 'vms' section.  This example illustrates how to create multiple Proxmox VMs via VM configurations in `vms.yml`.  Let's say that you've already defined the 'default' variables in `vms.yml`, and now just want to create a Proxmox VM, but with NetBox as your NSoT.  In addition, you want to both use NetBox's IPAM to map the IP address to the 'eth0' network interface on these newly-provisioned Proxmox VMs, and also to statically assign an IP address to the 'eth0' network interface (which will then be added to NetBox's IPAM).
-
-*NOTE: Make sure that 'update_dns' in `vms.yml` is set to false for this use case.*
-
-The following configuration in `vms.yml` will configure/model a Proxmox VM in Netbox with the initial status of 'Staged', and after the VM configuration is complete in NetBox, `proxmox-vm-manager.yml` will handle the provisioning of the VM in Proxmox.  Note that in `vms.yml`:
-- 'exists' is set to true, which will ensure that the VM is provisioned in Proxmox
-- 'start' is set to true, which will ensure that the VM will be started in Proxmox after it has been provisioned
-- 'auto_start' is set to true, which will ensure that the VM is automatically started upon a restart of the Proxmox node and/or cluster
-
-In `vms.yml` below, note that 'exists' is set to *false* for vm3.  The effect of this configuration is that vm3 will be deleted from *both* NetBox and Proxmox.  When 'exists' is set to *false*, the values of 'start' and 'auto_start' are irrelevant.
-
-```
-vms:
-  - name: vm1
-    template: jammy-server-cloudimg-amd64-template
-    vcpus: 2
-    memory: 2048
-    disk0: scsi0
-    disks:
-      - 20
-      - 10
-      - 5
-    primary_network_interface: eth0
-    network_interfaces:
-    - name: eth0
-      ip: 192.168.80.20/24
-    sshkey: ~/.ssh/identity-proxmox-vm.pub
-    exists: true
-    start: true
-    auto_start: true
-  - name: vm2
-    template: focal-server-cloudimg-amd64-template
-    vcpus: 2
-    memory: 2048
-    disk0: scsi0
-    disks:
-      - 30
-      - 40
-    primary_network_interface: eth0
-    network_interfaces:
-    - name: eth0
-      prefix: 192.168.80.0/24
-    sshkey: ~/.ssh/identity-proxmox-vm.pub
-    exists: true
-    start: true
-    auto_start: true
-  - name: vm3
-    template: noble-server-cloudimg-amd64-template
-    vcpus: 2
-    memory: 2048
-    disk0: scsi0
-    disks:
-      - 20
-    primary_network_interface: eth0
-    network_interfaces:
-    - name: eth0
-      ip: 192.168.80.21/24
-    sshkey: ~/.ssh/identity-proxmox-vm.pub
-    exists: false
-    start: true
-    auto_start: true
-```
+In this case, our URI will be `netbox-proxmox-webhook` (the trailing slash is critical!), and our webhook will be listening on the public interface and port that were specified when we started our Flask application.  When you add the webhook to NetBox (use the '+' button), it should look something like this.
 
-Usage:
+![netbox-proxmox-flask-app-webhook-image](./images/netbox-proxmox-flask-app-webhook.png)
 
-```
-shell$ cd /path/to/netbox-proxmox-ansible
+#### Flask Application: Event Rules
 
-shell$ source venv/bin/activate
+You will need to add the following event rules to NetBox to update Proxmox when virtual machines have been created, updated, and/or deleted.
+1. `proxmox-vm-add-disk` takes a Proxmox virtual machine disk that was added to NetBox then automates disk addition in Proxmox
 
-(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass
-```
+![Netbox Proxmox VM add disk image](./images/proxmox-vm-add-disk.png)
 
-## Example 4: Create Proxmox VM(s) and update the DNS via `vms.yml`.
+2. `proxmox-vm-created` takes a Proxmox virtual machine that was created in NetBox then automates Proxmox VM cloning; the Proxmox VM in NetBox status should be set to 'Staged', and the selected Proxmox VM template cannot be null
 
-Regardless of whether VM(s) is/are set to 'exist' in `vms.yml`, you can leverage `netbox-proxmox-ansible` to do DNS updates when your Proxmox VMs change.
+![NetBox Proxmox VM created image](./images/proxmox-vm-created.png)
 
-The current `netbox-proxmox-ansible` implementation only supports BIND9, and you will need the ability to update DNS entries to be able to use this functionality.  Further, *all* of your DNS records, for a given zone or zones, *must* reside in NetBox (via netbox-dns plugin).  In this scenario, NetBox is your NSoT for these zones, and changes to netbox-dns will induce changes to zone(s) on your BIND9 server.
+3. `proxmox-vm-delete-disk` takes a Proxmox virtual machine disk that was removed from NetBox then removes the non-OS disk from Proxmox; this *does not* include `scsi0`, which is the OS disk that's been provisioned in Proxmox
 
-*If you do not have access to make DNS changes and/or you have not installed the netbox-dns plugin, please set 'update_dns' to false in `vms.yml` -- and do not follow this procedure.*
+![NetBox Proxmox VM delete disk image](./images/proxmox-vm-delete-disk.png)
 
-```
-default_dns_domainname: "homelab.tld"
+4. `proxmox-vm-deleted` takes a Proxmox virtual machine that was deleted from NetBox then stops/removes the VM from Proxmox
 
-update_dns: true
-dns_integrations:
-  - bind9
-remote_bind9_zone_db_directory: /etc/bind/zones/vms
+![NetBox Proxmox VM deleted image](./images/proxmox-vm-deleted.png)
 
-vms:
-  - name: vm2
-    template: jammy-server-cloudimg-amd64-template
-    vcpus: 2
-    memory: 2048
-    disk0: scsi0
-    disks:
-      - 20
-      - 10
-      - 5
-    primary_network_interface: eth0
-    network_interfaces:
-    - name: eth0
-      ip: 192.168.80.20/24
-    sshkey: ~/.ssh/identity-proxmox-vm.pub
-    exists: true
-    start: true
-    auto_start: true
-```
+5. `proxmox-vm-resize-disk` takes a Proxmox virtual machine disk that was changed in NetBox then resizes the disk in Proxmox (*cannot downsize a disk, by design*); this can be used for *any* Proxmox VM disk
 
-Usage:
+![NetBox Proxmox VM resize disk image](./images/proxmox-vm-resize-disk.png)
 
-```
-shell$ cd /path/to/netbox-proxmox-ansible
+6. `proxmox-vm-started` takes a Proxmox virtual machine whose state was changed to 'Active' in NetBox and starts the VM in Proxmox
 
-shell$ source venv/bin/activate
+![NetBox Proxmox VM started image](./images/proxmox-vm-started.png)
 
-(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass --ask-pass --ask-become-pass
-```
+7. `proxmox-vm-stopped` takes a Proxmox virtual machine whose state was changed to 'Offline' in NetBox and stops the VM in Proxmox
 
-The `--ask-pass` option will ask for the SSH password of the user who will login to your BIND9 server.  The `--ask-become-pass` option will ask for the sudo password of the SSH user who has root privileges to modify records in the DNS.
+![NetBox Proxmox VM stopped image](./images/proxmox-vm-stopped.png)
 
-The above command and settings in `vms.yml` will:
-  - Create Proxmox VM in NetBox
-  - Take documented VM information from NetBox and create VM in Proxmox
-  - Start VM in Proxmox
-  - Update netbox-dns with settings for new VM
-  - Propagate changes to BIND9 server(s) specified in `inventory` file.
+8. `proxmox-vm-update-network-config` takes a Proxmox virtual machine whose network configuration was changed in NetBox (IP address, SSH public key), with the NetBox status set to 'Staged', and adds those network configuration settings to Proxmox
 
-## Example 5: Discover VMs in Proxmox and synchronize them into Netbox (including `vms.yml`).
+![NetBox Proxmox VM update network config image](./images/proxmox-vm-update-network-config.png)
 
-While your future state might be to document/model your Proxmox VMs in NetBox, you likely already have running VMs in Proxmox -- that you want to document in NetBox, but without the overhead of capturing this information manually.  To this end, `netbox-proxmox-ansible` implements `netbox-proxmox-discover-vms.yml`.
+9. `proxmox-vm-updated` takes any Proxmox virtual machine updates (vcpus, memory, etc) in NetBox, where the Proxmox VM status is set to 'Staged', and changes those settings in Proxmox
 
-`netbox-proxmox-discover-vms.yml` will collect *all* VMs from Proxmox then take this metadata and create corresponding Proxmox VM entries in NetBox.  
+![NetBox Proxmox VM updated](./images/proxmox-vm-updated.png)
 
-*Note this requires that qemu-guest-agent be installed on each Proxmox VM; see cloud-init and templating documentation above.*
 
-For running Proxmox VMs, `netbox-proxmox-discover-vms.yml` will collect the following information:
+### AWX or Tower/AAP
 
-- name of VM
-- VM resources
-  - vcpu count
-  - memory count
-- network configuration
-  - name of network interface (*only* configured network interfaces will be collected)
-  - IP address for each network interface
-  - MAC address of each network interface
-- disk configuration: disk names and sizes
+As noted earlier, AWX or Tower/AAP will perform Proxmox automation through separate (project) templates.  This section walks you through how (NetBox) webhooks and (NetBox) event rules are handled by AWX.
 
-For stopped Proxmox VMs, `netbox-proxmox-discover-vms.yml` will collect the following information:
+#### AWX or Tower/AAP Webhook
 
-- name of VM
+To use NetBox webhooks with AWX, each NetBox webhook for Proxmox VM management will point at a separate AWX (project) template.  In AWX, each (project) template has a unique ID.  When we execute a webhook in NetBox, in this case we're using AWX, the (NetBox) webhook will in turn point at the (project) template ID in AWX -- and tell AWX to launch the template, i.e. to run the automation.
 
-Usage:
+AWX webhooks are created this way in NetBox.
 
-```
-shell$ cd /path/to/netbox-proxmox-ansible
+![NetBox Proxmox AWX webhooks image](./images/netbox-awx-webhooks.png)
 
-shell$ source venv/bin/activate
+Let's take a look at the `proxmox-vm-create-and-set-resources-awx` webhook.
 
-(venv) shell$ ansible-playbook -i inventory netbox-proxmox-discover-vms.yml --ask-vault-pass
-```
+![NetBox Proxmox VM Create and Set Resources AWX webhook image](./images/netbox-proxmox-vm-create-and-set-resources-awx-webhook.png)
 
-`netbox-proxmox-discover-vms.yml` also reads `vms.yml` for default (or Proxmox VM-specific) settings such as for Sites and Tenants; each Proxmox VM object that's added into NetBox will be related to the Tenant and Site that were specified in `vms.yml`.
+Regardless of which AWX template you use as a (NetBox) webhook, you must include the following when you define the webhook in NetBox.
 
-## Example 6: Create Proxmox VM(s) in NetBox, deploy them to Proxmox then synchronize Proxmox VM changes back into NetBox (including `vms.yml`).
+- HTTP Method: POST
+- Payload URL: http(s)://hostname:port/api/v2/job_templates/JOBTEMPLATEID/launch/
+- HTTP Content Type: application/json
+- Additional Headers: Authorization: Basic BASE64-ENCODED-AWX-USER-AND-PASSWORD
+- Body Template
+  - *Must* set `extra_vars` in JSON format
+  - In this example, set `extra_vars['vm_config']` (JSON format) to include what was shown in the image above.
 
-Assuming that you have seasoned `vms.yml` to taste for your 'vms', this is a two-step process.
+`proxmox-remove-vm-awx` webhook
 
-1. First, use `proxmox-vm-manager.yml` to create the Proxmox VMs.
+![NetBox Proxmox remove VM AWX webhook image](./images/proxmox-remove-vm-awx.png)
 
-Usage (*without* DNS, make sure that 'update_dns' is set to false in `vms.yml`):
+`proxmox-start-vm-awx` webhook
 
-```
-shell$ cd /path/to/netbox-proxmox-ansible
+![NetBox Proxmox start VM AWX webhook image](./images/proxmox-start-vm-awx.png)
 
-shell$ source venv/bin/activate
+`proxmox-stop-vm-awx` webhook
 
-(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass
-```
+![NetBox Proxmox stop VM AWX webhook image](./images/proxmox-stop-vm-awx.png)
 
-Usage (with DNS, make sure that 'update_dns' is set to true in `vms.yml` and that 'dns_integrations' includes 'bind9'):
+`proxmox-vm-add-disk-awx` webhook
 
-```
-shell$ cd /path/to/netbox-proxmox-ansible
+![NetBox Proxmox stop VM AWX webhook image](./images/proxmox-vm-add-disk-awx.png)
 
-shell$ source venv/bin/activate
+`proxmox-vm-assign-ip-address-awx` webhook
 
-(venv) shell$ ansible-playbook -i inventory proxmox-vm-manager.yml --ask-vault-pass --ask-pass --ask-become-pass
-```
+![NetBox Proxmox VM assign IP address AWX webhook image](./images/proxmox-vm-assign-ip-address-awx.png)
 
-2. Second, use `netbox-proxmox-discover-vms.yml` to discover and Proxmox VMs which aren't already in NetBox.  This procedure will also make incremental changes to existing Proxmox VMs in NetBox -- such as adding MAC address to network interfaces.
+`proxmox-vm-configure-ipconfig0-and-ssh-key-awx` webhook
 
-Usage:
+![NetBox Proxmox VM configure ipconfig0 and ssh key AWX webhook image](./images/proxmox-vm-configure-ipconfig0-and-ssh-key-awx.png)
 
-```
-shell$ cd /path/to/netbox-proxmox-ansible
+`proxmox-vm-remove-disk-awx` webhook
 
-shell$ source venv/bin/activate
+![NetBox Proxmox VM remove disk AWX webhook image](./images/proxmox-vm-remove-disk-awx.png)
 
-(venv) shell$ ansible-playbook -i inventory netbox-proxmox-discover-vms.yml --ask-vault-pass
-```
+`proxmox-vm-resize-disk-awx` webhook
 
-# `netbox-proxmox-ansible` DNS Integrations
+![NetBox Proxmox VM resize disk AWX webhook image](./images/proxmox-vm-resize-disk-awx.png)
 
-`netbox-proxmox-ansible` provides a *convenience* function that allows you to update your DNS given any changes to Proxmox VMs.  This is driven by the netbox-dns plugin and how you define and update your DNS records in NetBox.  In this context, NetBox becomes your NSoT for DNS -- in addition to how you are leveraging NetBox to document/model your Proxmox VMs.  In other words, when your modify DNS records in your NSoT, the desired state is to update the underlying DNS to reflect these changes.
 
-This implementation won't work for everyone.  Only BIND9 is currently supported.  You might not have appropriate privileges on your DNS server to make DNS changes.  Maybe you aren't able to migrate your DNS zone(s) data into the netbox-dns plugin.  There are myriad reasons why this functionality might not work for you, so before proceeding with a DNS integration you'll need to take into account how DNS is used in your environment and if this solution is a fit.
+#### AWX or Tower/AAP Event Rules
 
-Ultimately, in an environment where you are able to make DNS changes, the ultimate goal is to integrate as many DNS implementations as possible into `netbox-proxmox-ansible`.
+Now let's take a look at the NetBox event rules that call an AWX webhook (project template) with Proxmox VM and VM disk object changes in Netbox.
 
-## BIND9
+![NetBox Proxmox VM event rules AWX image](./images/netbox-proxmox-event-rules-awx.png)
 
-For this DNS integration to be successful with BIND9, the following must be true in your environment.
+`proxmox-vm-create-and-set-resources`
 
-- You have a running BIND9 installation that you use for your DNS service
-- You are able to become 'root' (or at least can escalate to 'root' privileges) on the system(s) where BIND9 is running
-- You are able to propagate DNS changes to your BIND9 server *and* are able to reload zones in BIND9
-- You are able to create *all* zones in netbox-dns plugin and have the permissions (CRUD) for DNS entries via netbox-dns plugin
-- You are able to migrate all of your existing BIND9 DNS records for each zone into netbox-dns
-- You are able to update BIND9 zone (db) files
-- You are able to reload BIND9 zones
-- You are able to restart the BIND9 service, as necessary
+![NetBox Proxmox VM create and set resources event rule AWX image](./images/proxmox-vm-create-and-set-resources-awx-event-rule.png)
 
-Typically, BIND9 is deployed with a single (or series of) configuration(s).  In some instances named.conf will hold the entire BIND9 configuration for settings and zones.  In others, named.conf will include sub-configurations that are used for settings and others for zones.  Should you run BIND9 on your Proxmox cluster node(s), you'll want to define your zones somewhere under the `/etc/bind` directory.  It's up to you to decide whether or not you want to delegate a subdomain for your Proxmox VM(s) entry/ies (e.g. vms.my-domain.tld) or whether your VMs will be part of another zone.
+`proxmox-resize-vm-disk`
 
-Ultimately you will need total access to the forward and reverse zones on your BIND9 server.  The BIND9 integration will pull DNS entries from the netbox-dns plugin through the NetBox API, expand these DNS entries, through Jinja2 templating into BIND9-formatted zone files, then propagate these changed zone files to your BIND9 server based on the specified location of the BIND9 (db) zone files: Before reloading in BIND9 each changed zone.
+![NetBox Proxmox VM resize VM disk event rule AWX image](./images/proxmox-resize-vm-disk-awx-event-rule.png)
 
-This template is stored as `/path/to/netbox-proxmox-ansible/templates/dns/bind9/zone-template.j2`.
+`proxmox-set-ipconfig-and-ssh-key`
 
-When a Proxmox VM is created (in Proxmox) and 'update_dns' (and 'bind9' setting) is configured in `vms.yml`, the template will be expanded and DNS changes will be deployed.
+![NetBox Proxmox VM set ipconfig and ssh key event rule AWX image](./images/proxmox-set-ip-config-and-ssh-key-awx-event-rule.png)
+
+`proxmox-vm-active`
+
+![NetBox Proxmox VM set active event rule AWX image](./images/proxmox-vm-active-awx-event-rule.png)
+
+`proxmox-vm-add-disk`
+
+![NetBox Proxmox VM add disk event rule AWX image](./images/proxmox-vm-add-disk-awx-event-rule.png)
+
+`proxmox-vm-offline`
+
+![NetBox Proxmox VM offline event rule AWX image](./images/proxmox-vm-offline-awx-event-rule.png)
+
+`proxmox-vm-remove`
+
+![NetBox Proxmox VM remove event rule AWX image](./images/proxmox-vm-remove-awx-event-rule.png)
+
+`proxmox-vm-remove-disk`
+
+![NetBox Proxmox VM remove disk event rule AWX image](./images/proxmox-vm-remove-disk-awx-event-rule.png)
+
+`proxmox-vm-resize-os-disk`
+
+![NetBox Proxmox VM resize OS disk event rule AWX image](./images/proxmox-vm-resize-os-disk-awx-event-rule.png)
+
 
 # Developers
 - Nate Patwardhan &lt;npatwardhan@netboxlabs.com&gt;
@@ -996,11 +939,9 @@ When a Proxmox VM is created (in Proxmox) and 'update_dns' (and 'bind9' setting)
 
 ## Known Issues
 - *Only* supports SCSI disk types (this is possibly fine as Proxmox predomininantly provisions disks as SCSI)
+- Does not currently support Proxmox VM creation to a Proxmox cluster, but is only node-based
 - Needs better reconciliation on the NetBox end when Proxmox->NetBox discovery is used
-- DNS implementation only supports BIND9 currently
 
-## Roadmap -- Delivery TBD
-- Support other DNS implementations than BIND9: Gandi, Squarespace, etc
-- Easier configuration process
+## Roadmap -- Delivery
+- DNS update support (requires NetBox `netbox-dns` plugin)
 - Maybe evolve into to a NetBox plugin for Proxmox
-- Integrate with Ansible Automation Platform (AAP) via event rules/webhook
