@@ -721,7 +721,34 @@ Navigate to Resources > Projects in AWX, and create a new Project called 'netbox
 
 ![NetBox Proxmox Create Project image](./images/awx-create-project.png)
 
+Click the 'Sync' button in the AWX UI to ensure that git synchronization is successful.  If this step is *not* successful, then *do not proceed* -- as you troubleshoot.  Otherwise, proceed.
+
 #### Add (project) Templates to AWX
+
+In AWX, a (project) template provides a web accessible means of triggering automation, i.e. via a webhook.  Each (project) template represents an Ansible playbook -- each Ansible playbook represents a file that was synchronized from git when you created the project in AWX -- where the playbook will perform Proxmox automation.
+
+For example, when you have defined a Proxmox VM in NetBox (alongside its default resources), you can use `awx-clone-vm-and-set-resources.yml` to automate the cloning of a VM and setting its resources in Proxmox.
+
+![NetBox Proxmox clone vm and set resources image](./images/awx-proxmox-clone-vm-and-set-resources.png)
+
+When you create *any* template in AWX for Proxmox automation, you will need to set 'Prompt on launch' to true (tick checkbox) for both 'Credentials' and 'Variables', as shown below.
+
+![NetBox Proxmox clone vm and set resources edit image](./images/awx-netbox-proxmox-template-clone-resources-edit.png)
+
+`netbox-proxmox-ansible` provides a series of Ansible playbooks that you can use to create fully-functioning Proxmox VMs based on their desired configuration states in NetBox.  You will need to create a (project) template for each playbook in AWX.
+
+`netbox-proxmox-automation` implements the following Ansible playbooks.
+
+| Ansible playbook | Purpose |
+| --- | --- |
+| awx-proxmox-add-vm-disk.yml | Adds a disk to Proxmox VM (*not* scsi0, which is the OS disk) |
+| awx-proxmox-clone-vm-and-set-resources.yml | Clones a Proxmox VM template to a Proxmox VM and sets resources like vcpu and memory |
+| awx-proxmox-remove-vm-disk.yml | Removes a non-OS disk (i.e. not scsi0) from a Proxmox VM |
+| awx-proxmox-remove-vm.yml | Removes a Proxmox VM |
+| awx-proxmox-resize-vm-disk.yml | Resizes a Proxmox VM disk |
+| awx-proxmox-set-ipconfig0.yml | Sets ipconfig0 for Proxmox VM and adds ssh key|
+| awx-proxmox-start-vm.yml | Starts Proxmox VM |
+| awx-proxmox-stop-vm.yml | Stops Proxmox VM |
 
 
 ## Initial Configuration: NetBox Event Rules and Webhooks
