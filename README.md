@@ -23,7 +23,7 @@ Further:
 ## Usage
 
 `netbox-proxmox-automation` currently implements two automation use cases:
-1. NetBox webhooks and event rules will use AWX (Tower, AAP) to induce Proxmox automation
+1. NetBox webhooks and event rules will use AWX or Tower/AAP to induce Proxmox automation
 2. NetBox webhooks and event rules will use a Flask application to induce Proxmox automation
 
 ## What this implementation *is*
@@ -461,12 +461,6 @@ shell$ source venv/bin/activate
 (venv) shell$ ansible-playbook -i inventory netbox-proxmox-discover-vms.yml --ask-vault-pass
 ```
 
-## Initial Configuration: AWX (Tower, AAP)
-
-*You only need to do this configuration step if you intend to use AWX (Tower, AAP) to handle your Proxmox automation.*
-
-Put steps here
-
 ## Initial Configuration: Flask Application (Python)
 
 *You only need to do this configuration step if you intend to use the example Flask application to handle your Proxmox automation.*
@@ -529,6 +523,125 @@ Press CTRL+C to quit
 
 The above `flask` command will start the Flask application on port 8000 (or whatever you specify with the `-p` argument) and will bind on the IP address (or IP addresses) that were specified with the `-h` argument.  In this case, we used 0.0.0.0 with the `-h` argument, so the Flask application will listen on all interfaces.  The `--debug` argument indicates that we will run a single-threaded web service and that we will show output to stdout.  *You will want to use `gunicorn.py` or some other WSGI server to run the Flask application in production.*
 
+## Initial Configuration: AWX or Tower/AAP
+
+*You only need to do this configuration step if you intend to use AWX or Tower/AAP to handle your Proxmox automation.*
+
+Certainly, you do not need to do Ansible automation by using webhooks and event rules (triggering) in NetBox.  [This weblog](https://netboxlabs.com/blog/getting-started-with-network-automation-netbox-ansible/) shows you how you can use [Ansible](https://www.ansible.com/) with NetBox, as network source of truth, to induce changes in your environment -- by using a pull method for your automation from any client on your network.  In this example, you'll be able to run `ansible-playbook`, alongside a dynamic inventory (NetBox) to induce automation, or in this case automating changes to Proxmox VMs.
+
+However, many other NetBox users want to use NetBox as NSoT (network source of truth) to facilitate their Proxmox VM automation.  Changes to Proxmox VMs in NetBox will result in automation being kicked off, in this case via [AWX](https://github.com/ansible/awx), or perhaps for a Red Hat commercial customer, through [Tower/AAP](https://www.redhat.com/en/solutions/it-automation?sc_cid=7015Y000003sm3kQAA&gad_source=1&gclid=CjwKCAiAl4a6BhBqEiwAqvrqugh1f-1RfeP-NQxOKYhSbwJqUPVqGqR1A0ScrGMdNhLUbdTayU-EOhoCg00QAvD_BwE&gclsrc=aw.ds).  By using webhooks and event rules in NetBox, AWX or Tower/AAP are more than capable of inducing Proxmox automation.  In fact, using AWX or Tower/AAP is the preferred method for large environments -- where Proxmox VM deployment is a part of an underlying CI/CD.
+
+For those who are unfamiliar, AWX is the upstream (community, i.e. free) version of AAP.  Functionally, AWX works the same way as Tower/AAP, but without the commercial support.  AWX is an excellent alternative as you work through NetBox/Proxmox automation, but there can be a heavy lift when it comes to configuring AWX for the first time.  This section talks through the steps you'll need to be able to run AWX and to begin your Proxmox VM automation journey with NetBox.
+
+### Installing AWX with docker-compose
+
+AWX (or Tower/AAP) are typically installed in an environment where Kuberenetes (k8s) is available.  However, should you have Docker/docker-compose running on your local system, you should be able to install AWX [this way](https://github.com/ansible/awx/blob/devel/tools/docker-compose/README.md).
+
+Once you have installed AWX (or Tower/AAP) in your environment, and are able to login, as an 'admin' user through the UI, you can start configuring AWX (or Tower/AAP) to facilitate your Proxmox VM automation.  *Note that you can add whatever user(s)/group(s) that you want to AWX, but make sure that whatever user(s)/group(s) you add to AWX have the appropriate permissions to manage the following.*
+
+#### Create Github (or your Git of choice) Credential in AWX
+
+1. Login to the AWX UI
+2. Navigate to Resources > Credentials
+3. Create a new credential, as specified below, of type 'Source Control'.  Call it whatever you want, then make sure to copy and paste your SSH private key and (if required) SSH passphrase here.
+
+![AWX image git credential image](./images/awx-scm-credential-new.png)
+
+#### Select Inventory in AWX
+
+Navigate to Resources > Inventories.  'Demo Inventory' should be sufficient for `netbox-promox-automation`.
+
+![AWX default inventory image](./images/awx-default-inventory.png)
+
+#### Create Execution Environment in AWX
+
+Typically, when `ansible` or `ansible-playbook` is/are executed from the command line, this is done via a Python3 `venv`.  However, with AWX, there is no such capability to interact with a command line to leverage `venv` to do a `pip install` of Python module dependencies.
+
+As a result, you will need to use an [Execution Environment](https://ansible.readthedocs.io/projects/awx/en/latest/userguide/execution_environments.html) in AWX.  Your Execution Environment is a container image that will include all of the (Python) module dependencies that you'll need to facilitate Proxmox automation, and this container image will live in your container registry of choice.  
+
+*You (probably) only need to create an Exection Environment once for `netbox-proxmox-automation` with AWX.*
+
+In the end, your Execution Environment should look like this in AWX.
+
+![AWX Execution Environment image](./images/awx-execution-environment.png)
+
+To create your Execution Environment, you need to do the following.
+
+1. On your AWX host, create a directory structure like this.
+
+![AWX Execution Environment directory tree image](./images/awx-execution-environment-tree.png)
+
+2. On your AWX host, create and change to the directory where your Execution Environment will live: `mkdir -p /home/ubuntu/awx/execution-environments/ubuntu-env1; cd /home/ubuntu/awx/execution-environments/ubuntu-env1`
+
+3. On your AWX host, setup a Python 3 `venv`: `cd /home/ubuntu/awx/execution-environments/ubuntu-env1 ; python3 -m venv venv ; source venv/bin/activate`
+
+4. On your AWX host, create a file called `execution-environment.yml`.  It should look like the following.
+
+![AWX Execution Environment config file image](./images/awx-execution-environment-yml.png)
+
+Note that `execution-environment.yml` contains two requirement lines.  One is for Ansible Galaxy, and the other is for Python 3.
+
+5. Create `dependencies/requirements.txt` and `dependencies/requirements.yml`.
+
+`requirements.txt` will include the Python 3 module dependencies.
+
+```
+(venv) shell$ mkdir dependencies
+
+(venv) shell$ cat dependencies/requirements.txt
+ansible
+ansible-core
+ansible-runner
+bcrypt
+certifi
+cffi
+charset-normalizer
+cryptography
+dnspython
+docutils
+idna
+Jinja2
+lockfile
+MarkupSafe
+packaging
+paramiko
+pexpect
+prompt-toolkit
+proxmoxer
+ptyprocess
+pycparser
+PyNaCl
+pynetbox
+python-daemon
+PyYAML
+questionary
+requests
+resolvelib
+six
+urllib3
+wcwidth
+```
+
+`requirements.yml` will define the Ansible collections to include.  In this case we want to include the awx collection, the community.general collection (where the Proxmox Ansible modules live), and the netbox.netbox collection, which will interface with the NetBox API.
+
+```
+(venv) shell$ mkdir dependencies
+
+(venv) shell$ cat dependencies/requirements.yml
+---
+collections:
+  - awx.awx
+  - community.general
+  - netbox.netbox
+```
+
+
+#### Add Project to AWX
+
+blah blah
+
+#### Add (project) Templates to AWX
+
 
 ## Initial Configuration: NetBox Event Rules and Webhooks
 
@@ -540,7 +653,7 @@ A webhook in NetBox will consume the payload of data from an event rule.  An eve
 
 For the sake of automation, every event rule that you create in NetBox requires either a Webhook or a Script.
 
-Regardless of whether you are using a Flask (or other) application for Proxmox automation, or you are using AWX (or Tower/AAP), this automation should trigger anytime that a Proxmox VM is changed in NetBox such that:
+Regardless of whether you are using a Flask (or other) application for Proxmox automation, or you are using AWX or Tower/AAP, this automation should trigger anytime that a Proxmox VM is changed in NetBox such that:
 - a Proxmox VM has been created in NetBox with a status of 'Staged'
 - a Proxmox VM in NetBox (with a status of 'Staged') has a changed network configuration
 - a Proxmox VM in NetBox (with a status of 'Staged') adds new disks
@@ -609,15 +722,15 @@ You will need to add the following event rules to NetBox to update Proxmox when 
 ![NetBox Proxmox VM updated](./images/proxmox-vm-updated.png)
 
 
-### AWX (AWX/Tower/AAP)
+### AWX or Tower/AAP
 
 blahblah
 
-#### AWX (AWX/Tower/AAP) Webhook
+#### AWX or Tower/AAP Webhook
 
 blah
 
-#### AWX (AWX/Tower/AAP) Event Rules
+#### AWX or Tower/AAP Event Rules
 
 blahblahblah
 
