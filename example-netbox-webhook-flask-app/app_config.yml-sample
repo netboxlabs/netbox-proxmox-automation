@@ -1,7 +1,6 @@
 netbox_webhook_name: "netbox-proxmox-webhook"
 
 proxmox_api_config:
-  node: proxmox-ve
   api_host: proxmox-ip-or-hostname
   api_port: 8006
   api_user: proxmox_api_user
