@@ -856,6 +856,39 @@ Regardless of which AWX template you use as a (NetBox) webhook, you must include
   - *Must* set `extra_vars` in JSON format
   - In this example, set `extra_vars['vm_config']` (JSON format) to include what was shown in the image above.
 
+`proxmox-remove-vm-awx` webhook
+
+![NetBox Proxmox remove VM AWX webhook image](./images/proxmox-remove-vm-awx.png)
+
+`proxmox-start-vm-awx` webhook
+
+![NetBox Proxmox start VM AWX webhook image](./images/proxmox-start-vm-awx.png)
+
+`proxmox-stop-vm-awx` webhook
+
+![NetBox Proxmox stop VM AWX webhook image](./images/proxmox-stop-vm-awx.png)
+
+`proxmox-vm-add-diskawx` webhook
+
+![NetBox Proxmox stop VM AWX webhook image](./images/proxmox-vm-add-disk-awx.png)
+
+`proxmox-vm-assign-ip-address` webhook
+
+![NetBox Proxmox VM assign IP address AWX webhook image](./images/proxmox-vm-assign-ip-address-awx.png)
+
+`proxmox-vm-configure-ipconfig0-and-ssh-key-awx` webhook
+
+![NetBox Proxmox VM configure ipconfig0 and ssh key AWX webhook image](./images/proxmox-vm-configure-ipconfig0-and-ssh-key-awx.png)
+
+`proxmox-vm-remove-disk-awx` webhook
+
+![NetBox Proxmox VM remove disk AWX webhook image](./images/proxmox-vm-remove-disk-awx.png)
+
+`proxmox-vm-resize-disk-awx` webhook
+
+![NetBox Proxmox VM resize disk AWX webhook image](./images/proxmox-vm-resize-disk-awx.png)
+
+
 #### AWX or Tower/AAP Event Rules
 
 blahblahblah
