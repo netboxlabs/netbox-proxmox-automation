@@ -842,7 +842,19 @@ AWX webhooks are created this way in NetBox.
 
 ![NetBox Proxmox AWX webhooks image](./images/netbox-awx-webhooks.png)
 
-blah
+Let's take a look at the `proxmox-vm-create-and-set-resources-awx` webhook.
+
+![NetBox Proxmox VM Create and Set Resources AWX webhook image](./images/netbox-proxmox-vm-create-and-set-resources-awx-webhook.png)
+
+Regardless of which AWX template you use as a (NetBox) webhook, you must include the following when you define the webhook in NetBox.
+
+- HTTP Method: POST
+- Payload URL: http(s)://hostname:port/api/v2/job_templates/JOBTEMPLATEID/launch/
+- HTTP Content Type: application/json
+- Additional Headers: Authorization: Basic BASE64-ENCODED-AWX-USER-AND-PASSWORD
+- Body Template
+  - *Must* set `extra_vars` in JSON format
+  - In this example, set `extra_vars['vm_config']` (JSON format) to include what was shown in the image above.
 
 #### AWX or Tower/AAP Event Rules
 
