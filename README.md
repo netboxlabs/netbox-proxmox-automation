@@ -872,7 +872,7 @@ Regardless of which AWX template you use as a (NetBox) webhook, you must include
 
 ![NetBox Proxmox stop VM AWX webhook image](./images/proxmox-vm-add-disk-awx.png)
 
-`proxmox-vm-assign-ip-address` webhook
+`proxmox-vm-assign-ip-address-awx` webhook
 
 ![NetBox Proxmox VM assign IP address AWX webhook image](./images/proxmox-vm-assign-ip-address-awx.png)
 
@@ -891,7 +891,45 @@ Regardless of which AWX template you use as a (NetBox) webhook, you must include
 
 #### AWX or Tower/AAP Event Rules
 
-blahblahblah
+Now let's take a look at the NetBox event rules that call an AWX webhook (project template) with Proxmox VM and VM disk object changes in Netbox.
+
+![NetBox Proxmox VM event rules AWX image](./images/netbox-proxmox-event-rules-awx.png)
+
+`proxmox-vm-create-and-set-resources`
+
+![NetBox Proxmox VM create and set resources event rule AWX image](./images/proxmox-vm-create-and-set-resources-awx-event-rule.png)
+
+`proxmox-resize-vm-disk`
+
+![NetBox Proxmox VM resize VM disk event rule AWX image](./images/proxmox-resize-vm-disk-awx-event-rule.png)
+
+`proxmox-set-ipconfig-and-ssh-key`
+
+![NetBox Proxmox VM set ipconfig and ssh key event rule AWX image](./images/proxmox-set-ip-config-and-ssh-key-awx-event-rule.png)
+
+`proxmox-vm-active`
+
+![NetBox Proxmox VM set active event rule AWX image](./images/proxmox-vm-active-awx-event-rule.png)
+
+`proxmox-vm-add-disk`
+
+![NetBox Proxmox VM add disk event rule AWX image](./images/proxmox-vm-add-disk-awx-event-rule.png)
+
+`proxmox-vm-offline`
+
+![NetBox Proxmox VM offline event rule AWX image](./images/proxmox-vm-offline-awx-event-rule.png)
+
+`proxmox-vm-remove`
+
+![NetBox Proxmox VM remove event rule AWX image](./images/proxmox-vm-remove-awx-event-rule.png)
+
+`proxmox-vm-remove-disk`
+
+![NetBox Proxmox VM remove disk event rule AWX image](./images/proxmox-vm-remove-disk-awx-event-rule.png)
+
+`proxmox-vm-resize-os-disk`
+
+![NetBox Proxmox VM resize OS disk event rule AWX image](./images/proxmox-vm-resize-os-disk-awx-event-rule.png)
 
 
 # Developers
