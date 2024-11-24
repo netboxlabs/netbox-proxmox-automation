@@ -832,9 +832,15 @@ You will need to add the following event rules to NetBox to update Proxmox when 
 
 ### AWX or Tower/AAP
 
-blahblah
+As noted earlier, AWX or Tower/AAP will perform Proxmox automation through separate (project) templates.  This section walks you through how (NetBox) webhooks and (NetBox) event rules are handled by AWX.
 
 #### AWX or Tower/AAP Webhook
+
+To use NetBox webhooks with AWX, each NetBox webhook for Proxmox VM management will point at a separate AWX (project) template.  In AWX, each (project) template has a unique ID.  When we execute a webhook in NetBox, in this case we're using AWX, the (NetBox) webhook will in turn point at the (project) template ID in AWX -- and tell AWX to launch the template, i.e. to run the automation.
+
+AWX webhooks are created this way in NetBox.
+
+![NetBox Proxmox AWX webhooks image](./images/netbox-awx-webhooks.png)
 
 blah
 
