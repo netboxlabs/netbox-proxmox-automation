@@ -635,6 +635,11 @@ collections:
   - netbox.netbox
 ```
 
+6. Finally, build the new Execution Environment image, and push to your container registry, which in this case lives on localhost (local to AWX)
+
+![AWX Build Execution Environment commands image](./images/awx-ansible-build-ee.png)
+
+Once you have built your Execution Environment, which is based on the default AWX Execution Environment, you can proceed with Proxmox automation in AWX.
 
 #### Add Project to AWX
 
