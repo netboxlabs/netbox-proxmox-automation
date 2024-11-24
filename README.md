@@ -641,9 +641,85 @@ collections:
 
 Once you have built your Execution Environment, which is based on the default AWX Execution Environment, you can proceed with Proxmox automation in AWX.
 
+#### Add NetBox and Proxmox Credential Types to AWX
+
+Navigate to Administration > Credential Types in AWX, and create a credential type called 'NetBox Proxmox Creds'.
+
+![AWX Netbox Proxmox Creds image](./images/awx-netbox-proxmox-creds.png)
+
+Input configuration should include the following:
+
+```
+fields:
+  - id: proxmox_api_host
+    type: string
+    label: Proxmox API Host
+  - id: proxmox_api_user
+    type: string
+    label: Proxmox API User
+  - id: proxmox_api_user_token
+    type: string
+    label: Proxmox API Token ID
+  - id: proxmox_node
+    type: string
+    label: Proxmox Node
+  - id: proxmox_api_token_secret
+    type: string
+    label: Proxmox API Token
+    secret: true
+  - id: netbox_api_proto
+    type: string
+    label: NetBox HTTP Protocol
+  - id: netbox_api_host
+    type: string
+    label: NetBox API host
+  - id: netbox_api_port
+    type: string
+    label: NetBox API port
+  - id: netbox_api_token
+    type: string
+    label: NetBox API token
+    secret: true
+required:
+  - proxmox_api_host
+  - proxmox_api_user
+  - proxmox_api_user_token
+  - proxmox_node
+  - proxmox_api_token_secret
+  - netbox_api_host
+  - netbox_api_port
+  - netbox_api_proto
+  - netbox_api_token
+```
+
+Injector configuration should include the following (yes, `extra_vars` is required, as is `netbox_env_info` and `proxmox_env_info`):
+
+```
+extra_vars:
+  netbox_env_info:
+    api_host: '{{ netbox_api_host }}'
+    api_port: '{{ netbox_api_port }}'
+    api_proto: '{{ netbox_api_proto }}'
+    api_token: '{{ netbox_api_token }}'
+  proxmox_env_info:
+    node: '{{ proxmox_node }}'
+    api_host: '{{ proxmox_api_host }}'
+    api_user: '{{ proxmox_api_user }}'
+    api_token_id: '{{ proxmox_api_user_token }}'
+    api_token_secret: '{{ proxmox_api_token_secret }}'
+```
+
+#### Add NetBox/Proxmox Credentials to AWX
+
+Navigate to Resources > Credentials in AWX, and create a credential called 'NetBox Proxmox Credentials'.
+
+![NetBox Proxmox Credentials Image](./images/awx-netbox-proxmox-credentials.png)
+
 #### Add Project to AWX
 
-blah blah
+Navigate to Resources > Projects in AWX, and create a new Project called 'netbox-proxmox-ee-test1'.
+
+![NetBox Proxmox Create Project image](./images/awx-create-project.png)
 
 #### Add (project) Templates to AWX
 
