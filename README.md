@@ -868,7 +868,7 @@ Regardless of which AWX template you use as a (NetBox) webhook, you must include
 
 ![NetBox Proxmox stop VM AWX webhook image](./images/proxmox-stop-vm-awx.png)
 
-`proxmox-vm-add-diskawx` webhook
+`proxmox-vm-add-disk-awx` webhook
 
 ![NetBox Proxmox stop VM AWX webhook image](./images/proxmox-vm-add-disk-awx.png)
 
