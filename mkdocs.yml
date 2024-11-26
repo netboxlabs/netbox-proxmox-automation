@@ -1,7 +1,7 @@
 site_name: NetBox Labs Documentation
 theme:
   name: material
-  custom_dir: overrides
+  #custom_dir: overrides
   favicon: images/netbox-favicon.png
   logo: images/netbox-light-favicon.png
   features:
