@@ -54,79 +54,16 @@ plugins:
   - search
 nav:
   - Home: index.md
-  - Cloud:
-      - Getting Access:
-        - Setting up Console Access: "Administration Console/console-access.md"
-        - Accessing the Console From the NetBox Cloud UI: "Administration Console/console-access-from-ui.md"
-        - Retrieving NetBox Cloud Admin Credentials: "Administration Console/retrieving-nbc-credentials.md"
-      - Prefix Lists: "Administration Console/prefix-lists.md"
-      - Working with Database Backups: "Administration Console/working_with_database_backups.md"
-      - Upgrade NetBox Cloud: "Administration Console/upgrading-nbc.md"
-      - Set up Two-Factor Authentication: "Administration Console/set_up_2fa.md"
-      - Migrate to NetBox Cloud: "NetBox Cloud/migrating-to-netbox-cloud.md"
-      - NetBox Cloud Plugins: "Administration Console/netbox-cloud-plugins.md"
-      - Public IP Addressing: "Administration Console/public-ip-addressing.md"
-      - Managing Hostnames: "Administration Console/managing-hostnames.md"
-      - Single Sign-On (SSO):
-        - Azure AD:
-          - Set up Azure AD SSO: "Administration Console/azure-ad-sso-setup.md"
-          - Azure AD Group Mapping: "Administration Console/azure-group-mapping.md"
-        - Okta:
-          - Set up Okta SSO: "Administration Console/okta-sso-setup.md"
-          - Okta Group Mapping: "Administration Console/okta-group-mapping.md"
-      - Free Plan Features: "Administration Console/free-plan-features.md"
-      - Cloud Connectivity:
-        - Do I Need Cloud Connectivity Options?: "cloud-connectivity/do-i-need-cloud-connectivity.md"
-        - Cloud Connectivity Options:
-          - Which Cloud Connectivity Option is Right for Me?: "cloud-connectivity/which-connectivity-option.md"
-          - Internet Delivery (Single Region): "cloud-connectivity/internet-delivery.md"
-          - AWS Private Link (Single Region): "cloud-connectivity/aws-private-link.md"
-          - IPSEC VPN Tunnels (Single Region): "cloud-connectivity/ipsec-vpn-tunnels.md"
-          - AWS Direct Connect (Single Region): "cloud-connectivity/aws-direct-connect.md"
-          - AWS Direct Connect (Multi-Region): "cloud-connectivity/aws-direct-connect-multi-region.md"
-        - Frequently Asked Questions: "cloud-connectivity/cloud-connectivity-faq.md"
-      - Maintenance:
-        - Scheduled Maintenance: "maintenance.md"
-  - Enterprise:
-    - Overview: "netbox-enterprise/nbe-overview.md"
-    - Embedded Cluster:
-      - Requirements: "netbox-enterprise/nbe-ec-requirements.md"
-      - Installation: "netbox-enterprise/nbe-ec-installation.md"
-    - KOTS:
-      - Requirements: "netbox-enterprise/nbe-kots-requirements.md"
-      - Installation: "netbox-enterprise/nbe-kots-installation.md"
-    - "Administration":
-      - "TLS and Ingress": "netbox-enterprise/nbe-tls-ingress.md"
-      - "Backups": "netbox-enterprise/nbe-backups.md"
-      - "Advanced Tools and Troubleshooting": "netbox-enterprise/nbe-troubleshooting.md"
-    - "Release Notes": "netbox-enterprise/nbe-release-notes.md"
-  - Integrations: 
-    - NetBox Ansible Collection: "netbox-integrations/netbox-ansible-collection.md"
-    - pyATS: "netbox-integrations/pyats.md"
-  - SDKs:
-    - Pynetbox: "sdks/pynetbox.md"
-  - Extensions:
-    - Branching:
-      - Overview: "netbox-extensions/branching/index.md"
-      - Configuration: "netbox-extensions/branching/configuration.md"
-      - Using Branches:
-        - Creating a Branch: "netbox-extensions/branching/using-branches/creating-a-branch.md"
-        - Syncing & Merging Changes: "netbox-extensions/branching/using-branches/syncing-merging.md"
-        - Reverting a Branch: "netbox-extensions/branching/using-branches/reverting-a-branch.md"
-      - Models:
-        - Branches: "netbox-extensions/branching/models/branch.md"
-        - Branch Events: "netbox-extensions/branching/models/branchevent.md"
-        - Change Diffs: "netbox-extensions/branching/models/changediff.md"
-        - Object Changes: "netbox-extensions/branching/models/objectchange.md"
-    - Diode:
-      - Overview: "netbox-extensions/diode/index.md"
-      - Get started: 
-        - Components: "netbox-extensions/diode/diode-get-started.md"
-        - Installing the Diode plugin: "netbox-extensions/diode/diode-plugin.md"
-        - Running the Diode server: "netbox-extensions/diode/diode-server.md"
-        - Installing the Diode client SDK: "netbox-extensions/diode/diode-client.md"
-      - Diode Agent: "netbox-extensions/diode/diode-agent.md"
-  - Product and Feature Lifecycle: "product_feature_lifecycle.md"
+  - Usage: usage.md
+  - Proxmox Templates: proxmox-templates.md
+  - NetBox IPAM: netbox-ipam.md
+  - NetBox API Key and Permissions: netbox-key-and-permissions.md
+  - NetBox Customization: netbox-customization.md
+  - Proxmox API User and Key: proxmox-api-user-and-key.md
+  - Configure Flask Application: configure-flask-application.md
+  - Configure AWX or Tower/AAP: configure-awx-aap.md
+  - NetBox Event Rules and Webhooks (Flask): netbox-event-rules-and-webhooks-flask.md
+  - NetBox Event Rules and Webhooks (AWX/Tower/AAP): netbox-event-rules-and-webhooks-awx-aap.md
 extra:
   social:
     - icon: fontawesome/solid/globe
