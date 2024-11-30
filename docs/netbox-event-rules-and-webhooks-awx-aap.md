@@ -9,7 +9,7 @@ A webhook in NetBox will consume the payload of data from an event rule.  An eve
 
 For the sake of automation, every event rule that you create in NetBox requires either a Webhook or a Script.
 
-Regardless of whether you are using a Flask (or other) application for Proxmox automation, or you are using AWX or Tower/AAP, this automation should trigger anytime that a Proxmox VM is changed in NetBox such that:
+Regardless of whether you are using a Flask (or other) application for Proxmox automation, or you are using AWX/Tower/AAP, this automation should trigger anytime that a Proxmox VM is changed in NetBox such that:
 
 - a Proxmox VM has been created in NetBox with a status of 'Staged'
 - a Proxmox VM in NetBox (with a status of 'Staged') has a changed network configuration
@@ -20,11 +20,11 @@ Regardless of whether you are using a Flask (or other) application for Proxmox a
 - a Proxmox VM in NetBox has been removed
 
 
-### AWX or Tower/AAP
+### AWX/Tower/AAP
 
-As noted earlier, AWX or Tower/AAP will perform Proxmox automation through separate (project) templates.  This section walks you through how (NetBox) webhooks and (NetBox) event rules are handled by AWX.
+As noted earlier, AWX/Tower/AAP will perform Proxmox automation through separate (project) templates.  This section walks you through how (NetBox) webhooks and (NetBox) event rules are handled by AWX.
 
-#### AWX or Tower/AAP Webhook
+#### AWX/Tower/AAP Webhook
 
 To use NetBox webhooks with AWX, each NetBox webhook for Proxmox VM management will point at a separate AWX (project) template.  In AWX, each (project) template has a unique ID.  When we execute a webhook in NetBox, in this case we're using AWX, the (NetBox) webhook will in turn point at the (project) template ID in AWX -- and tell AWX to launch the template, i.e. to run the automation.
 
@@ -79,7 +79,7 @@ Regardless of which AWX template you use as a (NetBox) webhook, you must include
 ![NetBox Proxmox VM resize disk AWX webhook image](./images/proxmox-vm-resize-disk-awx.png)
 
 
-#### AWX or Tower/AAP Event Rules
+#### AWX/Tower/AAP Event Rules
 
 Now let's take a look at the NetBox event rules that call an AWX webhook (project template) with Proxmox VM and VM disk object changes in Netbox.
 

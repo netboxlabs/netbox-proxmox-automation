@@ -46,18 +46,3 @@ proxmox-ve-shell# pveum user token add api_user@pve api_user_token -privsep 0 # 
 
 proxmox-ve-shell# pveum acl modify / -user api_user@pve -role Administrator # allow api_user@pve to access everything -- given Administrator role rights
 ```
-
-For the command line above, note that you *will get the Proxmox API token via stdout only once*.  Make sure to copy and store this token in a safe place.  You will need it when we generate the Ansible `secrets.yml` configuration in the next step.
-
-Use `netbox-proxmox-discover-vms.yml` to discover and Proxmox VMs which aren't already in NetBox.  This procedure will also make incremental changes to existing Proxmox VMs in NetBox -- such as adding MAC address to network interfaces.
-
-## Usage
-
-```
-shell$ cd /path/to/netbox-proxmox-automation
-
-shell$ source venv/bin/activate
-
-(venv) shell$ ansible-playbook -i inventory netbox-proxmox-discover-vms.yml --ask-vault-pass
-```
-

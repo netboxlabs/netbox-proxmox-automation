@@ -1,18 +1,18 @@
-# Configure AWX or Tower/AAP
+# Configure AWX/Tower/AAP
 
-*You only need to do this configuration step if you intend to use AWX or Tower/AAP to handle your Proxmox automation.*
+*You only need to do this configuration step if you intend to use AWX/Tower/AAP to handle your Proxmox automation.*
 
-Certainly, you do not need to do Ansible automation by using webhooks and event rules (triggering) in NetBox.  [This weblog](https://netboxlabs.com/blog/getting-started-with-network-automation-netbox-ansible/) shows you how you can use [Ansible](https://www.ansible.com/) with NetBox, as network source of truth, to induce changes in your environment -- by using a pull method for your automation from any client on your network.  In this example, you'll be able to run `ansible-playbook`, alongside a dynamic inventory (NetBox) to induce automation, or in this case automating changes to Proxmox VMs.
+Certainly, you do not need to do Ansible automation by using webhooks and event rules (triggering) in NetBox.  [This weblog](https://netboxlabs.com/blog/getting-started-with-network-automation-netbox-ansible/) shows you how you can use [Ansible](https://www.ansible.com/) with NetBox, as network source of truth, to induce changes in your environment -- by facilitating automation from any client on your network.  In that example, you'd be able to run `ansible-playbook`, alongside a dynamic inventory (NetBox) to induce automation, and from there you could add Proxmox VM automation.
 
-However, many other NetBox users want to use NetBox as NSoT (network source of truth) to facilitate their Proxmox VM automation.  Changes to Proxmox VMs in NetBox will result in automation being kicked off, in this case via [AWX](https://github.com/ansible/awx), or perhaps for a Red Hat commercial customer, through [Tower/AAP](https://www.redhat.com/en/solutions/it-automation?sc_cid=7015Y000003sm3kQAA&gad_source=1&gclid=CjwKCAiAl4a6BhBqEiwAqvrqugh1f-1RfeP-NQxOKYhSbwJqUPVqGqR1A0ScrGMdNhLUbdTayU-EOhoCg00QAvD_BwE&gclsrc=aw.ds).  By using webhooks and event rules in NetBox, AWX or Tower/AAP are more than capable of inducing Proxmox automation.  In fact, using AWX or Tower/AAP is the preferred method for large environments -- where Proxmox VM deployment is a part of an underlying CI/CD.
+However, many other NetBox users want to use NetBox as NSoT (network source of truth) to facilitate their Proxmox VM automation.  Changes to (Proxmox) VMs in NetBox will result in automation being kicked off, in this case via [AWX](https://github.com/ansible/awx), or perhaps for a Red Hat commercial customer, through [Tower/AAP](https://www.redhat.com/en/solutions/it-automation?sc_cid=7015Y000003sm3kQAA&gad_source=1&gclid=CjwKCAiAl4a6BhBqEiwAqvrqugh1f-1RfeP-NQxOKYhSbwJqUPVqGqR1A0ScrGMdNhLUbdTayU-EOhoCg00QAvD_BwE&gclsrc=aw.ds).  By using webhooks and event rules in NetBox, AWX/Tower/AAP are more than capable of inducing Proxmox automation.  In fact, using AWX/Tower/AAP is the preferred method for large environments -- where Proxmox VM deployment might be a part of an underlying CI/CD process.
 
-For those who are unfamiliar, AWX is the upstream (community, i.e. free) version of AAP.  Functionally, AWX works the same way as Tower/AAP, but without the commercial support.  AWX is an excellent alternative as you work through NetBox/Proxmox automation, but there can be a heavy lift when it comes to configuring AWX for the first time.  This section talks through the steps you'll need to be able to run AWX and to begin your Proxmox VM automation journey with NetBox.
+For those who are unfamiliar, AWX is the upstream (community, i.e. free) version of AAP.  Functionally, AWX works the same way as Tower/AAP, but without the commercial support.  AWX is an excellent alternative as you work through NetBox/Proxmox automation, but it can be a heavy lift when configuring AWX for the first time.  This section talks through the steps you'll need to be able to run AWX and to begin your Proxmox VM automation journey with NetBox.
 
 ### Installing AWX with docker-compose
 
-AWX (or Tower/AAP) are typically installed in an environment where Kuberenetes (k8s) is available.  However, should you have Docker/docker-compose running on your local system, you should be able to install AWX [this way](https://github.com/ansible/awx/blob/devel/tools/docker-compose/README.md).
+AWX/Tower/AAP are typically installed in an environment where Kuberenetes (k8s) is available.  However, should you have Docker/docker-compose running on your local system, you should be able to install AWX [this way](https://github.com/ansible/awx/blob/devel/tools/docker-compose/README.md).
 
-Once you have installed AWX (or Tower/AAP) in your environment, and are able to login, as an 'admin' user through the UI, you can start configuring AWX (or Tower/AAP) to facilitate your Proxmox VM automation.  *Note that you can add whatever user(s)/group(s) that you want to AWX, but make sure that whatever user(s)/group(s) you add to AWX have the appropriate permissions to manage the following.*
+Once you have installed AWX/Tower/AAP in your environment, and are able to login, as an 'admin' user through the UI, you can start configuring AWX/Tower/AAP to facilitate your Proxmox VM automation.  *Note that you can add whatever user(s)/group(s) that you want to AWX, but make sure that whatever user(s)/group(s) you add to AWX have the appropriate permissions to manage the following.*
 
 #### Create Github (or your Git of choice) Credential in AWX
 
@@ -30,11 +30,11 @@ Navigate to Resources > Inventories.  'Demo Inventory' should be sufficient for 
 
 #### Create Execution Environment in AWX
 
-Typically, when `ansible` or `ansible-playbook` is/are executed from the command line, this is done via a Python3 `venv`.  However, with AWX, there is no such capability to interact with a command line to leverage `venv` to do a `pip install` of Python module dependencies.
+Typically, when `ansible` or `ansible-playbook` is/are executed from the command line, this is done via a Python3 `venv`.  However, with AWX, there is no such capability to interact with a command line to leverage `venv` to do a `pip install` of NetBox/Python module dependencies.
 
-As a result, you will need to use an [Execution Environment](https://ansible.readthedocs.io/projects/awx/en/latest/userguide/execution_environments.html) in AWX.  Your Execution Environment is a container image that will include all of the (Python) module dependencies that you'll need to facilitate Proxmox automation, and this container image will live in your container registry of choice.  
+As a result, you will need to use an [Execution Environment](https://ansible.readthedocs.io/projects/awx/en/latest/userguide/execution_environments.html) in AWX.  Your Execution Environment is a container image that will include all of the (NetBox/Python) module dependencies that you'll need to facilitate Proxmox automation, and this container image will live in your container registry of choice.  
 
-*You (probably) only need to create an Exection Environment once for `netbox-proxmox-automation` with AWX.*
+*You (probably) only need to create an Exection Environment once for `netbox-proxmox-automation` with AWX/Tower/AAP.*
 
 In the end, your Execution Environment should look like this in AWX.
 

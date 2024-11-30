@@ -4,9 +4,10 @@
 
 It is recommended that you do *not* create an API token for the NetBox 'admin' user.  Instead, create a new user in NetBox; then create a new permission for that API user -- that has sufficient read/write/modify permissions to modify the following object types in NetBox, at a minimum:
 
-  - Devices
+  - Devices (for VM cluster(s) hardware, if used)
   - Interfaces (devices and VMs)
   - VMs (groups, clusters, VMs)
+  - VM disks
 
 ### Create NetBox User + Group
  
