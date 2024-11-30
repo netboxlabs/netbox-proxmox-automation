@@ -1,25 +1,26 @@
 # Usage
 
-`netbox-proxmox-automation` currently implements two automation use cases:
-1. NetBox webhooks and event rules will use AWX or Tower/AAP to induce Proxmox automation
-2. NetBox webhooks and event rules will use a Flask application to induce Proxmox automation
+`netbox-proxmox-automation` implements two automation use cases:
+
+1. NetBox webhooks and event rules will use Ansible AWX/Tower/AAP to facilitate Proxmox automation
+2. NetBox webhooks and event rules will use a Flask application to facilitate Proxmox automation
 
 ## What this implementation *is*
 
-`netbox-proxmox-automation` is an implementation where you defined your *desired* VM states in NetBox.  Your desired VM state in NetBox then gets synchronized to Proxmox.
+`netbox-proxmox-automation` is an implementation where you define your *desired* (Proxmox) VM states in NetBox.  Your desired VM state in NetBox then gets synchronized to Proxmox.
 
-`netbox-proxmox-automation` uses cloud-init images to induce VM changes on Proxmox based on the *desired* state in NetBox.  Almost always these cloud-init images will be Debian or Debian-derived images (e.g. Debian or Ubuntu), RHEL-derived images (e.g. Rocky Linux), or maybe even Windows-based cloud-init images.  *(Windows cloud-init images are currently un-tested.)*  While you should be able to use a cloud-init image of choice with this automation, and due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.  We welcome any reports around other cloud-init images, and will merge in this functionality as we are able.
+`netbox-proxmox-automation` uses cloud-init images to induce VM changes on Proxmox based on the *desired* state in NetBox.  Proxmox is highly conducive to using cloud-init images -- when said cloud-init images are converted to templates.  You can define items like ssh keys and network configurations in Proxmox by way of using cloud-init images, and cloud-init will cascade these settings into your Proxmox VMs: *dynamically*.  Further, Proxmox has a comprehensive API -- you can define VM resources, plus disk configurations and more -- which makes it easy for you to automate your desired Proxmox VM states with little effort.
 
-Proxmox is highly conducive to using cloud-init images -- when cloud-init images are converted to templates.  You can define items like ssh keys and network configurations in Proxmox by way of using cloud-init images, and cloud-init will cascade these settings into your Proxmox VMs: *Dynamically*.  Further, Proxmox has a comprehensive API -- you can define VM resources, plus disk configurations and more -- where you can leverage automation to lay down your desired VM states in Proxmox with little effort.
+Almost always these cloud-init images will be Debian or Debian-derived images (e.g. Debian or Ubuntu), RHEL-derived images (e.g. Rocky Linux), or maybe even Windows-based cloud-init images.  *(Windows cloud-init images are currently un-tested.)*  While you should be able to use a cloud-init image of choice with this automation, and due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.  We welcome any reports around other cloud-init images, and will address this functionality as we are able.
 
-NetBox models VMs in an intuitive way.  You can define roles for VMs, such as for Proxmox, and from there you can define both VM state (Active, Offline, etc) and other resources like vcpus, memory, network configuration, disks, and more (through customizations in NetBox).
+NetBox models VMs in an intuitive way.  You can define roles for VMs, such as for Proxmox, and from there you can define both VM state (Staged, Active, Offline, etc) and other resources like vcpus, memory, network configuration, VM disks, and more (through customizations in NetBox).
 
 This automation is based on the premise(s) that:
 
   1. You are using Python (version 3)
   2. You are using NetBox 4.1.0 or newer (NetBox 3.7.x should also work)
   3. You have a running Proxmox instance or cluster
-  4. You have a running [AWX](https://github.com/ansible/awx) instance or are running [your own web service](https://github.com/netboxlabs/netbox-proxmox-automation/tree/main/example-netbox-webhook-flask-app) to handle webhooks and event rules
+  4. You have a running [AWX](https://github.com/ansible/awx) instance or are running [your own web application](https://github.com/netboxlabs/netbox-proxmox-automation/tree/main/example-netbox-webhook-flask-app) to handle webhooks and event rules
   5. You have converted a cloud-init image to a Proxmox VM template
   6. Your Promox VM template(s) has/have qemu-guest-agent installed, and that qemu-guest-agent has been enabled via cloud-init
   7. You have access to the NetBox and Proxmox APIs (via API tokens, respectively)
