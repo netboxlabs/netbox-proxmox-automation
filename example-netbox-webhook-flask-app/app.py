@@ -68,7 +68,14 @@ class WebhookListener(Resource):
         if DEBUG:
             print("INCOMING DATA FOR WEBHOOK", webhook_json_data)
 
-        tc = NetBoxProxmoxHelper(app_config, webhook_json_data['data']['custom_fields']['proxmox_node'])
+        if 'proxmox_node' in webhook_json_data['data']['custom_fields']:
+            proxmox_node = webhook_json_data['data']['custom_fields']['proxmox_node']
+        else:
+            proxmox_node = app_config['proxmox_api_config']['node']
+
+
+        tc = NetBoxProxmoxHelper(app_config, proxmox_node)
+
 
         if webhook_json_data['event'] == 'created' and webhook_json_data['model'] == 'virtualmachine' and webhook_json_data['data']['status']['value'] == 'staged':
             tc.proxmox_clone_vm(webhook_json_data)

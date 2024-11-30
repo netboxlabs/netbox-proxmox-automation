@@ -9,7 +9,7 @@ A webhook in NetBox will consume the payload of data from an event rule.  An eve
 
 For the sake of automation, every event rule that you create in NetBox requires either a Webhook or a Script.
 
-Regardless of whether you are using a Flask (or other) application for Proxmox automation, or you are using AWX or Tower/AAP, this automation should trigger anytime that a Proxmox VM is changed in NetBox such that:
+Regardless of whether you are using a Flask (or other) application for Proxmox automation, or you are using AWX/Tower/AAP, this automation should trigger anytime that a Proxmox VM is changed in NetBox such that:
 
 - a Proxmox VM has been created in NetBox with a status of 'Staged'
 - a Proxmox VM in NetBox (with a status of 'Staged') has a changed network configuration

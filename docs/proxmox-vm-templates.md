@@ -1,22 +1,23 @@
-# Proxmox Templates
+# Proxmox VM Templates
 
-`netbox-proxmox-automation` is intended to make your life as simple as possible.  Once you have a working Proxmox node (or cluster), have provisioned a Proxmox API token with the permissions noted above, a NetBox instance, a NetBox API token, the entire process of managing Proxmox VMs via NetBox involves these simple requirements.
+`netbox-proxmox-automation` is intended to make your life as simple as possible.  Once you have a working Proxmox node (or cluster), have provisioned a Proxmox API token (the permission is able to manage both VMs and storage), a NetBox instance, a NetBox API token, the entire process of managing Proxmox VMs via NetBox involves these simple requirements.
 
-  1. You have defined event rules and webhooks for VM operations in NetBox
-  2. You have a web service that handles events via webhooks
+  1. You have defined a webhook that will be used to facilitate your automation
+  2. You have defined an event rule that uses the webhook in Step 1 -- for automating Proxmox VM operations based on VM state in NetBox
+  3. You have a web application that handles events via webhooks
 
-    - You are running a web service that handles events via webhooks, e.g. [example-netbox-webhook-flask-app](https://github.com/netboxlabs/netbox-proxmox-automation/tree/main/example-netbox-webhook-flask-app)
+    - For example, [example-netbox-webhook-flask-app](https://github.com/netboxlabs/netbox-proxmox-automation/tree/main/example-netbox-webhook-flask-app) is an example web application that you can use to facilitate Proxmox automation by handling event rules from NetBox.
     
         *-or-*
     
-    - You are running AWX and have created templates to handle events via webhooks
+    - You are running AWX and have created (project) templates to handle events via webhooks
 
 
 ## Initial Configuration: Creating Proxmox VM templates from (cloud-init) images
 
 `netbox-proxmox-automation` *only* supports cloud-init images.  The dynamic nature of Proxmox VM automation requires this implementation to be able to set things, during the Proxmox VM provisioning process, like network configuration, hostnames, and more.  While it's *possible* that `netbox-proxmox-automation` *might* support your existing Proxmox VM templates, it's *highly* recommended that you follow the procedure below -- for the best results.
 
-As a cloud-init image is basically "blank", meaning that there is not broad network or SSH key configuration, this allows us to have total flexibility in the way that this automation takes a *desired* Proxmox VM state from NetBox and generates anticipated changes to VMs -- in Proxmox.
+As a cloud-init image is sufficient "bare bones", meaning that there is not broad network or SSH key or package configuration(s), this allows us to have total flexibility in the way that this automation takes a *desired* Proxmox VM state from NetBox and generates anticipated changes to VMs -- in Proxmox.
 
 This process is [well documented](https://pve.proxmox.com/wiki/Cloud-Init_Support) by the Proxmox team.  In the end it comes down to:
 - logging into your Proxmox node(s) and running these commands as the 'root' user, or as a user who has adequate permissions to modify Proxmox VMs and the underlying storage
@@ -39,7 +40,7 @@ proxmox-ve-node# cd cloud-images/ubuntu
 proxmox-ve-node# for r in jammy focal noble; do wget "https://cloud-images.ubuntu.com/${r}/current/${r}-server-cloudimg-amd64.img" & done
 ```
 
-Then let the cloud-init images download.  Once the downloads have completed, you might want to take backups of the original cloud-init images -- as we will proceed with modifying these cloud-init images slightly before converting them to Proxmox VM templates.  Taking backups of the original cloud-init images is helpful should you ever need to revert any customization you did before converting the cloud-init images into Proxmox VM templates.  Run this, again, as 'root' on the proxmox-node of your choice.
+Then wait for the cloud-init images to download.  Once the downloads have completed, you might want to take backups of the original cloud-init images -- as we will proceed with modifying these cloud-init images slightly before converting them to Proxmox VM templates.  Taking backups of the original cloud-init images is helpful should you ever need to revert any customization you did before converting the cloud-init images into Proxmox VM templates.  Run this, again, as 'root' on the proxmox-node of your choice.
 
 ```
 proxmox-ve-node# cd /root/cloud-images/ubuntu
@@ -110,7 +111,7 @@ First, create the Proxmox VM, with a unique id, and configure its attributes.  W
 - create the Proxmox VM
 - import the cloud-init image to the Proxmox VM
 - set the SCSI (disk) hardware attributes for the Proxmox VM root disk
-- map an IDE disk to the cloud-init image
+- map an IDE disk to the cloud-init image (this will be used as a CD-ROM)
 - define a boot disk for the Proxmox VM
 - define a serial port such that the Proxmox VM is accessible through the Proxmox console
 - set the QEMU agent to be enabled such that you can access various information from `qemu-guest-agent` when the Proxmox VM is running
@@ -188,9 +189,9 @@ proxmox-ve-node# qm set 9000 --agent enabled=1
 update VM 9000: -agent enabled=1
 ```
 
-Second, convert the Proxmox VM into a template.  You can then use this Proxmox VM template in your `netbox-proxmox-automation` automation.
+Second, convert the Proxmox VM into a template.  You can then use this Proxmox VM template in your `netbox-proxmox-automation` automation.    
 
-Now convert the Proxmox VM to a template.  *Note that this cannot be undone!*
+*Note that this cannot be undone!*
 
 ```
 proxmox-ve-node# qm template 9000
@@ -198,4 +199,4 @@ proxmox-ve-node# qm template 9000
   Logical volume pve/base-9000-disk-0 changed.
 ```
 
-You should now be able to use your Proxmox VM template, with a VM id (vmid) of 9000 (or whatever you choose) in your `netbox-proxmox-automation` automation.
+You should now be able to use your Proxmox VM template, with a VM id (vmid) of 9000 (or whatever you chose) in your `netbox-proxmox-automation` automation.

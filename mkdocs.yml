@@ -55,7 +55,7 @@ plugins:
 nav:
   - Home: index.md
   - Usage: usage.md
-  - Proxmox Templates: proxmox-templates.md
+  - Proxmox VM Templates: proxmox-vm-templates.md
   - NetBox IPAM: netbox-ipam.md
   - NetBox API Key and Permissions: netbox-key-and-permissions.md
   - NetBox Customization: netbox-customization.md
