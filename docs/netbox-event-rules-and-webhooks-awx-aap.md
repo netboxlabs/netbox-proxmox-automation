@@ -22,11 +22,11 @@ Regardless of whether you are using a Flask (or other) application for Proxmox a
 
 ### AWX/Tower/AAP
 
-As noted earlier, AWX/Tower/AAP will perform Proxmox automation through separate (project) templates.  This section walks you through how (NetBox) webhooks and (NetBox) event rules are handled by AWX.
+As noted earlier, AWX/Tower/AAP will perform Proxmox automation through separate (job) templates.  This section walks you through how (NetBox) webhooks and (NetBox) event rules are handled by AWX.
 
 #### AWX/Tower/AAP Webhook
 
-To use NetBox webhooks with AWX, each NetBox webhook for Proxmox VM management will point at a separate AWX (project) template.  In AWX, each (project) template has a unique ID.  When we execute a webhook in NetBox, in this case we're using AWX, the (NetBox) webhook will in turn point at the (project) template ID in AWX -- and tell AWX to launch the template, i.e. to run the automation.
+To use NetBox webhooks with AWX, each NetBox webhook for Proxmox VM management will point at a separate AWX (job) template.  In AWX, each (job) template has a unique ID.  When we execute a webhook in NetBox, in this case we're using AWX, the (NetBox) webhook will in turn point at the (job) template ID in AWX -- and tell AWX to launch the template, i.e. to run the automation.
 
 AWX webhooks are created this way in NetBox.
 
@@ -81,7 +81,7 @@ Regardless of which AWX template you use as a (NetBox) webhook, you must include
 
 #### AWX/Tower/AAP Event Rules
 
-Now let's take a look at the NetBox event rules that call an AWX webhook (project template) with Proxmox VM and VM disk object changes in Netbox.
+Now let's take a look at the NetBox event rules that call an AWX webhook (job template) with Proxmox VM and VM disk object changes in Netbox.
 
 ![NetBox Proxmox VM event rules AWX image](./images/netbox-proxmox-event-rules-awx.png)
 
