@@ -1,3 +1,4 @@
+import re
 import pynetbox
 import requests
 import urllib
@@ -178,6 +179,37 @@ class NetBoxProxmoxHelper:
                     if nb_obj_update_vmid:
                         nb_obj_update_vmid['custom_fields']['proxmox_vmid'] = new_vm_id
                         nb_obj_update_vmid.save()
+                except pynetbox.core.query.RequestError as e:
+                    raise e
+                
+                # set scsi0 in NetBox
+                try:
+                    proxmox_vm_config = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(new_vm_id).config.get()
+
+                    if 'bootdisk' in proxmox_vm_config:
+                        os_disk = proxmox_vm_config['bootdisk']
+
+                    if os_disk in proxmox_vm_config:
+                        m = re.search(r'size=(\d+)([MG]){1}', proxmox_vm_config[os_disk])
+
+                        if m:
+                            disk_raw_size = m.group(1)
+
+                            if m.group(2) == 'G':
+                                disk_size = int(disk_raw_size) * 1000
+                            elif m.group(2) == 'M':
+                                disk_size = int(disk_raw_size)
+
+                    nb_obj_add_vm_disk = self.netbox_api.virtualization.virtual_disks.create(
+                        virtual_machine=nb_obj_update_vmid['id'],
+                        name=proxmox_vm_config['bootdisk'],
+                        size=disk_size,
+                        description=f"OS/boot disk for {json_in['data']['name']}"
+                    )
+
+                    if not nb_obj_add_vm_disk:
+                        raise ValueError("Unable to add VM disk to NetBox")
+
                 except pynetbox.core.query.RequestError as e:
                     raise e
 
