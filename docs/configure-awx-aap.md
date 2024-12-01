@@ -198,9 +198,9 @@ Navigate to Resources > Projects in AWX, and create a new Project called 'netbox
 
 Click the 'Sync' button in the AWX UI to ensure that git synchronization is successful.  If this step is *not* successful, then *do not proceed* -- as you troubleshoot.  Otherwise, proceed.
 
-#### Add (project) Templates to AWX
+#### Add (job) Templates to AWX
 
-In AWX, a (project) template provides a web accessible means of triggering automation, i.e. via a webhook.  Each (project) template represents an Ansible playbook -- each Ansible playbook represents a file that was synchronized from git when you created the project in AWX -- where the playbook will perform Proxmox automation.
+In AWX, a (job) template provides a web accessible means of triggering automation, i.e. via a webhook.  Each (job) template represents an Ansible playbook -- each Ansible playbook represents a file that was synchronized from git when you created the project in AWX -- where the playbook will perform Proxmox automation.
 
 For example, when you have defined a Proxmox VM in NetBox (alongside its default resources), you can use `awx-clone-vm-and-set-resources.yml` to automate the cloning of a VM and setting its resources in Proxmox.
 
@@ -210,7 +210,7 @@ When you create *any* template in AWX for Proxmox automation, you will need to s
 
 ![NetBox Proxmox clone vm and set resources edit image](./images/awx-netbox-proxmox-template-clone-resources-edit.png)
 
-`netbox-proxmox-ansible` provides a series of Ansible playbooks that you can use to create fully-functioning Proxmox VMs based on their desired configuration states in NetBox.  You will need to create a (project) template for each playbook in AWX.
+`netbox-proxmox-ansible` provides a series of Ansible playbooks that you can use to create fully-functioning Proxmox VMs based on their desired configuration states in NetBox.  You will need to create a (job) template for each playbook in AWX.
 
 `netbox-proxmox-automation` implements the following Ansible playbooks.
 

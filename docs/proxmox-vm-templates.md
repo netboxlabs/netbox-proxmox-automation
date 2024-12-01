@@ -10,7 +10,7 @@
     
         *-or-*
     
-    - You are running AWX and have created (project) templates to handle events via webhooks
+    - You are running AWX and have created (job) templates to handle events via webhooks
 
 
 ## Initial Configuration: Creating Proxmox VM templates from (cloud-init) images
