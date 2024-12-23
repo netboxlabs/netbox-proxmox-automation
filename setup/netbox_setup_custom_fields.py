@@ -8,7 +8,7 @@ import yaml
 import json
 import pynetbox
 
-from helpers.proxmox_api import ProxmoxAPIHelper
+from helpers.netbox_proxmox_api import ProxmoxAPIHelper
 
 def get_arguments():
     # Initialize the parser
