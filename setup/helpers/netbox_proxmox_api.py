@@ -5,7 +5,7 @@ import urllib
 
 from proxmoxer import ProxmoxAPI
 
-class ProxmoxAPIHelper:
+class NetBoxProxmoxAPIHelper:
     def __init__(self, cfg_data):
         self.proxmox_nodes = []
         self.proxmox_vms = {}
