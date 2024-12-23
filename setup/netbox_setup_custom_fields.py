@@ -8,7 +8,7 @@ import yaml
 import json
 import pynetbox
 
-from helpers.netbox_proxmox_api import ProxmoxAPIHelper
+from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
 
 def get_arguments():
     # Initialize the parser
@@ -290,7 +290,7 @@ if __name__ == "__main__":
     netbox_api_token = f"{app_config['netbox_api_config']['api_token']}"
 
     # init Proxmox API integration
-    p = ProxmoxAPIHelper(app_config)
+    p = NetBoxProxmoxAPIHelper(app_config)
 
     # setup defaults and override from config values later
     proxmox_cluster_name = default_netbox_cluster_name
