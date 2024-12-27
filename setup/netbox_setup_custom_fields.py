@@ -11,6 +11,7 @@ from helpers.netbox_objects import NetboxCustomFields, NetboxCustomFieldChoiceSe
 
 from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
 
+
 def get_arguments():
     # Initialize the parser
     parser = argparse.ArgumentParser(description="Import Netbox and Proxmox Configurations")
@@ -83,9 +84,12 @@ def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label
 
     if input_type['value'] == 'select':
         nbcf = NetboxCustomFields(netbox_url, netbox_api_token,
-                                {'weight': 100, 'filter_logic': {'value': 'loose', 'label': 'Loose'}, 'search_weight': 1000,
+                                {'weight': 100, 
+                                 #'filter_logic': {'value': 'loose', 'label': 'Loose'},
+                                 'filter_logic': 'disabled',
+                                 'search_weight': 1000,
                                 'object_types': object_types,
-                                'type': input_type,
+                                'type': input_type['value'],
                                 'group_name': 'Proxmox',
                                 'name': name,
                                 'label': label,
@@ -93,15 +97,19 @@ def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label
                                 'default': default})
     elif input_type['value'] == 'text':
         nbcf = NetboxCustomFields(netbox_url, netbox_api_token,
-                                {'weight': 100, 'filter_logic': {'value': 'loose', 'label': 'Loose'}, 'search_weight': 1000,
+                                {'weight': 100,
+                                 'filter_logic': 'disabled',
+                                 'search_weight': 1000,
                                 'object_types': object_types,
-                                'type': input_type,
+                                'type': input_type['value'],
                                 'group_name': 'Proxmox',
                                 'name': name,
                                 'label': label})
     elif input_type['value'] == 'longtext':
         nbcf = NetboxCustomFields(netbox_url, netbox_api_token,
-                                {'weight': 100, 'filter_logic': {'value': 'loose', 'label': 'Loose'}, 'search_weight': 1000,
+                                {'weight': 100,
+                                 'filter_logic': 'disabled',
+                                 'search_weight': 1000,
                                 'object_types': object_types,
                                 'type': input_type,
                                 'group_name': 'Proxmox',
@@ -132,7 +140,7 @@ if __name__ == "__main__":
     netbox_url = f"{app_config['netbox_api_config']['api_proto']}://{app_config['netbox_api_config']['api_host']}:{app_config['netbox_api_config']['api_port']}/"
     netbox_api_token = f"{app_config['netbox_api_config']['api_token']}"
 
-    # init Proxmox API integration
+    # init NetBox Proxmox API integration
     p = NetBoxProxmoxAPIHelper(app_config)
 
     # setup defaults and override from config values later
