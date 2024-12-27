@@ -95,7 +95,6 @@ def __netbox_make_slug(in_str):
 
 def netbox_create_webhook(netbox_url, netbox_api_token, payload):
     created_webhook = NetboxWebhooks(netbox_url, netbox_api_token, payload)
-    print(created_webhook, created_webhook.obj)
     return dict(created_webhook.obj)['id'], dict(created_webhook.obj)['name']
 
 
@@ -118,18 +117,31 @@ def main():
     netbox_url = f"{app_config['netbox_api_config']['api_proto']}://{app_config['netbox_api_config']['api_host']}:{app_config['netbox_api_config']['api_port']}/"
     netbox_api_token = f"{app_config['netbox_api_config']['api_token']}"
 
+    if not 'automation_type' in app_config:
+        raise ValueError("app_config is missing definition for 'automation_type'")
+    
     if app_config['automation_type'] not in ['flask', 'ansible_automation']:
         raise ValueError(f"Unknown automation_type in {app_config_file}: {app_config['automation_type']}")
 
     if not app_config['automation_type'] in app_config:
         raise ValueError(f"No known configuration for {app_config['automation_type']}")
-
-    print(app_config, netbox_url, netbox_api_token)
-
+    
     # init NetBox Proxmox API integration
     p = NetBoxProxmoxAPIHelper(app_config)
 
     if app_config['automation_type'] == 'ansible_automation':
+        ansible_automation_webhook_body_templates = {
+            'proxmox-clone-vm-and-set-resources': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\",\r\n      \"vcpus\": \"{{ data['vcpus'] }}\",\r\n      \"memory\": \"{{ data['memory'] }}\",\r\n      \"template\": \"{{ data['custom_fields']['proxmox_vm_template'] }}\",\r\n      \"storage\": \"{{ data['custom_fields']['proxmox_vm_storage'] }}\"\r\n    }\r\n  }\r\n}",
+            'proxmox-remove-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\"\r\n    }\r\n  }\r\n}",
+            'proxmox-set-ipconfig0-and-ssh-key': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\",\r\n      \"ip\": \"{{ data['primary_ip4']['address'] }}\",\r\n      \"ssh_key\": \"{{ data['custom_fields']['proxmox_public_ssh_key'] }}\"\r\n    }\r\n  }\r\n}",
+            'proxmox-resize-vm-disk': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['virtual_machine']['name'] }}\",\r\n      \"resize_disk\": \"{{ data['name'] }}\",\r\n      \"resize_disk_size\": \"{{ data['size'] }}\",\r\n      \"storage_volume\": \"{{ data['custom_fields']['proxmox_storage_volume'] }}\"\r\n    }\r\n  }\r\n}",
+            'proxmox-add-vm-disk': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['virtual_machine']['name'] }}\",\r\n      \"add_disk\": \"{{ data['name'] }}\",\r\n      \"add_disk_size\": \"{{ data['size'] }}\",\r\n      \"storage_volume\": \"{{ data['custom_fields']['proxmox_storage_volume'] }}\"\r\n    }\r\n  }\r\n}",
+            'proxmox-remove-vm-disk': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['virtual_machine']['name'] }}\",\r\n      \"remove_disk\": \"{{ data['name'] }}\"\r\n    }\r\n  }\r\n}",
+            'proxmox-stop-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\"\r\n    }\r\n  }\r\n}",
+            'proxmox-start-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\"\r\n    }\r\n  }\r\n}",
+            'update-dns': "{\r\n  \"extra_vars\": {\r\n    \"dns_stuff\": {\r\n      \"dns_zone_id\": \"{{ data['zone']['id'] }}\",\r\n      \"dns_zone_name\": \"{{ data['zone']['name'] }}\",\r\n      \"dns_integrations\": \"{{ data['custom_fields']['dns_integrations'] }}\"\r\n    }\r\n  }\r\n}"
+        }
+        
         awx_project_name = app_config['ansible_automation']['project_name']
 
         awx_url_v2_api = f"{app_config['ansible_automation']['http_proto']}://{app_config['ansible_automation']['host']}:{app_config['ansible_automation']['http_port']}/api/v2/"
@@ -137,13 +149,9 @@ def main():
         if not awx_url_v2_api.endswith('/'):
             awx_url_v2_api += '/'
 
-        print(awx_url_v2_api)
-
         auth_in = setup_http_basic_auth(app_config['ansible_automation']['username'], app_config['ansible_automation']['password'])
 
         awx_project_id = awx_get_project_info(awx_url_v2_api, auth_in, app_config['ansible_automation']['ssl_verify'], awx_project_name)
-
-        print(awx_project_id)
 
         awx_job_templates = awx_get_job_templates_info(awx_url_v2_api, auth_in, app_config['ansible_automation']['ssl_verify'], awx_project_id)
 
@@ -154,23 +162,28 @@ def main():
 
         netbox_webhook_additional_headers = create_authorization_header(app_config['ansible_automation']['username'], app_config['ansible_automation']['password'])
 
+        if not 'ansible_automation_template_mappings' in app_config:
+            print(f"'ansible_automation_template_mappings' is not set in {app_config_file}")
+            print("Please add it in the following format then run this script again")
+            print("\nansible_automation_template_mappings:")
+
         for awx_job_template in awx_job_templates:
-            print(awx_job_template, awx_job_templates[awx_job_template])
-            netbox_webhook_name = f"{awx_job_templates[awx_job_template]}-{re.sub(r'_', '-', app_config['automation_type'])}"
-            netbox_webhook_url = f"{awx_url_v2_api}job_templates/{awx_job_template}/launch/"
+            if not 'ansible_automation_template_mappings' in app_config:
+                print(f"  {awx_job_templates[awx_job_template]}: Your choice of {', '.join(ansible_automation_webhook_body_templates.keys())}")
+            else:
+                netbox_webhook_name = f"{awx_job_templates[awx_job_template]}-{re.sub(r'_', '-', app_config['automation_type'])}"
+                netbox_webhook_url = f"{awx_url_v2_api}job_templates/{awx_job_template}/launch/"
 
-            print(f"{awx_job_templates[awx_job_template]} -> {netbox_webhook_url} {netbox_webhook_name}")
-            netbox_webhook_payload['ssl_verification'] = app_config['ansible_automation']['ssl_verify']
-            netbox_webhook_payload['http_method'] = 'POST'
-            netbox_webhook_payload['http_content_type'] = 'application/json'
-            netbox_webhook_payload['name'] = netbox_webhook_name
-            netbox_webhook_payload['payload_url'] = netbox_webhook_url
-            netbox_webhook_payload['additional_headers'] = netbox_webhook_additional_headers
+                netbox_webhook_payload['ssl_verification'] = app_config['ansible_automation']['ssl_verify']
+                netbox_webhook_payload['http_method'] = 'POST'
+                netbox_webhook_payload['http_content_type'] = 'application/json'
+                netbox_webhook_payload['name'] = netbox_webhook_name
+                netbox_webhook_payload['payload_url'] = netbox_webhook_url
+                netbox_webhook_payload['additional_headers'] = netbox_webhook_additional_headers
+                netbox_webhook_payload['body_template'] = ansible_automation_webhook_body_templates[awx_job_templates[awx_job_template]]
 
-            print(netbox_webhook_payload)
-
-            netbox_webhook_id, netbox_webhook_name_returned = netbox_create_webhook(netbox_url, netbox_api_token, netbox_webhook_payload)
-            collected_netbox_webhook_payload[netbox_webhook_id] = netbox_webhook_name_returned
+                netbox_webhook_id, netbox_webhook_name_returned = netbox_create_webhook(netbox_url, netbox_api_token, netbox_webhook_payload)
+                collected_netbox_webhook_payload[netbox_webhook_id] = netbox_webhook_name_returned
 
         print(collected_netbox_webhook_payload)
 
