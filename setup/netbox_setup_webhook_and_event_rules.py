@@ -89,17 +89,19 @@ def get_arguments():
     return args
 
 
-def __netbox_make_slug(in_str):
-    return re.sub(r'\W+', '-', in_str).lower()
-
-
 def netbox_create_webhook(netbox_url, netbox_api_token, payload):
     created_webhook = NetboxWebhooks(netbox_url, netbox_api_token, payload)
     return dict(created_webhook.obj)['id'], dict(created_webhook.obj)['name']
 
 
+def netbox_create_event_rule(netbox_url, netbox_api_token, payload):
+    created_event_rule = NetboxEventRules(netbox_url, netbox_api_token, payload)
+    return dict(created_event_rule.obj)['id'], dict(created_event_rule.obj)['name']
+
+
 def main():
     netbox_webhook_payload = {}
+    netbox_event_rule_payload = {}
     collected_netbox_webhook_payload = {}
 
     args = get_arguments()
@@ -129,6 +131,165 @@ def main():
     # init NetBox Proxmox API integration
     p = NetBoxProxmoxAPIHelper(app_config)
 
+    netbox_proxmox_event_rules = {
+            'proxmox-clone-vm-and-set-resources': {
+                'enabled': True,
+                'action_type': 'webhook',
+                'action_object_type': 'extras.webhook',
+                'action_object_id': -1,
+                'object_types': [
+                    "virtualization.virtualmachine"
+                ],
+                'event_types': [
+                    "object_created"
+                ],
+                'conditions': {
+                    "and": [
+                        {
+                            "attr": "status.value",
+                            "value": "staged"
+                        },
+                        {
+                            "attr": "vcpus",
+                            "negate": True,
+                            "value": None
+                        },
+                        {
+                            "attr": "memory",
+                            "negate": True,
+                            "value": None
+                        },
+                        {
+                            "attr": "custom_fields.proxmox_vm_template",
+                            "negate": True,
+                            "value": None
+                        }
+                    ]
+                }
+            },
+            'proxmox-remove-vm': {
+                'enabled': True,
+                'action_type': 'webhook',
+                'action_object_type': 'extras.webhook',
+                'action_object_id': -1,
+                'object_types': [
+                    "virtualization.virtualmachine"
+                ],
+                'event_types': [
+                    "object_deleted"
+                ],
+                'conditions': ''
+            },
+            'proxmox-set-ipconfig0-and-ssh-key': {
+                'enabled': True,
+                'action_type': 'webhook',
+                'action_object_type': 'extras.webhook',
+                'action_object_id': -1,
+                'object_types': [
+                    "virtualization.virtualmachine"
+                ],
+                'event_types': [
+                    "object_created",
+                    "object_deleted",
+                    "object_updated"
+                ],
+                'conditions': {
+                    "and": [
+                        {
+                            "attr": "primary_ip4",
+                            "negate": True,
+                            "value": None
+                        },
+                        {
+                            "attr": "status.value",
+                            "value": "staged"
+                        }
+                    ]
+                }
+            },
+            'proxmox-resize-vm-disk': {
+                'enabled': True,
+                'action_type': 'webhook',
+                'action_object_type': 'extras.webhook',
+                'action_object_id': -1,
+                'object_types': [
+                    "virtualization.virtualdisk"
+                ],
+                'event_types': [
+                    "object_updated"
+                ],
+                'conditions': ''
+            },
+            'proxmox-add-vm-disk': {
+                'enabled': True,
+                'action_type': 'webhook',
+                'action_object_type': 'extras.webhook',
+                'action_object_id': -1,
+                'object_types': [
+                    "virtualization.virtualdisk"
+                ],
+                'event_types': [
+                    "object_created"
+                ],
+                'conditions': ''
+            },
+            'proxmox-remove-vm-disk': {
+                'enabled': True,
+                'action_type': 'webhook',
+                'action_object_type': 'extras.webhook',
+                'action_object_id': -1,
+                'object_types': [
+                    "virtualization.virtualdisk"
+                ],
+                'event_types': [
+                    "object_deleted"
+                ],
+                'conditions': {
+                    "attr": "name",
+                    "negate": True,
+                    "value": "scsi0"
+                }              
+            },
+            'proxmox-stop-vm': {
+                'enabled': True,
+                'action_type': 'webhook',
+                'action_object_type': 'extras.webhook',
+                'action_object_id': -1,
+                'object_types': [
+                    "virtualization.virtualmachine"
+                ],
+                'event_types': [
+                    "object_updated"
+                ],
+                'conditions': {
+                    "attr": "status.value",
+                    "value": "offline"
+                }
+            },
+            'proxmox-start-vm': {
+                'enabled': True,
+                'action_type': 'webhook',
+                'action_object_type': 'extras.webhook',
+                'action_object_id': -1,
+                'object_types': [
+                    "virtualization.virtualmachine"
+                ],
+                'event_types': [
+                    "object_updated"
+                ],
+                'conditions': {
+                    "attr": "status.value",
+                    "value": "active"
+                }
+            },
+#            'update-dns': {
+#                'enabled': True,
+#                'action_type': 'webhook',
+#                'action_object_type': 'extras.webhook',
+#                'action_object_id': -1,
+#            }
+    }
+
     if app_config['automation_type'] == 'ansible_automation':
         ansible_automation_webhook_body_templates = {
             'proxmox-clone-vm-and-set-resources': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\",\r\n      \"vcpus\": \"{{ data['vcpus'] }}\",\r\n      \"memory\": \"{{ data['memory'] }}\",\r\n      \"template\": \"{{ data['custom_fields']['proxmox_vm_template'] }}\",\r\n      \"storage\": \"{{ data['custom_fields']['proxmox_vm_storage'] }}\"\r\n    }\r\n  }\r\n}",
@@ -139,7 +300,7 @@ def main():
             'proxmox-remove-vm-disk': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['virtual_machine']['name'] }}\",\r\n      \"remove_disk\": \"{{ data['name'] }}\"\r\n    }\r\n  }\r\n}",
             'proxmox-stop-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\"\r\n    }\r\n  }\r\n}",
             'proxmox-start-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\"\r\n    }\r\n  }\r\n}",
-            'update-dns': "{\r\n  \"extra_vars\": {\r\n    \"dns_stuff\": {\r\n      \"dns_zone_id\": \"{{ data['zone']['id'] }}\",\r\n      \"dns_zone_name\": \"{{ data['zone']['name'] }}\",\r\n      \"dns_integrations\": \"{{ data['custom_fields']['dns_integrations'] }}\"\r\n    }\r\n  }\r\n}"
+            #'update-dns': "{\r\n  \"extra_vars\": {\r\n    \"dns_stuff\": {\r\n      \"dns_zone_id\": \"{{ data['zone']['id'] }}\",\r\n      \"dns_zone_name\": \"{{ data['zone']['name'] }}\",\r\n      \"dns_integrations\": \"{{ data['custom_fields']['dns_integrations'] }}\"\r\n    }\r\n  }\r\n}"
         }
         
         awx_project_name = app_config['ansible_automation']['project_name']
@@ -180,12 +341,31 @@ def main():
                 netbox_webhook_payload['name'] = netbox_webhook_name
                 netbox_webhook_payload['payload_url'] = netbox_webhook_url
                 netbox_webhook_payload['additional_headers'] = netbox_webhook_additional_headers
-                netbox_webhook_payload['body_template'] = ansible_automation_webhook_body_templates[awx_job_templates[awx_job_template]]
+
+                if awx_job_templates[awx_job_template] in ansible_automation_webhook_body_templates:
+                    netbox_webhook_payload['body_template'] = ansible_automation_webhook_body_templates[awx_job_templates[awx_job_template]]
+                else:
+                    netbox_webhook_payload['body_template'] = ''
 
                 netbox_webhook_id, netbox_webhook_name_returned = netbox_create_webhook(netbox_url, netbox_api_token, netbox_webhook_payload)
-                collected_netbox_webhook_payload[netbox_webhook_id] = netbox_webhook_name_returned
 
-        print(collected_netbox_webhook_payload)
+                if awx_job_templates[awx_job_template] in ansible_automation_webhook_body_templates:
+                    collected_netbox_webhook_payload[app_config['ansible_automation_template_mappings'][awx_job_templates[awx_job_template]]] = netbox_webhook_id
+
+        for event_rule in netbox_proxmox_event_rules:
+            if collected_netbox_webhook_payload:
+                if event_rule in collected_netbox_webhook_payload:
+                    netbox_event_rule_payload['name'] = f"{event_rule}-{re.sub(r'_', '-', app_config['automation_type'])}"
+                    netbox_event_rule_payload['enabled'] = netbox_proxmox_event_rules[event_rule]['enabled']
+                    netbox_event_rule_payload['object_types'] = netbox_proxmox_event_rules[event_rule]['object_types']
+                    netbox_event_rule_payload['event_types'] = netbox_proxmox_event_rules[event_rule]['event_types']
+                    netbox_event_rule_payload['action_type'] = netbox_proxmox_event_rules[event_rule]['action_type']
+                    netbox_event_rule_payload['action_object_type'] = netbox_proxmox_event_rules[event_rule]['action_object_type']
+                    netbox_event_rule_payload['action_object_id'] = collected_netbox_webhook_payload[event_rule]
+                    netbox_event_rule_payload['conditions'] = netbox_proxmox_event_rules[event_rule]['conditions']
+
+                    if not netbox_create_event_rule(netbox_url, netbox_api_token, netbox_event_rule_payload):
+                        raise ValueError(f"Unable to create event rule {netbox_event_rule_payload['name']}")
 
 
 if __name__ == "__main__":

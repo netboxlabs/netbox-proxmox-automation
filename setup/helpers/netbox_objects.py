@@ -181,8 +181,14 @@ class NetboxEventRules(Netbox):
         super().__init__(url, token, payload)
         self.object_type = self.nb.extras.event_rules
         self.required_fields = [ 
-            "address",
-            "status",    
+            "name",
+            "enabled",
+            "object_types",
+            "event_types",
+            "action_type",
+            "action_object_type",
+            "action_object_id",
+            "conditions"    
         ]
         self.find_key = find_key
         self.findBy(self.find_key)
