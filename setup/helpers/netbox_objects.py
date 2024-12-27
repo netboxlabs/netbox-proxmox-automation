@@ -63,9 +63,8 @@ class Netbox:
             if self.hasRequired:
                 self.object_type.create(self.payload)
                 if 'name' in self.payload:
-                    print(f"Object '{self.payload['name']}' created successfully.")
-                elif 'username' in self.payload:              
-                    print(f"Object '{self.payload['username']}' created successfully.")
+                    print(f"Object (has required) '{self.payload['name']}' created successfully.")
+                    self.findBy('name')
 
 
 class NetboxCustomFields(Netbox):
@@ -151,10 +150,40 @@ class NetboxIPAddresses(Netbox):
         self.object_type = self.nb.ipam.ip_addresses
         self.required_fields = [ 
             "address",
-            "status"    
+            "status",    
         ]
         self.find_key = find_key
         self.findBy(self.find_key)
         self.createOrUpdate()
 
 
+class NetboxWebhooks(Netbox):
+    def __init__(self, url, token, payload, find_key = 'name') -> None:
+        # Initialize the Netbox superclass with URL and token
+        super().__init__(url, token, payload)
+        self.object_type = self.nb.extras.webhooks
+        self.required_fields = [ 
+            'name',
+            'ssl_verification',
+            'http_method',
+            'http_content_type',
+            'payload_url',
+            'additional_headers',
+        ]
+        self.find_key = find_key
+        self.findBy(self.find_key)
+        self.createOrUpdate()
+
+
+class NetboxEventRules(Netbox):
+    def __init__(self, url, token, payload, find_key = 'name') -> None:
+        # Initialize the Netbox superclass with URL and token
+        super().__init__(url, token, payload)
+        self.object_type = self.nb.extras.event_rules
+        self.required_fields = [ 
+            "address",
+            "status",    
+        ]
+        self.find_key = find_key
+        self.findBy(self.find_key)
+        self.createOrUpdate()
