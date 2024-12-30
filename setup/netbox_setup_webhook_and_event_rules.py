@@ -122,7 +122,7 @@ def main():
     if not 'automation_type' in app_config:
         raise ValueError("app_config is missing definition for 'automation_type'")
     
-    if app_config['automation_type'] not in ['flask', 'ansible_automation']:
+    if app_config['automation_type'] not in ['flask_application', 'ansible_automation']:
         raise ValueError(f"Unknown automation_type in {app_config_file}: {app_config['automation_type']}")
 
     if not app_config['automation_type'] in app_config:
@@ -290,7 +290,36 @@ def main():
 #            }
     }
 
-    if app_config['automation_type'] == 'ansible_automation':
+    if app_config['automation_type'] == 'flask_application':
+        netbox_webhook_url = f"{app_config['flask_application']['http_proto']}://{app_config['flask_application']['host']}:{app_config['flask_application']['http_port']}/{app_config['flask_application']['netbox_webhook_name']}/"
+        netbox_webhook_name = f"netbox-proxmox-{re.sub('_', '-', app_config['automation_type'])}"
+
+        netbox_webhook_payload['ssl_verification'] = app_config['flask_application']['ssl_verify']
+        netbox_webhook_payload['http_method'] = 'POST'
+        netbox_webhook_payload['http_content_type'] = 'application/json'
+        netbox_webhook_payload['name'] = netbox_webhook_name
+        netbox_webhook_payload['payload_url'] = netbox_webhook_url
+        netbox_webhook_payload['additional_headers'] = ''
+        netbox_webhook_payload['body_template'] = ''
+
+        netbox_webhook_id, netbox_webhook_name_returned = netbox_create_webhook(netbox_url, netbox_api_token, netbox_webhook_payload)
+
+        if not netbox_webhook_id:
+            raise ValueError(f"Unable to create webhook for {netbox_webhook_payload['name']}")
+        
+        for event_rule in netbox_proxmox_event_rules:
+            netbox_event_rule_payload['name'] = f"NEW-{event_rule}-{re.sub(r'_', '-', app_config['automation_type'])}"
+            netbox_event_rule_payload['enabled'] = netbox_proxmox_event_rules[event_rule]['enabled']
+            netbox_event_rule_payload['object_types'] = netbox_proxmox_event_rules[event_rule]['object_types']
+            netbox_event_rule_payload['event_types'] = netbox_proxmox_event_rules[event_rule]['event_types']
+            netbox_event_rule_payload['action_type'] = netbox_proxmox_event_rules[event_rule]['action_type']
+            netbox_event_rule_payload['action_object_type'] = netbox_proxmox_event_rules[event_rule]['action_object_type']
+            netbox_event_rule_payload['action_object_id'] = netbox_webhook_id
+            netbox_event_rule_payload['conditions'] = netbox_proxmox_event_rules[event_rule]['conditions']
+
+            if not netbox_create_event_rule(netbox_url, netbox_api_token, netbox_event_rule_payload):
+                raise ValueError(f"Unable to create event rule {netbox_event_rule_payload['name']}")
+    elif app_config['automation_type'] == 'ansible_automation':
         ansible_automation_webhook_body_templates = {
             'proxmox-clone-vm-and-set-resources': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\",\r\n      \"vcpus\": \"{{ data['vcpus'] }}\",\r\n      \"memory\": \"{{ data['memory'] }}\",\r\n      \"template\": \"{{ data['custom_fields']['proxmox_vm_template'] }}\",\r\n      \"storage\": \"{{ data['custom_fields']['proxmox_vm_storage'] }}\"\r\n    }\r\n  }\r\n}",
             'proxmox-remove-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\"\r\n    }\r\n  }\r\n}",
@@ -349,6 +378,9 @@ def main():
 
                 netbox_webhook_id, netbox_webhook_name_returned = netbox_create_webhook(netbox_url, netbox_api_token, netbox_webhook_payload)
 
+                if not netbox_webhook_id:
+                    raise ValueError(f"Unable to create webhook for {netbox_webhook_payload['name']}")
+
                 if awx_job_templates[awx_job_template] in ansible_automation_webhook_body_templates:
                     collected_netbox_webhook_payload[app_config['ansible_automation_template_mappings'][awx_job_templates[awx_job_template]]] = netbox_webhook_id
 
@@ -366,6 +398,8 @@ def main():
 
                     if not netbox_create_event_rule(netbox_url, netbox_api_token, netbox_event_rule_payload):
                         raise ValueError(f"Unable to create event rule {netbox_event_rule_payload['name']}")
+    else:
+        raise ValueError(f"Unknown automation type {app_config['automation_type']}")
 
 
 if __name__ == "__main__":
