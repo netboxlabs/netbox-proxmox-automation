@@ -1,0 +1,33 @@
+proxmox_api_config:
+  api_host: proxmox-ip-or-hostname
+  api_port: 8006
+  api_user: proxmox_api_user
+  api_token_id: name_of_proxmox_api_token
+  api_token_secret: proxmox_api_secret_token
+  verify_ssl: false
+netbox_api_config:
+  api_proto: http # or https
+  api_host: name or ip of NetBox host
+  api_port: 8000
+  api_token: netbox_api_secret_token
+  verify_ssl: false # or true, up to you
+proxmox:
+  cluster_name: proxmox-ve
+netbox:
+  cluster_role: Proxmox
+  vm_role: "Proxmox VM"
+automation_type: choices are ansible_automation or flask_application
+ansible_automation:
+  host: name or ip of AWX/Tower/AAP host
+  http_proto: http or https
+  http_port: 80 or whatever
+  ssl_verify: false # or true
+  username: awx_user # should have permissions to view both projects and templates
+  password: awx_password
+  project_name: netbox-proxmox-ee-test1 # or whatever you named your project
+flask_application:
+  host: name or ip of where Flask application is running
+  http_proto: http or https
+  http_port: 9000 or whatever
+  ssl_verify: false # or true
+  netbox_webhook_name: "netbox-proxmox-webhook"
