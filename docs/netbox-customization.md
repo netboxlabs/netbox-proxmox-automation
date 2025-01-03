@@ -10,8 +10,56 @@ In the NetBox UI, you will need to create the following custom field choices
 2. `proxmox-vm-templates` will be used to correlate a Proxmox VM template with the Proxmox VM that you will provision
 3. `proxmox-vm-storage` will be used to correlate an underlying Proxmox VM storage volume with the Proxmox VM you will provision
 
-In the NetBox UI, navigate to Customization > Custom Field Choices
+#### Automated NetBox Objects and Custom Fields Creation
 
+If you'd prefer to manually create the webhook and event rules in NetBox, you can skip to the next section.  Otherwise, proceed with the following to automate the creation of the webhook and event rules in NetBox.
+
+`netbox-proxmox-automation` version 1.1.0 and newer ships with a convenience script, `netbox_setup_objects_and_custom_fields.py`, that when used alongside a configuration file of your choice, will greatly simplify this process.  In the case of AWX/Tower/AAP, `netbox_setup_objects_and_custom_fields.py` will query your AWX/Tower/AAP instance for project and template(s) information; this information will then be used to create the corresponding webhooks and event rules in NetBox.
+
+There exists a sample configuration file called `netbox_setup_objects.yml-sample` under the conf.d directory of this git repository.  Copy this file to a location of your choice, and season it to taste.  In the end you should have a configuration that looks something like this.
+
+```
+proxmox_api_config:
+  api_host: proxmox-ip-or-hostname
+  api_port: 8006
+  api_user: proxmox_api_user
+  api_token_id: name_of_proxmox_api_token
+  api_token_secret: proxmox_api_secret_token
+  verify_ssl: false
+netbox_api_config:
+  api_proto: http # or https
+  api_host: name or ip of NetBox host
+  api_port: 8000
+  api_token: netbox_api_secret_token
+  verify_ssl: false # or true, up to you
+proxmox:
+  cluster_name: proxmox-ve
+netbox:
+  cluster_role: Proxmox
+  vm_role: "Proxmox VM"
+```
+
+Usage:
+
+```
+shell$ cd setup
+
+shell$ pwd
+/some/path/netbox-proxmox-automation/setup
+
+shell$ python3 -m venv venv
+
+shell$ source venv/bin/activate
+
+(venv) shell$ pip install -r requirements.txt
+
+(venv) shell$ ./netbox_setup_objects_and_custom_fields.py --config /path/to/your/configuration.yml
+```
+
+Then verify that everything has been created.  You can skip the rest of this document if so.
+
+
+If *not* using automation, in the NetBox UI, navigate to Customization > Custom Field Choices
 
 #### proxmox-node
 

@@ -24,6 +24,63 @@ Regardless of whether you are using a Flask (or other) application for Proxmox a
 
 As noted earlier, AWX/Tower/AAP will perform Proxmox automation through separate (job) templates.  This section walks you through how (NetBox) webhooks and (NetBox) event rules are handled by AWX.
 
+#### Automated Webhook and Event Rules Configuration
+
+If you'd prefer to manually create the webhook and event rules in NetBox, you can skip to the next section.  Otherwise, proceed with the following to automate the creation of the webhook and event rules in NetBox.
+
+`netbox-proxmox-automation` version 1.1.0 and newer ships with a convenience script, `netbox_setup_webhook_and_event_rules.py`, that when used alongside a configuration file of your choice, will greatly simplify this process.  In the case of AWX/Tower/AAP, `netbox_setup_webhook_and_event_rules.py` will query your AWX/Tower/AAP instance for project and template(s) information; this information will then be used to create the corresponding webhooks and event rules in NetBox.
+
+There exists a sample configuration file called `netbox_setup_objects.yml-sample` under the conf.d directory of this git repository.  Copy this file to a location of your choice, and season it to taste.  In the end you should have a configuration that looks something like this.
+
+```
+proxmox_api_config:
+  api_host: proxmox-ip-or-hostname
+  api_port: 8006
+  api_user: proxmox_api_user
+  api_token_id: name_of_proxmox_api_token
+  api_token_secret: proxmox_api_secret_token
+  verify_ssl: false
+netbox_api_config:
+  api_proto: http # or https
+  api_host: name or ip of NetBox host
+  api_port: 8000
+  api_token: netbox_api_secret_token
+  verify_ssl: false # or true, up to you
+proxmox:
+  cluster_name: proxmox-ve
+netbox:
+  cluster_role: Proxmox
+  vm_role: "Proxmox VM"
+automation_type: ansible_automation
+ansible_automation:
+  host: name or ip of AWX/Tower/AAP host
+  http_proto: http or https
+  http_port: 80 or whatever
+  ssl_verify: false # or true
+  username: awx_user # should have permissions to view both projects and templates
+  password: awx_password
+  project_name: netbox-proxmox-ee-test1 # or whatever you named your project
+```
+
+Usage:
+
+```
+shell$ cd setup
+
+shell$ pwd
+/some/path/netbox-proxmox-automation/setup
+
+shell$ python3 -m venv venv
+
+shell$ source venv/bin/activate
+
+(venv) shell$ pip install -r requirements.txt
+
+(venv) shell$ ./netbox_setup_webhook_and_event_rules.py --config /path/to/your/configuration.yml
+```
+
+Then verify that everything has been created.  You can skip the rest of this document if so.
+
 #### AWX/Tower/AAP Webhook
 
 To use NetBox webhooks with AWX, each NetBox webhook for Proxmox VM management will point at a separate AWX (job) template.  In AWX, each (job) template has a unique ID.  When we execute a webhook in NetBox, in this case we're using AWX, the (NetBox) webhook will in turn point at the (job) template ID in AWX -- and tell AWX to launch the template, i.e. to run the automation.
