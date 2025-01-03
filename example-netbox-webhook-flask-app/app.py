@@ -2,12 +2,16 @@ import logging
 import json
 import yaml
 
+from datetime import datetime
+
 # adapted from: https://majornetwork.net/2019/10/webhook-listener-for-netbox/
 
 from helpers.netbox_proxmox import NetBoxProxmoxHelper
 
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_restx import Api, Resource, fields
+
+VERSION = '1.1.0'
 
 app_config_file = 'app_config.yml'
 
@@ -50,7 +54,33 @@ webhook_request = api.model("Webhook request from NetBox", {
     'request_id': fields.String,
 })
 
+# For session logging, c/o sol1
+session = {
+  'name': "example-netbox-webhook-flask-app",
+  'version': VERSION,
+  'version_lastrun': VERSION,
+  'server_start': "",
+  'status': {
+    'requests': 0,
+    'last_called': ""
+  },
+}
 
+
+@ns.route("/status/", methods=['GET'])
+class WebhookListener(Resource):
+    @ns.expect(webhook_request)
+
+    def get(self):
+        _session = session.copy()
+        _session['version_lastrun'] = VERSION
+        _session['status']['requests'] += 1
+        _session['status']['last_called'] = datetime.now()
+        logger.info(f"{request.full_path}, {request.remote_addr}, Status request with data {request.get_data()}")
+        return jsonify(_session)
+
+
+# For handling event rules
 @ns.route("/")
 class WebhookListener(Resource):
     @ns.expect(webhook_request)
