@@ -175,3 +175,4 @@ tests/
 app_config.yml
 netbox_setup_custom_fields.yml
 netbox_importer.py*
+netbox_setup_objects.yml
