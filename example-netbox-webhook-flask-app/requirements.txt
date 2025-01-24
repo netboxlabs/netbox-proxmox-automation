@@ -2,7 +2,7 @@ aniso8601==9.0.1
 ansible-runner==2.4.0
 attrs==24.2.0
 blinker==1.8.2
-certifi==2024.8.30
+certifi==2024.7.4
 charset-normalizer==3.4.0
 click==8.1.7
 Flask==3.0.3
@@ -11,7 +11,7 @@ idna==3.10
 importlib-metadata==6.2.1
 importlib_resources==6.4.5
 itsdangerous==2.2.0
-Jinja2==3.1.4
+Jinja2==3.1.5
 jsonschema==4.23.0
 jsonschema-specifications==2024.10.1
 lockfile==0.12.2
