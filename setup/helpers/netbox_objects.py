@@ -162,6 +162,8 @@ class NetboxVirtualMachineInterface(Netbox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
+
+        """
         self.object_type = self.nb.virtualization.interfaces
         self.required_fields = [ 
             "name",
@@ -170,7 +172,11 @@ class NetboxVirtualMachineInterface(Netbox):
         self.find_key = find_key
         self.findBy(self.find_key)
         self.createOrUpdate()
+        """
 
+        self.object_type = self.nb.virtualization.interfaces
+        nb_vm_int = self.object_type.create(payload)
+        
 
 class NetboxIPAddresses(Netbox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
