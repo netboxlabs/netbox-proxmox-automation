@@ -38,9 +38,27 @@ def create_aa_inventory(aa_obj = None, inventory_name = None, org_id = 0):
     return aa_obj.create_object('inventory', inventory_name, inventory_payload)
 
 
-def create_aa_project(aa_obj = None, project_name = None):
+def create_aa_execution_environment(aa_obj = None, ee_name = None, ee_image_name = None, ee_reg_cred_id = 0, org_id = 0):
+    ee_payload = {
+        'name': ee_name,
+        'image': ee_image_name,
+        'organization': org_id
+    }
+
+    if ee_reg_cred_id:
+        ee_payload['credential'] = ee_reg_cred_id
+
+    return aa_obj.create_object('execution_environments', ee_name, ee_payload)
+
+
+def create_aa_project(aa_obj = None, project_name = None, scm_type = None, scm_url = None, scm_branch = None, org_id = 0, ee_id = 0):
     project_payload = {
-        'name': project_name
+        'name': project_name,
+        'organization': org_id,
+        'scm_type': scm_type,
+        'scm_url': scm_url,
+        'scm_branch': scm_branch,
+        'default_environment': ee_id
     }
 
     return aa_obj.create_object('projects', project_name, project_payload)
@@ -53,9 +71,13 @@ def main():
     default_organization = 'Default'
     default_inventory = 'Default Inventory'
 
+    default_execution_environment = 'netbox-proxmox-exec-env'
+    default_execution_environment_image = 'localhost:5000/awx/ee/exec-env-test1:1.0.0'
+    default_execution_environment_pull = 'Missing'
+
     default_project = 'netbox-proxmox-ee-test1'
     default_scm_type = 'git'
-    default_git_url = 'https://github.com/netboxlabs/netbox-proxmox-automation.git'
+    default_scm_url = 'https://github.com/netboxlabs/netbox-proxmox-automation.git'
     default_scm_branch = 'main'
 
     with open(app_config_file) as yaml_cfg:
@@ -73,10 +95,6 @@ def main():
         raise ValueError(f"Missing 'settings' in 'ansible_automation' section of {app_config_file}")
 
     aa = AnsibleAutomation(app_config['ansible_automation'])
-    print(aa.cfg_data)
-
-    print("FOUND ORG?", aa.get_object_id('organizations', 'Default'))
-    print("FOUND INVENTORY?", aa.get_object_id('inventory', 'Demo Inventory'))
 
     org_name = default_organization    
     if 'organization' in app_config['ansible_automation']['settings']:
@@ -102,11 +120,40 @@ def main():
 
     inventory_id = created_inventory['id']
 
+    ee_name = default_execution_environment
+    ee_image_name = default_execution_environment_image
+
+    if 'execution_environment' in app_config['ansible_automation']['settings']:
+        if 'name' in app_config['ansible_automation']['settings']['execution_environment']:
+            ee_name = app_config['ansible_automation']['settings']['execution_environment']['name']
+
+        if 'image' in app_config['ansible_automation']['settings']['execution_environment']:
+            ee_image_name = app_config['ansible_automation']['settings']['execution_environment']['image']
+
+    created_ee = create_aa_execution_environment(aa, ee_name, ee_image_name, 0, org_id)
+    created_ee_id = created_ee['id']
+
+    if not created_ee:
+        print(f"Unable to create execution environment {ee_name}")
+        sys.exit(1)
+
     project_name = default_project
-    if 'project_name' in app_config['ansible_automation']['settings']:
+    if 'project' in app_config['ansible_automation']['settings']:
         project_name = app_config['ansible_automation']['settings']['project']
 
-    created_project = create_aa_project(aa, project_name)
+    scm_type = default_scm_type
+    if 'scm_type' in app_config['ansible_automation']['settings']:
+        scm_type = app_config['ansible_automation']['settings']['scm_type']
+
+    scm_url = default_scm_url
+    if 'scm_url' in app_config['ansible_automation']['settings']:
+        scm_url = app_config['ansible_automation']['settings']['scm_url']
+
+    scm_branch = default_scm_branch
+    if 'scm_branch' in app_config['ansible_automation']['settings']:
+        scm_branch = app_config['ansible_automation']['settings']['scm_branch']
+
+    created_project = create_aa_project(aa, project_name, scm_type, scm_url, scm_branch, org_id, created_ee_id)
 
     if not created_project:
         print(f"Unable to create project {project_name}")
@@ -115,6 +162,7 @@ def main():
     project_id = created_project['id']
 
     print(org_id, inventory_id, project_id, created_project, aa.get_object_by_id('projects', project_id))
+    print(dir(aa.api_v2))
 
     sys.exit(0)
 

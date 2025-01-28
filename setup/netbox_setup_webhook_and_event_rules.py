@@ -345,7 +345,13 @@ def main():
             #'update-dns': "{\r\n  \"extra_vars\": {\r\n    \"dns_stuff\": {\r\n      \"dns_zone_id\": \"{{ data['zone']['id'] }}\",\r\n      \"dns_zone_name\": \"{{ data['zone']['name'] }}\",\r\n      \"dns_integrations\": \"{{ data['custom_fields']['dns_integrations'] }}\"\r\n    }\r\n  }\r\n}"
         }
         
-        awx_project_name = app_config['ansible_automation']['project_name']
+        if not 'settings' in app_config['ansible_automation']:
+            raise ValueError("Missing 'settings' section in 'ansible_automation'")
+
+        if not 'project' in app_config['ansible_automation']['settings']:
+            raise ValueError("Missing 'project' in ansible_automation 'settings'")
+                
+        awx_project_name = app_config['ansible_automation']['settings']['project']
 
         awx_url_v2_api = f"{app_config['ansible_automation']['http_proto']}://{app_config['ansible_automation']['host']}:{app_config['ansible_automation']['http_port']}/api/v2/"
 
