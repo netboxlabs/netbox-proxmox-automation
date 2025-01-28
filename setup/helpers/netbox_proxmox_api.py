@@ -151,6 +151,9 @@ class NetBoxProxmoxAPIHelper:
 
                 for proxmox_vm_disk in proxmox_vm_disks:
                     tmp_disk_name = {}
+
+                    disk_info = proxmox_vm_config[proxmox_vm_disk].split(',')[0]
+                    storage_volume = disk_info.split(':')[0]
                     disk_size = proxmox_vm_config[proxmox_vm_disk].split(',')[-1]
                     get_disk_size = re.search(r'^size=(\d+)([MG])$', disk_size)
 
@@ -162,7 +165,7 @@ class NetBoxProxmoxAPIHelper:
                         raise ValueError(f"Unknown disk size metric: {get_disk_size.group(2)}")
 
                     tmp_disk_name[proxmox_vm_disk] = str(disk_size)
-                    proxmox_vm_configurations[proxmox_vm]['disks'].append({proxmox_vm_disk: tmp_disk_name[proxmox_vm_disk]})
+                    proxmox_vm_configurations[proxmox_vm]['disks'].append({'disk_name': proxmox_vm_disk, 'disk_size': tmp_disk_name[proxmox_vm_disk], 'proxmox_disk_storage_volume': storage_volume})
 
                 try:
                     self.proxmox_api.nodes(self.proxmox_vms[proxmox_vm]['node']).qemu(self.proxmox_vms[proxmox_vm]['vmid']).agent.ping.post()

@@ -69,7 +69,7 @@ def netbox_get_vms(nb_obj = None):
 
 def netbox_create_proxmox_discovered_object_tags(nb_obj = None, tag_name = None):
     try:
-        print("CREATE OBJ TAG", nb_obj.nb.extras.tags.create([{'name': tag_name, 'slug': __netbox_make_slug(tag_name)}]))
+        nb_obj.nb.extras.tags.create([{'name': tag_name, 'slug': __netbox_make_slug(tag_name)}])
     except pynetbox.RequestError as e:
         raise ValueError(e, e.error)
 
@@ -133,6 +133,10 @@ def netbox_create_vm(nb_url = None, nb_api_token = None, proxmox_cluster_name = 
                     if network_interface == 'eth0':
                         if not ip_address_entry['ip-address'].endswith('/64'):
                             __netbox_vm_network_interface_assign_primary_ip4_address(vm_name, network_interface_id, ip_address_entry['ip-address'])
+
+        if 'disks' in vm_configuration:
+            for vm_disk in vm_configuration['disks']:
+                __netbox_vm_create_disk(vm_name, vm_disk['disk_name'], vm_disk['disk_size'], vm_disk['proxmox_disk_storage_volume'])
     except pynetbox.RequestError as e:
         raise ValueError(e, e.error)
 
@@ -146,8 +150,6 @@ def __netbox_create_vm_network_interface(nb_url = None, nb_api_token = None, net
             'name': vm_network_interface_name,
             'mac_address': vm_network_interface_mac_address
         }
-
-        print("CREATE INTERFACE PAYLOAD", nb_vm_create_interface_payload)
 
         #nb_create_vm_interface = NetboxVirtualMachineInterface(nb_url, nb_api_token, nb_vm_create_interface_payload)
         #nb_create_vm_interface_id = dict(nb_create_vm_interface.obj)['id']
@@ -196,8 +198,34 @@ def __netbox_vm_network_interface_assign_primary_ip4_address(vm_name = None, pri
         raise ValueError(e, e.error)
 
 
-def __netbox_vm_create_disks(nb_obj = None, netbox_vm_id = 0, disk_name = None, disk_size = 0):
-    return True
+def __netbox_vm_create_disk(vm_name = None, disk_name = None, disk_size = 0, proxmox_disk_storage_volume = None):
+    try:
+        print(f"Adding virtual disk {disk_name} (vol: {proxmox_disk_storage_volume}) VM {vm_name}")
+
+        assigned_vm_obj = nb_obj.nb.virtualization.virtual_machines.get(name=vm_name)
+        assigned_disk_obj = nb_obj.nb.virtualization.virtual_disks.get(name=disk_name, virtual_machine=vm_name)
+
+        if assigned_vm_obj and not assigned_disk_obj:
+            nb_vm_id = dict(assigned_vm_obj)['id']
+
+            virtual_disks_payload = {
+                'virtual_machine': {
+                    'name': vm_name,
+                    'id': nb_vm_id
+                },
+                'name': disk_name,
+                'size': int(disk_size),
+                'custom_fields': {
+                    'proxmox_disk_storage_volume': proxmox_disk_storage_volume
+                }
+            }
+
+            created_vm_disk = nb_obj.nb.virtualization.virtual_disks.create(virtual_disks_payload)
+            created_vm_disk_id = dict(created_vm_disk)['id']
+
+            return created_vm_disk_id
+    except pynetbox.RequestError as e:
+        raise ValueError(e, e.error)
 
 
 def main():
@@ -207,7 +235,7 @@ def main():
 
     # args.virt_type (vms, lxc)
     # args.config
-    print("ARGS", args)
+    # print("ARGS", args)
 
     app_config_file = args.config
 
@@ -229,7 +257,7 @@ def main():
 
     # Collect all NetBox VMs, and for Proxmox VMs: VMIDs
     all_nb_vms = netbox_get_vms(nb_obj)
-    print(all_nb_vms)
+    #print(all_nb_vms)
 
     all_nb_vms_ids = {}
 
