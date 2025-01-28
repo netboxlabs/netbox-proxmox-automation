@@ -64,6 +64,76 @@ def create_aa_project(aa_obj = None, project_name = None, scm_type = None, scm_u
     return aa_obj.create_object('projects', project_name, project_payload)
 
 
+def create_aa_credential_type(aa_obj = None, credential_type_name = None):
+    ct_payload = {
+        'name': credential_type_name,
+        'kind': "cloud",
+        'inputs': {
+            'fields': [
+                {'id': "proxmox_api_host", 'type': "string", 'label': "Proxmox API Host"},
+                {'id': "proxmox_api_user", 'type': "string", 'label': "Proxmox API User"},
+                {'id': "proxmox_api_user_token", 'type': "string", 'label': "Proxmox API Token ID"},
+                {'id': "proxmox_node", 'type': "string", 'label': "Proxmox Node"},
+                {'id': "proxmox_api_token_secret", 'type': "string", 'label': "Proxmox API Token", 'secret': True},
+                {'id': "netbox_api_proto", 'type': "string", 'label': "NetBox HTTP Protocol"},
+                {'id': "netbox_api_host", 'type': "string", 'label': "NetBox API host"},
+                {'id': "netbox_api_port", 'type': "string", 'label': "NetBox API port"},
+                {'id': "netbox_api_token", 'type': "string", 'label': "NetBox API token", 'secret': True}
+            ],
+            'required': ['proxmox_api_host',
+                         'proxmox_api_user',
+                         'proxmox_api_user_token',
+                         'proxmox_node',
+                         'proxmox_api_token_secret',
+                         'netbox_api_host',
+                         'netbox_api_port',
+                         'netbox_api_proto',
+                         'netbox_api_token'
+            ]
+        },
+        'injectors': {
+            'extra_vars': {
+                "netbox_env_info": {
+                    "api_host": '{{ netbox_api_host }}',
+                    "api_port": '{{ netbox_api_port }}',
+                    "api_proto": '{{ netbox_api_proto }}',
+                    "api_token": '{{ netbox_api_token }}'
+                },
+                "proxmox_env_info": {
+                    "node": '{{ proxmox_node }}',
+                    "api_host": '{{ proxmox_api_host }}',
+                    "api_user": '{{ proxmox_api_user }}',
+                    "api_token_id": '{{ proxmox_api_user_token }}',
+                    "api_token_secret": '{{ proxmox_api_token_secret }}'
+                }
+            }
+        }
+    }
+
+    return aa_obj.create_object('credential_types', credential_type_name, ct_payload)
+
+
+def create_aa_credential(aa_obj = None, credential_name = None, credential_type_id = 0, org_id = 0, netbox_api_config = {}, proxmox_api_config = {}):
+    credential_payload = {
+        'name': credential_name,
+        'credential_type': credential_type_id,
+        'organization': org_id,
+        'inputs': {
+            'netbox_api_host': netbox_api_config['api_host'],
+            'netbox_api_port': str(netbox_api_config['api_port']),
+            'netbox_api_proto': netbox_api_config['api_proto'],
+            'netbox_api_token': netbox_api_config['api_token'],
+            'proxmox_node': proxmox_api_config['node'],
+            'proxmox_api_host': proxmox_api_config['api_host'],
+            'proxmox_api_user': proxmox_api_config['api_user'],
+            'proxmox_api_user_token': proxmox_api_config['api_token_id'],
+            'proxmox_api_token_secret': proxmox_api_config['api_token_secret']
+        }
+    }
+
+    return aa_obj.create_object('credentials', credential_name, credential_payload)
+
+
 def main():
     args = get_arguments()
     app_config_file = args.config
@@ -79,6 +149,9 @@ def main():
     default_scm_type = 'git'
     default_scm_url = 'https://github.com/netboxlabs/netbox-proxmox-automation.git'
     default_scm_branch = 'main'
+
+    credential_type = 'NetBox Proxmox Credential Type'
+    credential_name = 'NetBox Proxmox Credentials Configuration'
 
     with open(app_config_file) as yaml_cfg:
         try:
@@ -161,8 +234,23 @@ def main():
 
     project_id = created_project['id']
 
-    print(org_id, inventory_id, project_id, created_project, aa.get_object_by_id('projects', project_id))
-    print(dir(aa.api_v2))
+    create_credential_type = create_aa_credential_type(aa, credential_type)
+
+    if not create_credential_type:
+        print(f"Unable to create credential type {credential_type}")
+        sys.exit(1)
+
+    create_credential_type_id = create_credential_type['id']
+
+    create_credential = create_aa_credential(aa, credential_name, create_credential_type_id, org_id, app_config['netbox_api_config'], app_config['proxmox_api_config'])
+
+    if not create_credential:
+        print(f"Unable to create credential {credential_name}")
+        sys.exit(1)
+
+    create_credential_id = create_credential['id']
+
+    print(org_id, inventory_id, project_id, created_project, aa.get_object_by_id('projects', project_id), create_credential_type_id, create_credential_id)
 
     sys.exit(0)
 
