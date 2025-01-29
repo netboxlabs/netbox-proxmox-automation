@@ -47,6 +47,17 @@ def create_aa_inventory(aa_obj = None, inventory_name = None, org_id = 0):
     return aa_obj.create_object('inventory', inventory_name, inventory_payload)
 
 
+def create_aa_host(aa_obj = None, inventory_id = 0, host_name = None, is_enabled = False, var_data = None):
+    host_payload = {
+        'name': host_name,
+        'enabled': is_enabled,
+        'inventory': inventory_id,
+        'variables': var_data
+    }
+
+    return aa_obj.create_object('hosts', host_name, host_payload)
+
+
 def create_aa_execution_environment(aa_obj = None, ee_name = None, ee_image_name = None, ee_reg_cred_id = 0, org_id = 0):
     ee_payload = {
         'name': ee_name,
@@ -223,6 +234,9 @@ def main():
     default_organization = 'Default'
     default_inventory = 'Default Inventory'
 
+    default_host_name = 'localhost'
+    default_host_var_data = "---\nansible_connection: local\nansible_python_interpreter: '{{ ansible_playbook_python }}'"
+
     default_execution_environment = 'netbox-proxmox-exec-env'
     default_execution_environment_image = 'localhost:5000/awx/ee/exec-env-test1:1.0.0'
     default_execution_environment_pull = 'Missing'
@@ -249,13 +263,60 @@ def main():
     if not 'settings' in app_config['ansible_automation']:
         raise ValueError(f"Missing 'settings' in 'ansible_automation' section of {app_config_file}")
 
+
+    # Set common variables
+    org_name = default_organization
+    if 'organization' in app_config['ansible_automation']['settings']:
+        org_name = app_config['ansible_automation']['settings']['organization']
+
+    inventory_name = default_inventory
+    if 'inventory' in app_config['ansible_automation']['settings']:
+        if 'name' in app_config['ansible_automation']['settings']['inventory']:
+            inventory_name = app_config['ansible_automation']['settings']['inventory']['name']
+
+    host_name = default_host_name
+    host_var_data = default_host_var_data
+    if 'hosts' in app_config['ansible_automation']['settings']:
+        if 'name' in app_config['ansible_automation']['settings']['hosts']:
+            host_name = app_config['ansible_automation']['settings']['hosts']['name']
+
+        if 'var_data' in app_config['ansible_automation']['settings']['hosts']:
+            host_var_data = app_config['ansible_automation']['settings']['hosts']['var_data']
+
+    ee_name = default_execution_environment
+    ee_image_name = default_execution_environment_image
+    if 'execution_environment' in app_config['ansible_automation']['settings']:
+        if 'name' in app_config['ansible_automation']['settings']['execution_environment']:
+            ee_name = app_config['ansible_automation']['settings']['execution_environment']['name']
+
+        if 'image' in app_config['ansible_automation']['settings']['execution_environment']:
+            ee_image_name = app_config['ansible_automation']['settings']['execution_environment']['image']
+
+    project_name = default_project
+    if 'project' in app_config['ansible_automation']['settings']:
+        if 'name' in app_config['ansible_automation']['settings']['project']:
+            project_name = app_config['ansible_automation']['settings']['project']['name']
+
+    scm_type = default_scm_type
+    if 'project' in app_config['ansible_automation']['settings']:
+        if 'scm_type' in app_config['ansible_automation']['settings']['project']:
+            scm_type = app_config['ansible_automation']['settings']['project']['scm_type']
+
+    scm_url = default_scm_url
+    if 'project' in app_config['ansible_automation']['settings']:
+        if 'scm_url' in app_config['ansible_automation']['settings']['project']:
+            scm_url = app_config['ansible_automation']['settings']['project']['scm_url']
+
+    scm_branch = default_scm_branch
+    if 'project' in app_config['ansible_automation']['settings']:
+        if 'scm_branch' in app_config['ansible_automation']['settings']['project']:
+            scm_branch = app_config['ansible_automation']['settings']['project']['scm_branch']
+    # End set common variables
+
+    
     aa = AnsibleAutomation(app_config['ansible_automation'])
 
     if args.action_type == 'create':
-        org_name = default_organization    
-        if 'organization' in app_config['ansible_automation']['settings']:
-            org_name = app_config['ansible_automation']['settings']['organization']
-
         created_organization = create_aa_organization(aa, org_name)
 
         if not created_organization:
@@ -263,11 +324,6 @@ def main():
             sys.exit(1)
 
         org_id = created_organization['id']
-
-        inventory_name = default_inventory
-        if 'inventory' in app_config['ansible_automation']['settings']:
-            inventory_name = app_config['ansible_automation']['settings']['inventory']
-
         created_inventory = create_aa_inventory(aa, inventory_name, org_id)
 
         if not created_inventory:
@@ -275,16 +331,13 @@ def main():
             sys.exit(1)
 
         inventory_id = created_inventory['id']
+        created_host = create_aa_host(aa, inventory_id, host_name, True, host_var_data)
 
-        ee_name = default_execution_environment
-        ee_image_name = default_execution_environment_image
+        if not created_host:
+            print(f"Unable to create hosts {host_name}")
+            sys.exit(1)
 
-        if 'execution_environment' in app_config['ansible_automation']['settings']:
-            if 'name' in app_config['ansible_automation']['settings']['execution_environment']:
-                ee_name = app_config['ansible_automation']['settings']['execution_environment']['name']
-
-            if 'image' in app_config['ansible_automation']['settings']['execution_environment']:
-                ee_image_name = app_config['ansible_automation']['settings']['execution_environment']['image']
+        created_host_id = created_host['id']
 
         created_ee = create_aa_execution_environment(aa, ee_name, ee_image_name, 0, org_id)
         created_ee_id = created_ee['id']
@@ -292,26 +345,6 @@ def main():
         if not created_ee:
             print(f"Unable to create execution environment {ee_name}")
             sys.exit(1)
-
-        project_name = default_project
-        if 'project' in app_config['ansible_automation']['settings']:
-            if 'name' in app_config['ansible_automation']['settings']['project']:
-                project_name = app_config['ansible_automation']['settings']['project']['name']
-
-        scm_type = default_scm_type
-        if 'project' in app_config['ansible_automation']['settings']:
-            if 'scm_type' in app_config['ansible_automation']['settings']['project']:
-                scm_type = app_config['ansible_automation']['settings']['project']['scm_type']
-
-        scm_url = default_scm_url
-        if 'project' in app_config['ansible_automation']['settings']:
-            if 'scm_url' in app_config['ansible_automation']['settings']['project']:
-                scm_url = app_config['ansible_automation']['settings']['project']['scm_url']
-
-        scm_branch = default_scm_branch
-        if 'project' in app_config['ansible_automation']['settings']:
-            if 'scm_branch' in app_config['ansible_automation']['settings']['project']:
-                scm_branch = app_config['ansible_automation']['settings']['project']['scm_branch']
 
         created_project = create_aa_project(aa, project_name, scm_type, scm_url, scm_branch, org_id, created_ee_id)
 
@@ -392,7 +425,13 @@ def main():
             aa.delete_object_by_name('credential_types', credential_type)
 
         aa.delete_object(get_project)
-                
+
+        if host_name != default_host_name:
+            aa.delete_object_by_name('hosts', host_name)
+
+        if inventory_name != default_inventory:
+            aa.delete_object_by_name('inventory', inventory_name)
+            
     sys.exit(0)
 
 
