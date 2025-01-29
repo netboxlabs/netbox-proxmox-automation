@@ -10,10 +10,18 @@ from helpers.ansible_automation import AnsibleAutomation
 
 def get_arguments():
     # Initialize the parser
-    parser = argparse.ArgumentParser(description="Import Netbox and Proxmox Configurations")
+    parser = argparse.ArgumentParser(description="Command-line Parsing for AWX (Tower/AAP) Object Creations")
 
-    # Add arguments for URL and Token
-    parser.add_argument("--config", required=True, help="YAML file containing the configuration")
+    sub_parser = parser.add_subparsers(dest='action_type',
+                                       required=True,
+                                       description='Ansible Automation actions',
+                                       help='additional help')
+
+    aa_create = sub_parser.add_parser('create', help='create objects help action')
+    aa_create.add_argument("--config", required=True, help="YAML file containing the configuration")
+
+    aa_destroy = sub_parser.add_parser('destroy', help='destroy objects help action')
+    aa_destroy.add_argument("--config", required=True, help="YAML file containing the configuration")
 
     # Parse the arguments
     args = parser.parse_args()
@@ -199,6 +207,15 @@ def create_aa_job_template_credential(aa_obj = None, template_id = 0, cred_name 
     return True
 
 
+def get_aa_project_related_templates(aa_obj = None, project_id = 0):
+    related_templates = []
+
+    for item in aa_obj.get_objects_by_kwargs('job_templates', project=project_id):
+        related_templates.append(aa_obj.get_object_by_id('job_templates', item.id))
+
+    return related_templates
+
+
 def main():
     args = get_arguments()
     app_config_file = args.config
@@ -234,104 +251,148 @@ def main():
 
     aa = AnsibleAutomation(app_config['ansible_automation'])
 
-    org_name = default_organization    
-    if 'organization' in app_config['ansible_automation']['settings']:
-        org_name = app_config['ansible_automation']['settings']['organization']
+    if args.action_type == 'create':
+        org_name = default_organization    
+        if 'organization' in app_config['ansible_automation']['settings']:
+            org_name = app_config['ansible_automation']['settings']['organization']
 
-    created_organization = create_aa_organization(aa, org_name)
+        created_organization = create_aa_organization(aa, org_name)
 
-    if not created_organization:
-        print(f"Unable to create organization {org_name}")
-        sys.exit(1)
+        if not created_organization:
+            print(f"Unable to create organization {org_name}")
+            sys.exit(1)
 
-    org_id = created_organization['id']
+        org_id = created_organization['id']
 
-    inventory_name = default_inventory
-    if 'inventory' in app_config['ansible_automation']['settings']:
-        inventory_name = app_config['ansible_automation']['settings']['inventory']
+        inventory_name = default_inventory
+        if 'inventory' in app_config['ansible_automation']['settings']:
+            inventory_name = app_config['ansible_automation']['settings']['inventory']
 
-    created_inventory = create_aa_inventory(aa, inventory_name, org_id)
+        created_inventory = create_aa_inventory(aa, inventory_name, org_id)
 
-    if not created_inventory:
-        print(f"Unable to create inventory {inventory_name}")
-        sys.exit(1)
+        if not created_inventory:
+            print(f"Unable to create inventory {inventory_name}")
+            sys.exit(1)
 
-    inventory_id = created_inventory['id']
+        inventory_id = created_inventory['id']
 
-    ee_name = default_execution_environment
-    ee_image_name = default_execution_environment_image
+        ee_name = default_execution_environment
+        ee_image_name = default_execution_environment_image
 
-    if 'execution_environment' in app_config['ansible_automation']['settings']:
-        if 'name' in app_config['ansible_automation']['settings']['execution_environment']:
-            ee_name = app_config['ansible_automation']['settings']['execution_environment']['name']
+        if 'execution_environment' in app_config['ansible_automation']['settings']:
+            if 'name' in app_config['ansible_automation']['settings']['execution_environment']:
+                ee_name = app_config['ansible_automation']['settings']['execution_environment']['name']
 
-        if 'image' in app_config['ansible_automation']['settings']['execution_environment']:
-            ee_image_name = app_config['ansible_automation']['settings']['execution_environment']['image']
+            if 'image' in app_config['ansible_automation']['settings']['execution_environment']:
+                ee_image_name = app_config['ansible_automation']['settings']['execution_environment']['image']
 
-    created_ee = create_aa_execution_environment(aa, ee_name, ee_image_name, 0, org_id)
-    created_ee_id = created_ee['id']
+        created_ee = create_aa_execution_environment(aa, ee_name, ee_image_name, 0, org_id)
+        created_ee_id = created_ee['id']
 
-    if not created_ee:
-        print(f"Unable to create execution environment {ee_name}")
-        sys.exit(1)
+        if not created_ee:
+            print(f"Unable to create execution environment {ee_name}")
+            sys.exit(1)
 
-    project_name = default_project
-    if 'project' in app_config['ansible_automation']['settings']:
-        project_name = app_config['ansible_automation']['settings']['project']
+        project_name = default_project
+        if 'project' in app_config['ansible_automation']['settings']:
+            if 'name' in app_config['ansible_automation']['settings']['project']:
+                project_name = app_config['ansible_automation']['settings']['project']['name']
 
-    scm_type = default_scm_type
-    if 'scm_type' in app_config['ansible_automation']['settings']:
-        scm_type = app_config['ansible_automation']['settings']['scm_type']
+        scm_type = default_scm_type
+        if 'project' in app_config['ansible_automation']['settings']:
+            if 'scm_type' in app_config['ansible_automation']['settings']['project']:
+                scm_type = app_config['ansible_automation']['settings']['project']['scm_type']
 
-    scm_url = default_scm_url
-    if 'scm_url' in app_config['ansible_automation']['settings']:
-        scm_url = app_config['ansible_automation']['settings']['scm_url']
+        scm_url = default_scm_url
+        if 'project' in app_config['ansible_automation']['settings']:
+            if 'scm_url' in app_config['ansible_automation']['settings']['project']:
+                scm_url = app_config['ansible_automation']['settings']['project']['scm_url']
 
-    scm_branch = default_scm_branch
-    if 'scm_branch' in app_config['ansible_automation']['settings']:
-        scm_branch = app_config['ansible_automation']['settings']['scm_branch']
+        scm_branch = default_scm_branch
+        if 'project' in app_config['ansible_automation']['settings']:
+            if 'scm_branch' in app_config['ansible_automation']['settings']['project']:
+                scm_branch = app_config['ansible_automation']['settings']['project']['scm_branch']
 
-    created_project = create_aa_project(aa, project_name, scm_type, scm_url, scm_branch, org_id, created_ee_id)
+        created_project = create_aa_project(aa, project_name, scm_type, scm_url, scm_branch, org_id, created_ee_id)
 
-    if not created_project:
-        print(f"Unable to create project {project_name}")
-        sys.exit(1)
+        if not created_project:
+            print(f"Unable to create project {project_name}")
+            sys.exit(1)
 
-    project_id = created_project['id']
+        project_id = created_project['id']
 
-    project_playbooks = get_aa_playbooks(aa, project_id)
+        project_playbooks = get_aa_playbooks(aa, project_id)
 
-    if not project_playbooks:
-        print(f"Unable to collect project playbooks for {project_name}")
-        sys.exit(1)
+        if not project_playbooks:
+            print(f"Unable to collect project playbooks for {project_name}")
+            sys.exit(1)
 
-    project_playbooks = [x for x in project_playbooks if x.startswith('awx-')]
-    #print("PP", project_playbooks)
+        project_playbooks = [x for x in project_playbooks if x.startswith('awx-')]
+        #print("PP", project_playbooks)
 
-    create_credential_type = create_aa_credential_type(aa, credential_type)
+        create_credential_type = create_aa_credential_type(aa, credential_type)
 
-    if not create_credential_type:
-        print(f"Unable to create credential type {credential_type}")
-        sys.exit(1)
+        if not create_credential_type:
+            print(f"Unable to create credential type {credential_type}")
+            sys.exit(1)
 
-    create_credential_type_id = create_credential_type['id']
+        create_credential_type_id = create_credential_type['id']
 
-    create_credential = create_aa_credential(aa, credential_name, create_credential_type_id, org_id, app_config['netbox_api_config'], app_config['proxmox_api_config'])
+        create_credential = create_aa_credential(aa, credential_name, create_credential_type_id, org_id, app_config['netbox_api_config'], app_config['proxmox_api_config'])
 
-    if not create_credential:
-        print(f"Unable to create credential {credential_name}")
-        sys.exit(1)
+        if not create_credential:
+            print(f"Unable to create credential {credential_name}")
+            sys.exit(1)
 
-    created_job_templates = []
-    for project_playbook in project_playbooks:
-        created_job_template = create_aa_job_template(aa, project_playbook, inventory_id, org_id, created_ee_id, project_id)
-        created_job_templates.append(created_job_template)
+        created_job_templates = []
+        for project_playbook in project_playbooks:
+            created_job_template = create_aa_job_template(aa, project_playbook, inventory_id, org_id, created_ee_id, project_id)
+            created_job_templates.append(created_job_template)
 
-    for created_job_template_item in created_job_templates:
-        create_aa_job_template_credential(aa, created_job_template_item['id'], credential_name)
+        for created_job_template_item in created_job_templates:
+            create_aa_job_template_credential(aa, created_job_template_item['id'], credential_name)
 
-    #print(org_id, inventory_id, project_id, created_project['related']['playbooks'], create_credential_id, create_credential_type_id)
+        #print(org_id, inventory_id, project_id, created_project['related']['playbooks'], create_credential_id, create_credential_type_id)
+    elif args.action_type == 'destroy':
+        project_name = default_project
+        if 'project' in app_config['ansible_automation']['settings']:
+            if 'name' in app_config['ansible_automation']['settings']['project']:
+                project_name = app_config['ansible_automation']['settings']['project']['name']
 
+        get_project = aa.get_object_by_name('projects', project_name)
+
+        if not get_project:
+            print(f"Unable to get project {project_name}")
+            sys.exit(1)
+
+        collected_credentials = {}
+        related_project_templates = get_aa_project_related_templates(aa, get_project['id'])
+        for related_project_template in related_project_templates:
+            related_credentials = aa.get_object_by_id('credentials', related_project_template.get_related('credentials').results[0]['id'])
+
+            if related_credentials:
+                related_credentials_type = aa.get_object_by_id('credential_types', related_credentials.get_related('credential_type')['id'])
+                collected_credentials[related_credentials['name']] = related_credentials_type['name']
+
+            aa.delete_object(related_project_template)
+
+        delete_credential = False
+        if credential_name in collected_credentials:
+            delete_credential = True
+
+        delete_credential_type = False
+        if delete_credential:
+            if collected_credentials[credential_name] == credential_type:
+                delete_credential_type = True
+
+        if delete_credential:
+            aa.delete_object_by_name('credentials', credential_name)
+
+        if delete_credential_type:
+            aa.delete_object_by_name('credential_types', credential_type)
+
+        aa.delete_object(get_project)
+                
     sys.exit(0)
 
 

@@ -65,6 +65,16 @@ class AnsibleAutomation:
         return object_id
     
 
+    def get_objects_by_kwargs(self, method_name = None, **kwargs):
+        method = getattr(self.api_v2, method_name)
+        get_obj = method.get(**kwargs)['results']
+
+        if get_obj:
+            return get_obj
+        
+        return {}
+    
+
     def create_object(self, method_name = None, obj_name = None, payload = {}):
         got_obj = self.get_object_by_name(method_name, obj_name)
 
@@ -73,6 +83,29 @@ class AnsibleAutomation:
             got_obj = method.post(payload)
 
         return got_obj
+
+    
+    def delete_object_by_name(self, method_name = None, obj_name = None):
+        del_obj = self.get_object_by_name(method_name, obj_name)
+
+        if not del_obj:
+            return False
         
+        try:
+            return self.delete_object(del_obj)
+        except:
+            return False
+    
+
+    def delete_object(self, the_object = None):
+        if not the_object:
+            return False
+        
+        try:
+            the_object.delete()
+            return True
+        except:
+            return False
+
 
 
