@@ -150,8 +150,15 @@ def create_aa_credential(aa_obj = None, credential_name = None, credential_type_
     return aa_obj.create_object('credentials', credential_name, credential_payload)
 
 
-def get_aa_playbooks(aa_obj = None, in_uri = None):
-    return aa_obj.do_rest_api_request(in_uri, 'GET', False, {})
+def get_aa_playbooks(aa_obj = None, project_id = 0):
+    aa_playbooks = []
+
+    for playbook_item in aa_obj.get_object_by_id('projects', project_id).get_related('playbooks'):
+        if playbook_item.endswith('.yml') or playbook_item.endswith('.yaml'):
+            if not re.search(r'/', playbook_item):
+                aa_playbooks.append(playbook_item)
+
+    return aa_playbooks
 
 
 def create_aa_job_template(aa_obj = None, playbook_name = None, inventory_id = 0, org_id = 0, ee_id = 0, project_id = 0):
@@ -172,17 +179,24 @@ def create_aa_job_template(aa_obj = None, playbook_name = None, inventory_id = 0
     return aa_obj.create_object('job_templates', job_template_name, job_template_payload)
     
 
-def create_aa_job_template_credential(aa_obj = None, in_uri = None, cred_id = 0, cred_type_id = 0):
-    aa_job_template_credential_payload = {
-        'id': cred_id,
-        #'credential_type': cred_type_id
-    }
+def create_aa_job_template_credential(aa_obj = None, template_id = 0, cred_name = None):
+    the_cred = aa_obj.get_object_by_name('credentials', cred_name)
 
-    test_creds = aa_obj.do_rest_api_request(in_uri, 'GET', False, {})
+    if not the_cred:
+        raise ValueError(f"Unable to get credentials object for {cred_name}")
+        
+    jt_entry = aa_obj.get_object_by_id('job_templates', template_id)
 
-    if test_creds and 'results' in test_creds:
-        if not test_creds['results']:
-            return aa_obj.do_rest_api_request(in_uri, 'POST', False, aa_job_template_credential_payload)
+    if not jt_entry:
+        raise ValueError(f"Unable to find job_templates {template_id}")
+
+    if not jt_entry['summary_fields']['credentials']:
+        try:
+            jt_entry.add_credential(the_cred)
+        except:
+            return False
+        
+    return True
 
 
 def main():
@@ -284,9 +298,8 @@ def main():
         sys.exit(1)
 
     project_id = created_project['id']
-    project_playbooks_v2_api_uri = created_project['related']['playbooks']
 
-    project_playbooks = get_aa_playbooks(aa, project_playbooks_v2_api_uri)
+    project_playbooks = get_aa_playbooks(aa, project_id)
 
     if not project_playbooks:
         print(f"Unable to collect project playbooks for {project_name}")
@@ -309,15 +322,13 @@ def main():
         print(f"Unable to create credential {credential_name}")
         sys.exit(1)
 
-    create_credential_id = create_credential['id']
-
     created_job_templates = []
     for project_playbook in project_playbooks:
         created_job_template = create_aa_job_template(aa, project_playbook, inventory_id, org_id, created_ee_id, project_id)
         created_job_templates.append(created_job_template)
 
     for created_job_template_item in created_job_templates:
-        create_aa_job_template_credential(aa, created_job_template_item['related']['credentials'], create_credential_id, create_credential_type_id)
+        create_aa_job_template_credential(aa, created_job_template_item['id'], credential_name)
 
     #print(org_id, inventory_id, project_id, created_project['related']['playbooks'], create_credential_id, create_credential_type_id)
 

@@ -3,8 +3,9 @@ import requests
 import json
 import base64
 
-from requests.auth import HTTPBasicAuth
 from awxkit import api, config, utils
+from awxkit.api import ApiV2, job_templates, projects
+from awxkit.api.resources import resources
 
 
 class AnsibleAutomation:
@@ -74,39 +75,4 @@ class AnsibleAutomation:
         return got_obj
         
 
-    def __setup_http_basic_auth(self, username = None, password = None):
-        return HTTPBasicAuth(username, password)
-
-
-    def do_rest_api_request(self, in_uri = None, request_method = None, ssl_verify = False, data = {}):
-        if in_uri.startswith('/') and self.aa_base_url.endswith('/'):
-            in_uri = re.sub(r'^\/', '', in_uri)
-
-        if not in_uri.endswith('/'):
-            in_uri += '/'
-
-        full_url = f"{self.aa_base_url}{in_uri}"
-
-        awx_api_login_str = f"{self.cfg_data['username']}:{self.cfg_data['password']}"
-        awx_api_login_str_auth = base64.b64encode(awx_api_login_str.encode('utf-8')).decode('utf-8')
-        awx_auth_header = f"Authorization: Basic {awx_api_login_str_auth}"
-
-        auth_in = self.__setup_http_basic_auth(self.cfg_data['username'], self.cfg_data['password'])
-
-        headers = {
-            'Content-Type': 'application/json'
-        }
-
-        if request_method == 'GET':
-            response = requests.get(full_url, headers = headers, auth=auth_in, verify=ssl_verify)
-        elif request_method == 'POST':
-            response = requests.post(full_url, headers = headers, auth=auth_in, verify=ssl_verify, json=data)
-
-        if response.status_code in (200, 201):
-            return response.json()
-        elif response.status_code == 204:
-            return f"added {full_url}"
-        else:
-            print("ERR", full_url, response.text, response.status_code)
-            return json.loads(response.text)
 
