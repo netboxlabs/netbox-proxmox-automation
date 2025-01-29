@@ -1,5 +1,6 @@
 import os, sys, re
 import requests
+import json
 import base64
 
 from requests.auth import HTTPBasicAuth
@@ -92,10 +93,20 @@ class AnsibleAutomation:
 
         auth_in = self.__setup_http_basic_auth(self.cfg_data['username'], self.cfg_data['password'])
 
+        headers = {
+            'Content-Type': 'application/json'
+        }
+
         if request_method == 'GET':
-            response = requests.get(full_url, headers = {'Content-Type': 'application/json'}, auth=auth_in, verify=ssl_verify)
+            response = requests.get(full_url, headers = headers, auth=auth_in, verify=ssl_verify)
+        elif request_method == 'POST':
+            response = requests.post(full_url, headers = headers, auth=auth_in, verify=ssl_verify, json=data)
 
-        if response.status_code == 200:
+        if response.status_code in (200, 201):
             return response.json()
-
+        elif response.status_code == 204:
+            return f"added {full_url}"
+        else:
+            print("ERR", full_url, response.text, response.status_code)
+            return json.loads(response.text)
 

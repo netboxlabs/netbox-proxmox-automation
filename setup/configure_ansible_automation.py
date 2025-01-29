@@ -154,7 +154,7 @@ def get_aa_playbooks(aa_obj = None, in_uri = None):
     return aa_obj.do_rest_api_request(in_uri, 'GET', False, {})
 
 
-def create_aa_job_template(aa_obj = None, playbook_name = None, inventory_id = 0, org_id = 0, ee_id = 0, project_id = 0, creds_id = 0):
+def create_aa_job_template(aa_obj = None, playbook_name = None, inventory_id = 0, org_id = 0, ee_id = 0, project_id = 0):
     job_template_name = re.sub(r'^awx\-', 'XX', playbook_name.split('.')[0])
 
     job_template_payload = {
@@ -166,18 +166,23 @@ def create_aa_job_template(aa_obj = None, playbook_name = None, inventory_id = 0
         'execution_environment': ee_id,
         'playbook': playbook_name,
         'ask_variables_on_launch': True,
-        'ask_credential_on_launch': True,
-        'summary_fields': {
-            'credentials': [
-                {
-                    'id': creds_id,
-                    'cloud': True
-                }
-            ]
-        }
+        'ask_credential_on_launch': True
     }
 
     return aa_obj.create_object('job_templates', job_template_name, job_template_payload)
+    
+
+def create_aa_job_template_credential(aa_obj = None, in_uri = None, cred_id = 0, cred_type_id = 0):
+    aa_job_template_credential_payload = {
+        'id': cred_id,
+        #'credential_type': cred_type_id
+    }
+
+    test_creds = aa_obj.do_rest_api_request(in_uri, 'GET', False, {})
+
+    if test_creds and 'results' in test_creds:
+        if not test_creds['results']:
+            return aa_obj.do_rest_api_request(in_uri, 'POST', False, aa_job_template_credential_payload)
 
 
 def main():
@@ -288,7 +293,7 @@ def main():
         sys.exit(1)
 
     project_playbooks = [x for x in project_playbooks if x.startswith('awx-')]
-    print("PP", project_playbooks)
+    #print("PP", project_playbooks)
 
     create_credential_type = create_aa_credential_type(aa, credential_type)
 
@@ -308,10 +313,13 @@ def main():
 
     created_job_templates = []
     for project_playbook in project_playbooks:
-        created_job_template = create_aa_job_template(aa, project_playbook, inventory_id, org_id, created_ee_id, project_id, create_credential_id)
+        created_job_template = create_aa_job_template(aa, project_playbook, inventory_id, org_id, created_ee_id, project_id)
         created_job_templates.append(created_job_template)
 
-    print(org_id, inventory_id, project_id, created_project['related']['playbooks'], create_credential_type_id, create_credential_id, created_job_templates)
+    for created_job_template_item in created_job_templates:
+        create_aa_job_template_credential(aa, created_job_template_item['related']['credentials'], create_credential_id, create_credential_type_id)
+
+    #print(org_id, inventory_id, project_id, created_project['related']['playbooks'], create_credential_id, create_credential_type_id)
 
     sys.exit(0)
 
