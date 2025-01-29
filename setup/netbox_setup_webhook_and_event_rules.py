@@ -351,7 +351,7 @@ def main():
         if not 'project' in app_config['ansible_automation']['settings']:
             raise ValueError("Missing 'project' in ansible_automation 'settings'")
                 
-        awx_project_name = app_config['ansible_automation']['settings']['project']
+        awx_project_name = app_config['ansible_automation']['settings']['project']['name']
 
         awx_url_v2_api = f"{app_config['ansible_automation']['http_proto']}://{app_config['ansible_automation']['host']}:{app_config['ansible_automation']['http_port']}/api/v2/"
 
