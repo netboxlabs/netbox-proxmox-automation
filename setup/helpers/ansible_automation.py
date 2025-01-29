@@ -1,5 +1,10 @@
 import os, sys, re
+import requests
+import base64
+
+from requests.auth import HTTPBasicAuth
 from awxkit import api, config, utils
+
 
 class AnsibleAutomation:
     def __init__(self, cfg_data = {}):
@@ -13,7 +18,9 @@ class AnsibleAutomation:
         aa_user = self.cfg_data['username']
         aa_pass = self.cfg_data['password']
 
-        config.base_url = aa_url
+        self.aa_base_url = aa_url
+
+        config.base_url = self.aa_base_url
         config.credentials = utils.PseudoNamespace(
             {'default':
                 {'username': aa_user, 'password': aa_pass}
@@ -40,7 +47,7 @@ class AnsibleAutomation:
         get_obj = method.get(id=obj_id)['results']
 
         if get_obj:
-            return get_obj
+            return get_obj[0]
         
         return {}
 
@@ -65,4 +72,30 @@ class AnsibleAutomation:
 
         return got_obj
         
+
+    def __setup_http_basic_auth(self, username = None, password = None):
+        return HTTPBasicAuth(username, password)
+
+
+    def do_rest_api_request(self, in_uri = None, request_method = None, ssl_verify = False, data = {}):
+        if in_uri.startswith('/') and self.aa_base_url.endswith('/'):
+            in_uri = re.sub(r'^\/', '', in_uri)
+
+        if not in_uri.endswith('/'):
+            in_uri += '/'
+
+        full_url = f"{self.aa_base_url}{in_uri}"
+
+        awx_api_login_str = f"{self.cfg_data['username']}:{self.cfg_data['password']}"
+        awx_api_login_str_auth = base64.b64encode(awx_api_login_str.encode('utf-8')).decode('utf-8')
+        awx_auth_header = f"Authorization: Basic {awx_api_login_str_auth}"
+
+        auth_in = self.__setup_http_basic_auth(self.cfg_data['username'], self.cfg_data['password'])
+
+        if request_method == 'GET':
+            response = requests.get(full_url, headers = {'Content-Type': 'application/json'}, auth=auth_in, verify=ssl_verify)
+
+        if response.status_code == 200:
+            return response.json()
+
 

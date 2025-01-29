@@ -2,6 +2,7 @@
 
 import os, sys, re
 import argparse
+import time
 import yaml
 
 from helpers.ansible_automation import AnsibleAutomation
@@ -61,7 +62,22 @@ def create_aa_project(aa_obj = None, project_name = None, scm_type = None, scm_u
         'default_environment': ee_id
     }
 
-    return aa_obj.create_object('projects', project_name, project_payload)
+    created_project = aa_obj.create_object('projects', project_name, project_payload)
+
+    # Wait for project completion to complete, pausing 0.25s per iteration
+    while True:
+        proj_status = aa_obj.get_object_by_name('projects', project_name)
+
+        if proj_status['status'] == 'successful':
+            break
+
+        if proj_status['status'] == 'failed':
+            print("failed to sync project playbooks")
+            sys.exit(0)
+
+        time.sleep(0.25)
+
+    return created_project
 
 
 def create_aa_credential_type(aa_obj = None, credential_type_name = None):
@@ -132,6 +148,36 @@ def create_aa_credential(aa_obj = None, credential_name = None, credential_type_
     }
 
     return aa_obj.create_object('credentials', credential_name, credential_payload)
+
+
+def get_aa_playbooks(aa_obj = None, in_uri = None):
+    return aa_obj.do_rest_api_request(in_uri, 'GET', False, {})
+
+
+def create_aa_job_template(aa_obj = None, playbook_name = None, inventory_id = 0, org_id = 0, ee_id = 0, project_id = 0, creds_id = 0):
+    job_template_name = re.sub(r'^awx\-', 'XX', playbook_name.split('.')[0])
+
+    job_template_payload = {
+        'name': job_template_name,
+        'job_type': 'run',
+        'inventory': inventory_id,
+        'organization': org_id,
+        'project': project_id,
+        'execution_environment': ee_id,
+        'playbook': playbook_name,
+        'ask_variables_on_launch': True,
+        'ask_credential_on_launch': True,
+        'summary_fields': {
+            'credentials': [
+                {
+                    'id': creds_id,
+                    'cloud': True
+                }
+            ]
+        }
+    }
+
+    return aa_obj.create_object('job_templates', job_template_name, job_template_payload)
 
 
 def main():
@@ -233,6 +279,16 @@ def main():
         sys.exit(1)
 
     project_id = created_project['id']
+    project_playbooks_v2_api_uri = created_project['related']['playbooks']
+
+    project_playbooks = get_aa_playbooks(aa, project_playbooks_v2_api_uri)
+
+    if not project_playbooks:
+        print(f"Unable to collect project playbooks for {project_name}")
+        sys.exit(1)
+
+    project_playbooks = [x for x in project_playbooks if x.startswith('awx-')]
+    print("PP", project_playbooks)
 
     create_credential_type = create_aa_credential_type(aa, credential_type)
 
@@ -250,7 +306,12 @@ def main():
 
     create_credential_id = create_credential['id']
 
-    print(org_id, inventory_id, project_id, created_project, aa.get_object_by_id('projects', project_id), create_credential_type_id, create_credential_id)
+    created_job_templates = []
+    for project_playbook in project_playbooks:
+        created_job_template = create_aa_job_template(aa, project_playbook, inventory_id, org_id, created_ee_id, project_id, create_credential_id)
+        created_job_templates.append(created_job_template)
+
+    print(org_id, inventory_id, project_id, created_project['related']['playbooks'], create_credential_type_id, create_credential_id, created_job_templates)
 
     sys.exit(0)
 
