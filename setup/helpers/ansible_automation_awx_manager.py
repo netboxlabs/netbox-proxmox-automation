@@ -203,7 +203,7 @@ class AnsibleAutomationAWXManager(AnsibleAutomationAWX):
             self.created_job_templates = []
 
         try:
-            job_template_name = re.sub(r'^awx\-', 'XX', playbook_name.split('.')[0])
+            job_template_name = re.sub(r'^awx\-', '', playbook_name.split('.')[0])
 
             job_template_payload = {
                 'name': job_template_name,

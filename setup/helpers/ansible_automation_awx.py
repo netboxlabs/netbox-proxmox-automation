@@ -1,7 +1,4 @@
 import os, sys, re
-import requests
-import json
-import base64
 
 from awxkit import api, config, utils
 from awxkit.api import ApiV2, job_templates, projects

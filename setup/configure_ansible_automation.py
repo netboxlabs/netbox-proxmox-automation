@@ -2,7 +2,6 @@
 
 import os, sys, re
 import argparse
-import time
 import yaml
 
 from helpers.ansible_automation_awx_manager import AnsibleAutomationAWXManager
@@ -121,19 +120,14 @@ def main():
 
     if args.action_type == 'create':
         aam.create_organization(org_name)
-        print(aam.org_id)
 
         aam.create_inventory(inventory_name)
-        print(aam.inventory_id)
 
         aam.create_host(host_name, host_var_data)
-        print(aam.host_id)
 
         aam.create_execution_environment(ee_name, ee_image_name)
-        print(aam.ee_id)
 
         aam.create_project(project_name, scm_type, scm_url, scm_branch)
-        print(aam.project_id, aam.project)
 
         project_playbooks = aam.get_playbooks()
         project_playbooks = [x for x in project_playbooks if x.startswith('awx-')]
@@ -144,14 +138,11 @@ def main():
             sys.exit(1)
 
         aam.create_credential_type(credential_type)
-        print(aam.credential_type_id)
 
         aam.create_credential(credential_name)
-        print(aam.credential_id)
 
         for project_playbook in project_playbooks:
             aam.create_job_template(project_playbook)
-        print("CJT", aam.created_job_templates)
 
         for created_job_template_item in aam.created_job_templates:
             aam.create_job_template_credential(created_job_template_item['id'])
@@ -169,7 +160,7 @@ def main():
             related_credentials = aam.get_object_by_id('credentials', project_template.get_related('credentials').results[0]['id'])
 
             if related_credentials:
-                related_credentials_type = aa.get_object_by_id('credential_types', related_credentials.get_related('credential_type')['id'])
+                related_credentials_type = aam.get_object_by_id('credential_types', related_credentials.get_related('credential_type')['id'])
                 collected_credentials[related_credentials['name']] = related_credentials_type['name']
 
             aam.delete_job_template(project_template)
