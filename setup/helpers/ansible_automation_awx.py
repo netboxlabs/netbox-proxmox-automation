@@ -8,9 +8,11 @@ from awxkit.api import ApiV2, job_templates, projects
 from awxkit.api.resources import resources
 
 
-class AnsibleAutomation:
+class AnsibleAutomationAWX:
     def __init__(self, cfg_data = {}):
-        self.cfg_data = cfg_data
+        self.cfg_data = cfg_data['ansible_automation']
+        self.proxmox_cfg_data = cfg_data['proxmox_api_config']
+        self.netbox_cfg_data = cfg_data['netbox_api_config']
 
         aa_url = f"{self.cfg_data['http_proto']}://{self.cfg_data['host']}:{str(self.cfg_data['http_port'])}/"
 
