@@ -24,7 +24,16 @@ ansible_automation:
   ssl_verify: false # or true
   username: awx_user # should have permissions to view both projects and templates
   password: awx_password
-  project_name: netbox-proxmox-ee-test1 # or whatever you named your project
+  settings:
+    project:
+      name: name-of-your-project # default: netbox-proxmox-ee-test1
+      scm_type: your-scm-type # Optional.  Default: git
+      scm_url: your-scm-url # Optional.  Default: https://github.com/netboxlabs/netbox-proxmox-automation.git
+      scm_branch: main # Optional.  Default: main
+    inventory:
+      name: your-inventory # Default: Demo Inventory
+    hosts:
+      name: your-defined-host # Default: localhost
 flask_application:
   host: name or ip of where Flask application is running
   http_proto: http or https
