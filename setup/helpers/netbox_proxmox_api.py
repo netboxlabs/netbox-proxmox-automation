@@ -11,9 +11,11 @@ class NetBoxProxmoxAPIHelper:
     def __init__(self, cfg_data):
         self.proxmox_nodes = []
         self.proxmox_vm_templates = {}
+        self.proxmox_lxc_templates = {}
         self.proxmox_vms = {}
         self.proxmox_lxc = {}
         self.proxmox_storage_volumes = []
+        self.proxmox_lxc_storage_volumes = []
 
         self.proxmox_api_config = {
             'api_host': cfg_data['proxmox_api_config']['api_host'],
@@ -101,6 +103,9 @@ class NetBoxProxmoxAPIHelper:
             for proxmox_storage in self.proxmox_api.storage.get():
                 if proxmox_storage['type'] != 'dir':
                     self.proxmox_storage_volumes.append(proxmox_storage['storage'])
+                else:
+                    if re.search(r'vztmpl', proxmox_storage['content']):
+                        self.proxmox_lxc_storage_volumes.append(proxmox_storage['storage'])
         except requests.exceptions.RequestException as e:
             raise requests.exceptions.RequestException(e)
 
@@ -196,6 +201,25 @@ class NetBoxProxmoxAPIHelper:
         return proxmox_vm_configurations
 
 
+    def proxmox_get_lxc_storage_volumes(self):
+        if not self.proxmox_lxc_storage_volumes:
+            self.proxmox_get_vm_storage_volumes()
+
+    
+    def proxmox_get_lxc_templates(self, proxmox_node = None):
+        for lxc_storage in self.proxmox_lxc_storage_volumes:
+            method = getattr(self.proxmox_api.nodes(proxmox_node).storage, lxc_storage)
+            local_storage = method.content.get()
+
+            #local_storage = self.proxmox_api.nodes('proxmox-ve').storage.local.content.get()
+            if local_storage:
+                for ls in local_storage:
+                    if ls['format'] == 'tzst' and ls['content'] == 'vztmpl':
+                        lxc_image_path = ls['volid']
+                        lxc_image_name = lxc_image_path.split('/')[1]
+                        self.proxmox_lxc_templates[lxc_image_name] = lxc_image_path
+
+
     def proxmox_get_lxc(self):
         return self.proxmox_lxc
 
@@ -214,6 +238,8 @@ class NetBoxProxmoxAPIHelper:
             proxmox_lxc_configurations[proxmox_lxc]['running'] = self.proxmox_lxc[proxmox_lxc]['running']
             proxmox_lxc_configurations[proxmox_lxc]['node'] = self.proxmox_lxc[proxmox_lxc]['node']
             proxmox_lxc_configurations[proxmox_lxc]['vmid'] = str(self.proxmox_lxc[proxmox_lxc]['vmid'])
+
+            proxmox_lxc_configurations[proxmox_lxc]['is_lxc'] = True
 
             if not 'disks' in proxmox_lxc_configurations[proxmox_lxc]:
                 proxmox_lxc_configurations[proxmox_lxc]['disks'] = []

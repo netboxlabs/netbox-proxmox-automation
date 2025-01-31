@@ -54,11 +54,29 @@ def create_custom_field_choice_sets_proxmox_vm_storage(proxmox_api_obj):
     return dict(ncfcs.obj)['id']
 
 
+def create_custom_field_choice_sets_proxmox_lxc_templates(proxmox_api_obj):
+    extra_choices = []
+
+    for proxmox_node in proxmox_api_obj.proxmox_nodes:
+        proxmox_api_obj.proxmox_get_lxc_templates(proxmox_node)
+
+    proxmox_lxc_templates = proxmox_api_obj.proxmox_lxc_templates
+
+    if proxmox_lxc_templates:
+        for psv in proxmox_lxc_templates:
+            extra_choices.append([psv, proxmox_lxc_templates[psv]])
+
+        ncfcs = NetboxCustomFieldChoiceSets(netbox_url, netbox_api_token, {'name': 'proxmox-lxc-templates', 'extra_choices': extra_choices})
+        return dict(ncfcs.obj)['id']
+    
+    return 0
+
+
 def create_custom_field_choice_sets_proxmox_vm_cluster_nodes(proxmox_api_obj):
     extra_choices = []
 
     # get proxmox nodes
-    proxmox_api_obj.get_proxmox_nodes()
+    #proxmox_api_obj.get_proxmox_nodes()
     proxmox_cluster_nodes = proxmox_api_obj.proxmox_nodes
 
     for pcn in proxmox_cluster_nodes:
@@ -69,7 +87,7 @@ def create_custom_field_choice_sets_proxmox_vm_cluster_nodes(proxmox_api_obj):
 
 
 def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label=None, choice_set_id=0, default=None):
-    if name in ['proxmox_node', 'proxmox_vm_storage', 'proxmox_vm_template']:
+    if name in ['proxmox_node', 'proxmox_vm_storage', 'proxmox_vm_templates', 'proxmox_lxc_templates']:
         object_types = ['virtualization.virtualmachine']
         input_type = {'value': 'select', 'label': 'Selection'}
     elif name in ['proxmox_disk_storage_volume']:
@@ -81,6 +99,9 @@ def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label
     elif name in ['proxmox_vmid']:
         object_types = ['virtualization.virtualmachine']
         input_type = {'value': 'text', 'label': 'Text'}
+    elif name in ['proxmox_is_lxc_container']:
+        object_types = ['virtualization.virtualmachine']
+        input_type = {'value': "boolean", 'label': 'Boolean (true/false)'}
 
     if input_type['value'] == 'select':
         nbcf = NetboxCustomFields(netbox_url, netbox_api_token,
@@ -115,7 +136,20 @@ def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label
                                 'group_name': 'Proxmox',
                                 'name': name,
                                 'label': label})
-
+    elif input_type['value'] == 'boolean':
+        nbcf = NetboxCustomFields(netbox_url, netbox_api_token,
+                                {'weight': 100,
+                                 'filter_logic': 'disabled',
+                                 'search_weight': 1000,
+                                'object_types': object_types,
+                                'type': input_type,
+                                'group_name': 'Proxmox',
+                                'name': name,
+                                'label': label,
+                                'required': True,
+                                'default': False,
+                                'label': label})
+    
     return dict(nbcf.obj)['id']
 
 
@@ -171,12 +205,14 @@ if __name__ == "__main__":
 
     netbox_field_choice_sets_vm_storage_volumes_id = create_custom_field_choice_sets_proxmox_vm_storage(p)
 
+    netbox_field_choice_sets_lxc_templates_id = create_custom_field_choice_sets_proxmox_lxc_templates(p)
+
     netbox_field_choice_sets_proxmox_nodes_id = create_custom_field_choice_sets_proxmox_vm_cluster_nodes(p)
 
     # custom fields
 
     # VM template id
-    custom_field_template_id = create_custom_field(netbox_url, netbox_api_token, 'proxmox_vm_template', 'Proxmox VM Template', netbox_field_choice_sets_templates_id, str(min(p.proxmox_vm_templates.keys())))
+    custom_field_template_id = create_custom_field(netbox_url, netbox_api_token, 'proxmox_vm_templates', 'Proxmox VM Templates', netbox_field_choice_sets_templates_id, str(min(p.proxmox_vm_templates.keys())))
 
     # VM proxmox node id
     custom_field_proxmox_node_id = create_custom_field(netbox_url, netbox_api_token, 'proxmox_node', 'Proxmox node', netbox_field_choice_sets_proxmox_nodes_id, p.proxmox_nodes[0])
@@ -192,3 +228,11 @@ if __name__ == "__main__":
 
     # proxmox_vm_storage
     custom_field_proxmox_disk_storage_volume_id = create_custom_field(netbox_url, netbox_api_token, 'proxmox_vm_storage', 'Proxmox VM Storage', netbox_field_choice_sets_vm_storage_volumes_id, p.proxmox_storage_volumes[0])
+
+    # proxmox_is_lxc_container
+    custom_field_proxmox_is_lxc_container = create_custom_field(netbox_url, netbox_api_token, 'proxmox_is_lxc_container', 'Is LXC Container?')
+
+    # proxmox_lxc_templates
+    if netbox_field_choice_sets_lxc_templates_id > 0:
+        #custom_field_proxmox_disk_storage_volume_id = create_custom_field(netbox_url, netbox_api_token, 'proxmox_lxc_templates', 'Proxmox LXC Templates', netbox_field_choice_sets_lxc_templates_id, str(min(p.proxmox_lxc_templates.keys())))
+        custom_field_proxmox_disk_storage_volume_id = create_custom_field(netbox_url, netbox_api_token, 'proxmox_lxc_templates', 'Proxmox LXC Templates', netbox_field_choice_sets_lxc_templates_id, "")
