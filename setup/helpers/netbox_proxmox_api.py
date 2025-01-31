@@ -92,10 +92,6 @@ class NetBoxProxmoxAPIHelper:
         return self.proxmox_vms
     
 
-    def proxmox_get_lxc(self):
-        return self.proxmox_lxc
-
-
     def proxmox_get_vm_templates(self):
         return self.proxmox_vm_templates
     
@@ -135,7 +131,7 @@ class NetBoxProxmoxAPIHelper:
             proxmox_vm_configurations[proxmox_vm]['node'] = self.proxmox_vms[proxmox_vm]['node']
             proxmox_vm_configurations[proxmox_vm]['vmid'] = str(self.proxmox_vms[proxmox_vm]['vmid'])
 
-            if self.proxmox_vms[proxmox_vm]['running']:
+            if self.proxmox_vms[proxmox_vm]['running']: # FIX: MOVE BEFORE TRY AND DECREASE INDENT BUT ONLY IF CLOUD-INIT ENABLED (ide2 in our config)
                 if 'sshkeys' in proxmox_vm_config:
                     proxmox_vm_configurations[proxmox_vm]['public_ssh_key'] = urllib.parse.unquote(proxmox_vm_config['sshkeys'])
 
@@ -200,8 +196,95 @@ class NetBoxProxmoxAPIHelper:
         return proxmox_vm_configurations
 
 
+    def proxmox_get_lxc(self):
+        return self.proxmox_lxc
+
+
     def proxmox_get_lxc_configurations(self):
+        proxmox_lxc_configurations = {}
+
         for proxmox_lxc in self.proxmox_lxc:
-            print("AF", proxmox_lxc, self.proxmox_lxc[proxmox_lxc])
-    
+            if not proxmox_lxc in proxmox_lxc_configurations:
+                proxmox_lxc_configurations[proxmox_lxc] = {}
+
+            proxmox_lxc_config = self.proxmox_api.nodes(self.proxmox_lxc[proxmox_lxc]['node']).lxc(self.proxmox_lxc[proxmox_lxc]['vmid']).config.get()
+
+            proxmox_lxc_configurations[proxmox_lxc]['vcpus'] = proxmox_lxc_config['cores']
+            proxmox_lxc_configurations[proxmox_lxc]['memory'] = proxmox_lxc_config['memory']
+            proxmox_lxc_configurations[proxmox_lxc]['running'] = self.proxmox_lxc[proxmox_lxc]['running']
+            proxmox_lxc_configurations[proxmox_lxc]['node'] = self.proxmox_lxc[proxmox_lxc]['node']
+            proxmox_lxc_configurations[proxmox_lxc]['vmid'] = str(self.proxmox_lxc[proxmox_lxc]['vmid'])
+
+            if not 'disks' in proxmox_lxc_configurations[proxmox_lxc]:
+                proxmox_lxc_configurations[proxmox_lxc]['disks'] = []
+
+            if 'rootfs' in proxmox_lxc_config:
+                storage_volume, disk_name, disk_size = sum([part.split(':') for part in proxmox_lxc_config['rootfs'].split(',')], [])
+                del disk_name
+
+                get_disk_size = re.search(r'size=(\d+)([MG])$', disk_size)
+
+                if not get_disk_size:
+                    raise ValueError(f"Unable to find matching disk size for {proxmox_lxc}")
+
+                if get_disk_size.group(2) == "M":
+                    disk_size = get_disk_size.group(1)
+                elif get_disk_size.group(2) == "G":
+                    disk_size = int(get_disk_size.group(1)) * 1024
+                else:
+                    raise ValueError(f"Unknown disk size metric: {get_disk_size.group(2)}")
+
+                proxmox_lxc_configurations[proxmox_lxc]['disks'].append({'disk_name': 'rootfs', 'disk_size': str(disk_size), 'proxmox_disk_storage_volume': storage_volume})
+                
+            if not 'network_interfaces' in proxmox_lxc_configurations[proxmox_lxc]:
+                proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'] = {}
+
+            network_interface_id = 0
+
+            while True:
+                net_interface_name = f"net{network_interface_id}"
+
+                if not net_interface_name in proxmox_lxc_config and network_interface_id == 0:
+                    raise ValueError(f"Unable to find '{net_interface_name}' for {proxmox_lxc}")
+                elif not net_interface_name in proxmox_lxc_config and network_interface_id > 0:
+                    break
+                
+                ni_info = re.search(r'^name=([^,]+),bridge=[^,]+,firewall=\d{1},gw=([^,]+),hwaddr=([^,]+),ip=([^,]+),', proxmox_lxc_config[net_interface_name])
+                ni_info6 = re.search(r'^name=([^,]+),bridge=[^,]+,firewall=\d{1},gw6=([^,]+),hwaddr=([^,]+),ip6=([^,]+),', proxmox_lxc_config[net_interface_name])
+
+                if not ni_info and not ni_info6:
+                    raise ValueError(f"Unable to parse network interface information for {proxmox_lxc}")
+                
+                if ni_info:
+                    if len(ni_info.groups()) != 4:
+                        raise ValueError(f"Incorrect number of fields in '{net_interface_name}' for {proxmox_lxc}")                    
+                    ip_address_type = 'ipv4'
+
+                if ni_info6:
+                    if len(ni_info6.groups()) != 4:
+                        raise ValueError(f"Incorrect number of fields in '{net_interface_name}' for {proxmox_lxc}")
+                    ip_address_type = 'ipv6'
+
+                interface_name = ni_info.group(1)
+                #gateway = ni_info.group(2)
+                mac_address = ni_info.group(3)
+                ip_address = ni_info.group(4)
+
+                if not interface_name in proxmox_lxc_configurations[proxmox_lxc]['network_interfaces']:
+                    proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name] = {}
+
+                proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name] = {}
+                proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name]['mac-address'] = mac_address
+                proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name]['ip-addresses'] = []
+
+                proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name]['ip-addresses'].append(
+                    {
+                        'type': ip_address_type,
+                        'ip-address': ip_address
+                    }
+                )
+
+                network_interface_id += 1
+
+        return proxmox_lxc_configurations    
  

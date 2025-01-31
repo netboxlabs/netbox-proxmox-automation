@@ -16,6 +16,7 @@ proxmox:
 netbox:
   cluster_role: Proxmox
   vm_role: "Proxmox VM"
+  lxc_role: "Proxmox LXC"
 automation_type: choices are ansible_automation or flask_application
 ansible_automation:
   host: name or ip of AWX/Tower/AAP host

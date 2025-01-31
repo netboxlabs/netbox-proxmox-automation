@@ -67,6 +67,21 @@ class Netbox:
                     self.findBy('name')
 
 
+class NetBoxDeviceRoles(Netbox):
+    def __init__(self, url, token, payload, find_key = 'name') -> None:
+        # Initialize the Netbox superclass with URL and token
+        super().__init__(url, token, payload)
+        self.object_type = self.nb.dcim.device_roles
+        self.required_fields = [ 
+            "name",
+            "slug",
+            "vm_role"
+        ]
+        self.find_key = find_key
+        self.findBy(self.find_key)
+        self.createOrUpdate()
+
+
 class NetBoxTags(Netbox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token

@@ -8,7 +8,7 @@ import pynetbox
 import proxmoxer
 
 from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
-from helpers.netbox_objects import Netbox, NetBoxTags, NetboxClusterTypes, NetboxClusters, NetboxVirtualMachines, NetboxVirtualMachineInterface, NetboxIPAddresses
+from helpers.netbox_objects import Netbox, NetBoxTags, NetBoxDeviceRoles, NetboxClusterTypes, NetboxClusters, NetboxVirtualMachines, NetboxVirtualMachineInterface, NetboxIPAddresses
 
 nb_obj = None
 
@@ -74,13 +74,14 @@ def netbox_create_proxmox_discovered_object_tags(nb_obj = None, tag_name = None)
         raise ValueError(e, e.error)
 
 
-def netbox_create_vm(nb_url = None, nb_api_token = None, proxmox_cluster_name = None, vm_configuration = {}, vm_name = None, tag_id = 0):
+def netbox_create_vm(nb_url = None, nb_api_token = None, proxmox_cluster_name = None, vm_configuration = {}, vm_name = None, vm_role_id = 0, tag_id = 0):
     try:
         create_vm_config = {
             'name': vm_name,
             'cluster': dict(NetboxClusters(nb_url, nb_api_token, {'name': proxmox_cluster_name}).obj)['id'],
             'vcpus': str(vm_configuration['vcpus']),
             'memory': vm_configuration['memory'],
+            'role': vm_role_id,
             'status': proxmox_to_netbox_vm_status_mappings[vm_configuration['running']],
             'tags': [str(tag_id)]
         }
@@ -130,7 +131,7 @@ def netbox_create_vm(nb_url = None, nb_api_token = None, proxmox_cluster_name = 
                     #print(f"IP ADDRESS ENTRY: {ip_address_entry} ---> {ip_address_entry['ip-address']}")
                     ip_address_id = __netbox_vm_network_interface_assign_ip_address(nb_url, nb_api_token, network_interface_id, ip_address_entry['ip-address'])
 
-                    if network_interface == 'eth0':
+                    if network_interface == 'eth0' or network_interface == 'net0':
                         if not ip_address_entry['ip-address'].endswith('/64'):
                             __netbox_vm_network_interface_assign_primary_ip4_address(vm_name, network_interface_id, ip_address_entry['ip-address'])
 
@@ -267,16 +268,26 @@ def main():
     pm = NetBoxProxmoxAPIHelper(app_config)
 
     if args.virt_type == 'vm':
-        nbt_vm_discovered_id = dict(NetBoxTags(nb_url, app_config['netbox_api_config']['api_token'], {'name': 'proxmox-vm-discovered', 'slug': __netbox_make_slug('proxmox-vm-discovered')}).obj)['id']
+        nbt_vm_discovered_id = dict(NetBoxTags(nb_url, app_config['netbox_api_config']['api_token'], {'name': 'proxmox-vm-discovered', 'slug': __netbox_make_slug('proxmox-vm-discovered'), 'color': 'aa1409'}).obj)['id']
+        device_role_id = dict(NetBoxDeviceRoles(nb_url, app_config['netbox_api_config']['api_token'], {'name': app_config['netbox']['vm_role'], 'slug': __netbox_make_slug(app_config['netbox']['vm_role']), 'vm_role': True, 'color': 'ffbf00'}).obj)['id']
+
         proxmox_vm_configurations = pm.proxmox_get_vms_configurations()
         #print("HEY PM VMS", proxmox_vm_configurations)
 
         for proxmox_vm_configuration in proxmox_vm_configurations:
             if not proxmox_vm_configuration in all_nb_vms and not pm.proxmox_vms[proxmox_vm_configuration]['vmid'] in all_nb_vms_ids:
                 #print("PXMXVMCFG", proxmox_vm_configuration, proxmox_vm_configurations[proxmox_vm_configuration])
-                netbox_create_vm(nb_url, app_config['netbox_api_config']['api_token'], app_config['proxmox']['cluster_name'], proxmox_vm_configurations[proxmox_vm_configuration], proxmox_vm_configuration, nbt_vm_discovered_id)
+                netbox_create_vm(nb_url, app_config['netbox_api_config']['api_token'], app_config['proxmox']['cluster_name'], proxmox_vm_configurations[proxmox_vm_configuration], proxmox_vm_configuration, device_role_id, nbt_vm_discovered_id)
     elif args.virt_type == 'lxc':
-        print("HEY PM LXC", pm.proxmox_get_lxc())
+        nbt_lxc_discovered_id = dict(NetBoxTags(nb_url, app_config['netbox_api_config']['api_token'], {'name': 'proxmox-lxc-discovered', 'slug': __netbox_make_slug('proxmox-lxc-discovered'), 'color': 'f44336'}).obj)['id']
+        device_role_id = dict(NetBoxDeviceRoles(nb_url, app_config['netbox_api_config']['api_token'], {'name': app_config['netbox']['lxc_role'], 'slug': __netbox_make_slug(app_config['netbox']['lxc_role']), 'vm_role': True, 'color': 'ff9800'}).obj)['id']
+
+        proxmox_lxc_configurations = pm.proxmox_get_lxc_configurations()
+
+        for proxmox_lxc_configuration in proxmox_lxc_configurations:
+            if not proxmox_lxc_configuration in all_nb_vms and not pm.proxmox_lxc[proxmox_lxc_configuration]['vmid'] in all_nb_vms_ids:
+                #print("PXMXVMCFG", proxmox_vm_configuration, proxmox_vm_configurations[proxmox_vm_configuration])
+                netbox_create_vm(nb_url, app_config['netbox_api_config']['api_token'], app_config['proxmox']['cluster_name'], proxmox_lxc_configurations[proxmox_lxc_configuration], proxmox_lxc_configuration, device_role_id, nbt_lxc_discovered_id)
     else:
         print(f"Unknown virtualizaton type {args.virt_type}")
         sys.exit(1)
