@@ -87,6 +87,13 @@ def create_custom_field_choice_sets_proxmox_vm_cluster_nodes(proxmox_api_obj):
 
 
 def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label=None, choice_set_id=0, default=None):
+    if name in ['proxmox_lxc_templates', 'proxmox_is_lxc_container']:
+        group_name = 'Proxmox LXC'
+    elif name in ['proxmox_node', 'proxmox_vmid']:
+        group_name = 'Proxmox (common)'
+    else:
+        group_name = 'Proxmox VM'
+
     if name in ['proxmox_node', 'proxmox_vm_storage', 'proxmox_vm_templates', 'proxmox_lxc_templates']:
         object_types = ['virtualization.virtualmachine']
         input_type = {'value': 'select', 'label': 'Selection'}
@@ -111,7 +118,7 @@ def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label
                                  'search_weight': 1000,
                                 'object_types': object_types,
                                 'type': input_type['value'],
-                                'group_name': 'Proxmox',
+                                'group_name': group_name,
                                 'name': name,
                                 'label': label,
                                 'choice_set': choice_set_id,
@@ -123,7 +130,7 @@ def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label
                                  'search_weight': 1000,
                                 'object_types': object_types,
                                 'type': input_type['value'],
-                                'group_name': 'Proxmox',
+                                'group_name': group_name,
                                 'name': name,
                                 'label': label})
     elif input_type['value'] == 'longtext':
@@ -133,7 +140,7 @@ def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label
                                  'search_weight': 1000,
                                 'object_types': object_types,
                                 'type': input_type,
-                                'group_name': 'Proxmox',
+                                'group_name': group_name,
                                 'name': name,
                                 'label': label})
     elif input_type['value'] == 'boolean':
@@ -143,7 +150,7 @@ def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label
                                  'search_weight': 1000,
                                 'object_types': object_types,
                                 'type': input_type,
-                                'group_name': 'Proxmox',
+                                'group_name': group_name,
                                 'name': name,
                                 'label': label,
                                 'required': True,

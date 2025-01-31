@@ -18,7 +18,6 @@ proxmox_to_netbox_vm_status_mappings = {
 }
 
 
-# I think that what we want is ./netbox-proxmox-discovery.py (vms|lxc) --config <whatever>
 def get_arguments():
     # Initialize the parser
     parser = argparse.ArgumentParser(description="Import Netbox and Proxmox Configurations")
@@ -82,8 +81,7 @@ def netbox_create_vm(nb_url = None, nb_api_token = None, proxmox_cluster_name = 
             'vcpus': str(vm_configuration['vcpus']),
             'memory': vm_configuration['memory'],
             'role': vm_role_id,
-            'status': proxmox_to_netbox_vm_status_mappings[vm_configuration['running']],
-            #'tags': [str(tag_id)]
+            'status': proxmox_to_netbox_vm_status_mappings[vm_configuration['running']]
         }
 
         if tag_id > 0:
@@ -108,37 +106,19 @@ def netbox_create_vm(nb_url = None, nb_api_token = None, proxmox_cluster_name = 
             if 'is_lxc' in vm_configuration:
                 print("YES LXC", vm_name)
                 create_vm_config['custom_fields']['proxmox_is_lxc_container'] = True
+                create_vm_config['custom_fields']['proxmox_vm_templates'] = ''
             else:
                 print("NO LXC", vm_name)
                 create_vm_config['custom_fields']['proxmox_is_lxc_container'] = False
 
-        #print("NB VM CONFIG", create_vm_config)
-        """
-        NB VM CONFIG {'name': 'u2004-client1', 'cluster': 1, 'vcpus': '1', 'memory': '512', 'status': 'active',
-        'tags': ['2'],
-        'custom_fields': {'proxmox_node': 'proxmox-ve', 'proxmox_public_ssh_key': 'ssh-rsa AAAAB3N...0QiC6e51 identity-proxmox-vm', 'proxmox_vm_storage': 'local-lvm', 'proxmox_vmid': '6382'}}        
-        """
         nb_created_vm = NetboxVirtualMachines(nb_url, nb_api_token, create_vm_config)
         nb_created_vm_id = dict(nb_created_vm.obj)['id']
-        #print("CREATED NB VM", nbc_vm, nb_created_vm_id, vm_configuration)
-        """
-        CREATED NB VM <helpers.netbox_objects.NetboxVirtualMachines object at 0x105a3b5d0> 274
-        {'vcpus': 1, 'memory': '512', 'running': True, 'node': 'proxmox-ve', 'vmid': '6382',
-        'public_ssh_key': 'ssh-rsa AAAAB3N...PY0QiC6e51 identity-proxmox-vm',
-        'bootdisk': 'scsi0', 'storage': 'local-lvm',
-        'disks': [{'scsi0': '20480'}],
-        'network_interfaces': {'eth0': {'mac-address': 'bc:24:11:3e:76:51',
-                                       'ip-addresses': [{'type': 'ipv4', 'ip-address': '192.168.80.11/24'}, 
-                                                        {'type': 'ipv6', 'ip-address': 'fe80::be24:11ff:fe3e:7651/64'}]}}}
-        """
 
         if 'network_interfaces' in vm_configuration:
             for network_interface in vm_configuration['network_interfaces']:
-                #print(f"******** CREATE NETWORK INTERFACE INFO {vm_name}: {nb_created_vm_id} {network_interface}")
                 network_interface_id = __netbox_create_vm_network_interface(nb_url, nb_api_token, nb_created_vm_id, network_interface, vm_configuration['network_interfaces'][network_interface]['mac-address'])
 
                 for ip_address_entry in vm_configuration['network_interfaces'][network_interface]['ip-addresses']:
-                    #print(f"IP ADDRESS ENTRY: {ip_address_entry} ---> {ip_address_entry['ip-address']}")
                     ip_address_id = __netbox_vm_network_interface_assign_ip_address(nb_url, nb_api_token, network_interface_id, ip_address_entry['ip-address'])
 
                     if network_interface == 'eth0' or network_interface == 'net0':
@@ -243,11 +223,6 @@ def main():
     global nb_obj
 
     args = get_arguments()
-
-    # args.virt_type (vms, lxc)
-    # args.config
-    # print("ARGS", args)
-
     app_config_file = args.config
 
     with open(app_config_file) as yaml_cfg:
@@ -258,17 +233,11 @@ def main():
         except IOError as ioe:
             raise ValueError(ioe)
 
-    #print("APP CONFIG", app_config)
-    #print("APP CONFIG NETBOX", app_config['netbox_api_config'])
-
     nb_url = f"{app_config['netbox_api_config']['api_proto']}://{app_config['netbox_api_config']['api_host']}:{str(app_config['netbox_api_config']['api_port'])}/"
-    #print("NB URL", nb_url)
     nb_obj = Netbox(nb_url, app_config['netbox_api_config']['api_token'], None)
-    #print("NB", nb_obj)
 
     # Collect all NetBox VMs, and for Proxmox VMs: VMIDs
     all_nb_vms = netbox_get_vms(nb_obj)
-    #print(all_nb_vms)
 
     all_nb_vms_ids = {}
 
@@ -281,10 +250,8 @@ def main():
         device_role_id = dict(NetBoxDeviceRoles(nb_url, app_config['netbox_api_config']['api_token'], {'name': app_config['netbox']['vm_role'], 'slug': __netbox_make_slug(app_config['netbox']['vm_role']), 'vm_role': True, 'color': 'ffbf00'}).obj)['id']
 
         proxmox_vm_configurations = pm.proxmox_get_vms_configurations()
-        #print("HEY PM VMS", proxmox_vm_configurations)
 
         for proxmox_vm_configuration in proxmox_vm_configurations:
-            #print("PXMXVMCFG", proxmox_vm_configuration, proxmox_vm_configurations[proxmox_vm_configuration])
             if not proxmox_vm_configuration in all_nb_vms and not pm.proxmox_vms[proxmox_vm_configuration]['vmid'] in all_nb_vms_ids:
                 nbt_vm_discovered_id = dict(NetBoxTags(nb_url, app_config['netbox_api_config']['api_token'], {'name': 'proxmox-vm-discovered', 'slug': __netbox_make_slug('proxmox-vm-discovered'), 'color': 'aa1409'}).obj)['id']
             else:
@@ -297,7 +264,6 @@ def main():
         proxmox_lxc_configurations = pm.proxmox_get_lxc_configurations()
 
         for proxmox_lxc_configuration in proxmox_lxc_configurations:
-            #print("PXMXVMCFG", proxmox_vm_configuration, proxmox_vm_configurations[proxmox_vm_configuration])
             if not proxmox_lxc_configuration in all_nb_vms and not pm.proxmox_lxc[proxmox_lxc_configuration]['vmid'] in all_nb_vms_ids:
                 nbt_lxc_discovered_id = dict(NetBoxTags(nb_url, app_config['netbox_api_config']['api_token'], {'name': 'proxmox-lxc-discovered', 'slug': __netbox_make_slug('proxmox-lxc-discovered'), 'color': 'f44336'}).obj)['id']
             else:

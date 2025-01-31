@@ -227,7 +227,7 @@ class NetBoxProxmoxAPIHelper:
     def proxmox_get_lxc_configurations(self):
         proxmox_lxc_configurations = {}
 
-        for proxmox_lxc in self.proxmox_lxc:
+        for proxmox_lxc in self.proxmox_get_lxc():
             if not proxmox_lxc in proxmox_lxc_configurations:
                 proxmox_lxc_configurations[proxmox_lxc] = {}
 
