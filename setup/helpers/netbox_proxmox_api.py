@@ -217,7 +217,7 @@ class NetBoxProxmoxAPIHelper:
                     if ls['format'] == 'tzst' and ls['content'] == 'vztmpl':
                         lxc_image_path = ls['volid']
                         lxc_image_name = lxc_image_path.split('/')[1]
-                        self.proxmox_lxc_templates[lxc_image_name] = lxc_image_path
+                        self.proxmox_lxc_templates[lxc_image_path] = lxc_image_name
 
 
     def proxmox_get_lxc(self):

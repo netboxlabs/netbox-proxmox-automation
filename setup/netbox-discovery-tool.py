@@ -103,13 +103,12 @@ def netbox_create_vm(nb_url = None, nb_api_token = None, proxmox_cluster_name = 
             if 'vmid' in vm_configuration:
                 create_vm_config['custom_fields']['proxmox_vmid'] = vm_configuration['vmid']
 
+            create_vm_config['custom_fields']['proxmox_vm_type'] = 'vm'
             if 'is_lxc' in vm_configuration:
-                print("YES LXC", vm_name)
-                create_vm_config['custom_fields']['proxmox_is_lxc_container'] = True
-                create_vm_config['custom_fields']['proxmox_vm_templates'] = ''
-            else:
-                print("NO LXC", vm_name)
-                create_vm_config['custom_fields']['proxmox_is_lxc_container'] = False
+                create_vm_config['custom_fields']['proxmox_vm_type'] = 'lxc'
+
+            # Don't take the default template (jammy, currently) for dicovered VM and LXC
+            create_vm_config['custom_fields']['proxmox_vm_templates'] = ''
 
         nb_created_vm = NetboxVirtualMachines(nb_url, nb_api_token, create_vm_config)
         nb_created_vm_id = dict(nb_created_vm.obj)['id']
