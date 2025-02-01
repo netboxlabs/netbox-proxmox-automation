@@ -102,10 +102,21 @@ def create_custom_field_choice_sets_proxmox_vm_type(proxmox_api_obj):
 
 
 def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label=None, choice_set_id=0, default=None):
+    weight = 100
+
     if name in ['proxmox_lxc_templates']:
         group_name = 'Proxmox LXC'
-    elif name in ['proxmox_node', 'proxmox_vmid', 'proxmox_vm_type']:
+    elif name in ['proxmox_node', 'proxmox_vmid', 'proxmox_vm_storage', 'proxmox_vm_type', 'proxmox_public_ssh_key']:
         group_name = 'Proxmox (common)'
+
+        if name == 'proxmox_vm_type':
+            weight = 200
+        elif name == 'proxmox_vmid':
+            weight = 300
+        elif name == 'proxmox_vm_storage':
+            weight = 400
+        elif name == 'proxmox_public_ssh_key':
+            weight = 500
     else:
         group_name = 'Proxmox VM'
 
@@ -127,7 +138,7 @@ def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label
 
     if input_type['value'] == 'select':
         nbcf = NetboxCustomFields(netbox_url, netbox_api_token,
-                                {'weight': 100, 
+                                {'weight': weight, 
                                  #'filter_logic': {'value': 'loose', 'label': 'Loose'},
                                  'filter_logic': 'disabled',
                                  'search_weight': 1000,
@@ -140,7 +151,7 @@ def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label
                                 'default': default})
     elif input_type['value'] == 'text':
         nbcf = NetboxCustomFields(netbox_url, netbox_api_token,
-                                {'weight': 100,
+                                {'weight': weight,
                                  'filter_logic': 'disabled',
                                  'search_weight': 1000,
                                 'object_types': object_types,
@@ -150,7 +161,7 @@ def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label
                                 'label': label})
     elif input_type['value'] == 'longtext':
         nbcf = NetboxCustomFields(netbox_url, netbox_api_token,
-                                {'weight': 100,
+                                {'weight': weight,
                                  'filter_logic': 'disabled',
                                  'search_weight': 1000,
                                 'object_types': object_types,
@@ -160,7 +171,7 @@ def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label
                                 'label': label})
     elif input_type['value'] == 'boolean':
         nbcf = NetboxCustomFields(netbox_url, netbox_api_token,
-                                {'weight': 100,
+                                {'weight': weight,
                                  'filter_logic': 'disabled',
                                  'search_weight': 1000,
                                 'object_types': object_types,
