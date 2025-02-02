@@ -103,6 +103,7 @@ def create_custom_field_choice_sets_proxmox_vm_type(proxmox_api_obj):
 
 def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label=None, choice_set_id=0, default=None):
     weight = 100
+    description = ''
 
     if name in ['proxmox_lxc_templates']:
         group_name = 'Proxmox LXC'
@@ -129,6 +130,7 @@ def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label
     elif name in ['proxmox_public_ssh_key']:
         object_types = ['virtualization.virtualmachine']
         input_type = {'value': 'longtext', 'label': 'Text (long)'}
+        description = 'For LXC (containers), you MUST add a SSH public key BEFORE you create the VM in NetBox'
     elif name in ['proxmox_vmid']:
         object_types = ['virtualization.virtualmachine']
         input_type = {'value': 'text', 'label': 'Text'}
@@ -168,7 +170,8 @@ def create_custom_field(netbox_url=None, netbox_api_token=None, name=None, label
                                 'type': input_type,
                                 'group_name': group_name,
                                 'name': name,
-                                'label': label})
+                                'label': label,
+                                'description': description})
     elif input_type['value'] == 'boolean':
         nbcf = NetboxCustomFields(netbox_url, netbox_api_token,
                                 {'weight': weight,
