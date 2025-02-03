@@ -18,7 +18,7 @@ lockfile==0.12.2
 MarkupSafe==3.0.2
 packaging==24.1
 pexpect==4.9.0
-proxmoxer==2.1.0
+proxmoxer==2.2.0
 ptyprocess==0.7.0
 pynetbox==7.4.1
 python-daemon==3.1.0
