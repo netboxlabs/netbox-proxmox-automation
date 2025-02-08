@@ -31,7 +31,7 @@
       api_host: "{{ proxmox_env_info.api_host }}"
       api_port: "{{ proxmox_env_info.api_port }}"
       #clone: "{{ vm_config['template'] | int }}"
-      clone: "{{ default(9000) | int }}"
+      clone: "{{ 9000 | int }}"
       name: "{{ vm_config['name'] }}"
       agent: 'enabled=1'
       storage: "{{ vm_config['storage'] }}"
