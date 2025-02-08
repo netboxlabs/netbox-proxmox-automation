@@ -10,6 +10,18 @@
   - name: Include Proxmox common discovery
     include_tasks: "ansible-tasks/collect-proxmox-vms.yml"
 
+  - name: SHOW US vmconfig
+    debug:
+      msg: "vm_config {{ vm_config }}"
+
+  - name: Show us NetBox config
+    debug:
+      msg: "NetBox config {{ netbox_env_info }}"
+
+  - name: Show us Proxmox config
+    debug:
+      msg: "Proxmox config {{ proxmox_env_info }}"
+
   - name: Create VM from a full clone of template
     community.general.proxmox_kvm:
       node: "{{ proxmox_env_info.node }}"
