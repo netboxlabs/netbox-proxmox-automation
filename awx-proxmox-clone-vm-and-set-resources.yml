@@ -29,7 +29,8 @@
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
       api_host: "{{ proxmox_env_info.api_host }}"
-      clone: "{{ vm_config['template'] }}"
+      #clone: "{{ vm_config['template'] }}"
+      clone: 9000
       name: "{{ vm_config['name'] }}"
       agent: 'enabled=1'
       storage: "{{ vm_config['storage'] }}"
