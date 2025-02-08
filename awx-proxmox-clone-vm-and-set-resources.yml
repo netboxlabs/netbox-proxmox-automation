@@ -22,6 +22,10 @@
     debug:
       msg: "Proxmox config {{ proxmox_env_info }}"
 
+  - name: Show us id of template (integer)
+    debug:
+      msg: "ID of template (integer) {{ vm_config['template'] | int }}"
+
   - name: Create VM from a full clone of template
     community.general.proxmox_kvm:
       node: "{{ proxmox_env_info.node }}"
