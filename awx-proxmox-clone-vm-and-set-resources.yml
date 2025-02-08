@@ -29,6 +29,7 @@
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
       api_host: "{{ proxmox_env_info.api_host }}"
+      api_port: "{{ proxmox_env_info.api_port }}"
       #clone: "{{ vm_config['template'] }} | int"
       clone: 9000
       name: "{{ vm_config['name'] }}"
