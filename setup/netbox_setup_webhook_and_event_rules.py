@@ -101,7 +101,11 @@ def main():
                             "value": None
                         },
                         {
-                            "attr": "custom_fields.proxmox_vm_template",
+                            "attr": "custom_fields.proxmox_vm_type",
+                            "value": "vm"
+                        },
+                        {
+                            "attr": "custom_fields.proxmox_vm_templates",
                             "negate": True,
                             "value": None
                         }
@@ -119,7 +123,10 @@ def main():
                 'event_types': [
                     "object_deleted"
                 ],
-                'conditions': ''
+                'conditions': {
+                    "attr": "custom_fields.proxmox_vm_type",
+                    "value": "vm"
+                }
             },
             'proxmox-set-ipconfig0': {
                 'enabled': True,
@@ -144,6 +151,10 @@ def main():
                         {
                             "attr": "status.value",
                             "value": "staged"
+                        },
+                        {
+                            "attr": "custom_fields.proxmox_vm_type",
+                            "value": "vm"
                         }
                     ]
                 }
@@ -203,8 +214,16 @@ def main():
                     "object_updated"
                 ],
                 'conditions': {
-                    "attr": "status.value",
-                    "value": "offline"
+                    "and": [
+                        {
+                            "attr": "status.value",
+                            "value": "offline"
+                        },
+                        {
+                            "attr": "custom_fields.proxmox_vm_type",
+                            "value": "vm"
+                        }
+                    ]
                 }
             },
             'proxmox-start-vm': {
@@ -219,8 +238,16 @@ def main():
                     "object_updated"
                 ],
                 'conditions': {
-                    "attr": "status.value",
-                    "value": "active"
+                    "and": [
+                        {
+                            "attr": "status.value",
+                            "value": "active"
+                        },
+                        {
+                            "attr": "custom_fields.proxmox_vm_type",
+                            "value": "vm"
+                        }
+                    ]
                 }
             },
 #            'update-dns': {
@@ -249,7 +276,7 @@ def main():
             raise ValueError(f"Unable to create webhook for {netbox_webhook_payload['name']}")
         
         for event_rule in netbox_proxmox_event_rules:
-            netbox_event_rule_payload['name'] = f"NEW-{event_rule}-{re.sub(r'_', '-', app_config['automation_type'])}"
+            netbox_event_rule_payload['name'] = f"{app_config['automation_type']}-{event_rule}-{re.sub(r'_', '-', app_config['automation_type'])}"
             netbox_event_rule_payload['enabled'] = netbox_proxmox_event_rules[event_rule]['enabled']
             netbox_event_rule_payload['object_types'] = netbox_proxmox_event_rules[event_rule]['object_types']
             netbox_event_rule_payload['event_types'] = netbox_proxmox_event_rules[event_rule]['event_types']
@@ -262,14 +289,15 @@ def main():
                 raise ValueError(f"Unable to create event rule {netbox_event_rule_payload['name']}")
     elif app_config['automation_type'] == 'ansible_automation':
         ansible_automation_webhook_body_templates = {
-            'proxmox-clone-vm-and-set-resources': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\",\r\n      \"vcpus\": \"{{ data['vcpus'] }}\",\r\n      \"memory\": \"{{ data['memory'] }}\",\r\n      \"template\": \"{{ data['custom_fields']['proxmox_vm_template'] }}\",\r\n      \"storage\": \"{{ data['custom_fields']['proxmox_vm_storage'] }}\"\r\n    }\r\n  }\r\n}",
-            'proxmox-remove-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\"\r\n    }\r\n  }\r\n}",
+            # add this: "vmid": "{{ data['custom_fields']['proxmox_vmid'] }}",
+            'proxmox-clone-vm-and-set-resources': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\",\r\n      \"vcpus\": \"{{ data['vcpus'] }}\",\r\n      \"memory\": \"{{ data['memory'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\",\r\n      \"template\": \"{{ data['custom_fields']['proxmox_vm_templates'] }}\",\r\n      \"storage\": \"{{ data['custom_fields']['proxmox_vm_storage'] }}\"\r\n    }\r\n  }\r\n}",
+            'proxmox-remove-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\"\r\n    }\r\n  }\r\n}",
             'proxmox-set-ipconfig0': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\",\r\n      \"ip\": \"{{ data['primary_ip4']['address'] }}\",\r\n      \"ssh_key\": \"{{ data['custom_fields']['proxmox_public_ssh_key'] }}\"\r\n    }\r\n  }\r\n}",
             'proxmox-resize-vm-disk': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['virtual_machine']['name'] }}\",\r\n      \"resize_disk\": \"{{ data['name'] }}\",\r\n      \"resize_disk_size\": \"{{ data['size'] }}\",\r\n      \"storage_volume\": \"{{ data['custom_fields']['proxmox_storage_volume'] }}\"\r\n    }\r\n  }\r\n}",
             'proxmox-add-vm-disk': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['virtual_machine']['name'] }}\",\r\n      \"add_disk\": \"{{ data['name'] }}\",\r\n      \"add_disk_size\": \"{{ data['size'] }}\",\r\n      \"storage_volume\": \"{{ data['custom_fields']['proxmox_storage_volume'] }}\"\r\n    }\r\n  }\r\n}",
             'proxmox-remove-vm-disk': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['virtual_machine']['name'] }}\",\r\n      \"remove_disk\": \"{{ data['name'] }}\"\r\n    }\r\n  }\r\n}",
-            'proxmox-stop-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\"\r\n    }\r\n  }\r\n}",
-            'proxmox-start-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\"\r\n    }\r\n  }\r\n}",
+            'proxmox-stop-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\"\r\n    }\r\n  }\r\n}",
+            'proxmox-start-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\"\r\n    }\r\n  }\r\n}",
             #'update-dns': "{\r\n  \"extra_vars\": {\r\n    \"dns_stuff\": {\r\n      \"dns_zone_id\": \"{{ data['zone']['id'] }}\",\r\n      \"dns_zone_name\": \"{{ data['zone']['name'] }}\",\r\n      \"dns_integrations\": \"{{ data['custom_fields']['dns_integrations'] }}\"\r\n    }\r\n  }\r\n}"
         }
         
