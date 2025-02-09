@@ -17,7 +17,8 @@
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
       api_host: "{{ proxmox_env_info.api_host }}"
-      name: "{{ vm_config['name'] }}"
+      #name: "{{ vm_config['name'] }}"
+      vmid: "{{ vm_config['vmid'] }}"
       state: started
     when: vm_config['name'] in collected_proxmox_vms
     register: start_vm_job
@@ -40,7 +41,8 @@
       api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
       node: "{{ proxmox_env_info.node }}"
-      name: "{{ vm_config['name'] }}"
+      #name: "{{ vm_config['name'] }}"
+      vmid: "{{ vm_config['vmid'] }}"
       config: "current"
     register: proxmox_started_vm
 
