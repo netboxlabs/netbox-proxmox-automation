@@ -5,11 +5,11 @@
       api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
       node: "{{ proxmox_env_info.node }}"
-    register: proxmox_discovered_vms
+    register: proxmox_discovered_vm
 
   - name: Discover / Collect Proxmox VMs
     set_fact:
-      collected_proxmox_vms: "{{ collected_proxmox_vms | combine({item.name: True}) }}"
+      collected_proxmox_vms: "{{ collected_proxmox_vm | combine({item.name: item.vmid}) }}"
     loop: "{{ proxmox_discovered_vms.proxmox_vms }}"
-    when: not item.template
+    when: not item.template and item.type == 'qemu'
 
