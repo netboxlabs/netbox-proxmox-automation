@@ -105,7 +105,7 @@
       data:
         virtual_machine: "{{ vm_config['hostname'] }}"
         name: rootfs
-        size: 5
+        size: {{ 5 * 1024 | int }}
         custom_fields:
           proxmox_disk_storage_volume: "{{ vm_config['storage'] }}"
       state: present
