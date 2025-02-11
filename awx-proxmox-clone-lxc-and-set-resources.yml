@@ -61,8 +61,9 @@
     delay: 5
     when: not vm_config['name'] in collected_proxmox_vms
 
-  - debug:
-    msg: "HEY LXC JOB: {{ create_lxc_job }}"
+  - name: Show us LXC settings
+    debug:
+      msg: "HEY LXC JOB: {{ create_lxc_job }}"
 
   - name: "Discover information for newly-created Proxmox LXC"
     community.general.proxmox_vm_info:
