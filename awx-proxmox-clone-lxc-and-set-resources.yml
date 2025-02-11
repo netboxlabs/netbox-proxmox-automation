@@ -36,8 +36,7 @@
       api_port: "{{ proxmox_env_info.api_port }}"
       ostemplate: "{{ vm_config ['template'] }}"
       #vmid: "{{ vm_config['template'] }}"
-      name: "{{ vm_config['name'] }}"
-      hostname: "{{ vm_config['name'] }}"
+      hostname: "{{ vm_config['hostname'] }}"
       cores: "{{ vm_config['cpus'] | int | default(1) }}"
       cpus: "{{ vm_config['cpus'] | int | default(1) }}"
       memory: "{{ vm_config['memory'] | default(512) }}"
@@ -48,7 +47,7 @@
       unprivileged: true
       state: present
       timeout: 120
-    when: not vm_config['name'] in collected_proxmox_vms
+    when: not vm_config['hostname'] in collected_proxmox_vms
     register: create_lxc_job
     async: 180
     poll: 0
@@ -60,7 +59,7 @@
     until: _jobs_alias_vc_0.finished
     retries: 60
     delay: 5
-    when: not vm_config['name'] in collected_proxmox_vms
+    when: not vm_config['hostname'] in collected_proxmox_vms
 
   - name: Show us LXC settings
     debug:
@@ -73,7 +72,7 @@
       api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
       node: "{{ proxmox_env_info.node }}"
-      name: "{{ vm_config['name'] }}"
+      name: "{{ vm_config['hostname'] }}"
     register: new_proxmox_lxc
 
   - name: "Update proxmox_vmid (for LXC) in NetBox"
@@ -81,7 +80,7 @@
       netbox_url: "{{ netbox_env_info.api_proto }}://{{ netbox_env_info.api_host }}:{{ netbox_env_info.api_port}}"
       netbox_token: "{{ netbox_env_info.api_token }}"
       data:
-        name: "{{ vm_config['name'] }}"
+        name: "{{ vm_config['hostname'] }}"
         custom_fields:
           proxmox_vmid: "{{ new_proxmox_lxc.proxmox_vms[0].vmid }}"
       state: present
