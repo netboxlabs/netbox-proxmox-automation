@@ -8,7 +8,7 @@
 
   tasks:
   - name: Include Proxmox common discovery
-    include_tasks: "ansible-tasks/collect-proxmox-vm.yml"
+    include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
   - name: Stop specified LXC
     community.general.proxmox:
