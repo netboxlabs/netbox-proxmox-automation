@@ -194,6 +194,7 @@ if __name__ == "__main__":
     default_netbox_cluster_role = default_netbox_proxmox_name
     default_netbox_cluster_name = 'proxmox-ve'
     default_netbox_vm_role = 'Proxmox VM'
+    default_netbox_lxc_role = 'Proxmox LXC'
 
     args = get_arguments()
 
@@ -217,6 +218,7 @@ if __name__ == "__main__":
     proxmox_cluster_name = default_netbox_cluster_name
     vm_cluster_role = default_netbox_cluster_role
     vm_role = default_netbox_vm_role
+    lxc_role = default_netbox_lxc_role
 
     if 'proxmox' in app_config:
         if 'cluster_name' in app_config['proxmox']:
@@ -228,7 +230,10 @@ if __name__ == "__main__":
 
         if 'vm_role' in app_config['netbox']:
             vm_role = app_config['netbox']['vm_role']
-    
+
+        if 'lxc_role' in app_config['netbox']:
+            lxc_role = app_config['netbox']['lxc_role']
+
     # vm clusters and types
     nbct = NetboxClusterTypes(netbox_url, netbox_api_token, {'name': vm_cluster_role, 'slug': __netbox_make_slug(vm_cluster_role)})
     netbox_cluster_type_id = dict(nbct.obj)['id']
@@ -273,4 +278,7 @@ if __name__ == "__main__":
     # proxmox_lxc_templates
     if netbox_field_choice_sets_lxc_templates_id > 0:
         #custom_field_proxmox_disk_storage_volume_id = create_custom_field(netbox_url, netbox_api_token, 'proxmox_lxc_templates', 'Proxmox LXC Templates', netbox_field_choice_sets_lxc_templates_id, str(min(p.proxmox_lxc_templates.keys())))
-        custom_field_proxmox_disk_storage_volume_id = create_custom_field(netbox_url, netbox_api_token, 'proxmox_lxc_templates', 'Proxmox LXC Templates', netbox_field_choice_sets_lxc_templates_id, "")
+        if len(p.proxmox_lxc_templates.keys()):
+            custom_field_proxmox_disk_storage_volume_id = create_custom_field(netbox_url, netbox_api_token, 'proxmox_lxc_templates', 'Proxmox LXC Templates', netbox_field_choice_sets_lxc_templates_id, str(min(p.proxmox_lxc_templates.keys())))
+        else:
+            custom_field_proxmox_disk_storage_volume_id = create_custom_field(netbox_url, netbox_api_token, 'proxmox_lxc_templates', 'Proxmox LXC Templates', netbox_field_choice_sets_lxc_templates_id, "")
