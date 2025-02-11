@@ -24,7 +24,7 @@
   
   - name: Show start key
     debug:
-      msg: "start key {{ vm_config['vmid'] }} ||| {{ collected_proxmox_lxc[vm_config['hostname']] }} ||| {{ vm_config['vmid'] | str == collected_proxmox_lxc[vm_config['hostname']] | str }}"
+      msg: "start key {{ vm_config['vmid'] }} ||| {{ collected_proxmox_lxc[vm_config['hostname']] }} ||| {{ vm_config['vmid'] | int == collected_proxmox_lxc[vm_config['hostname']] | int }}"
 
   - name: Start specified LXC
     community.general.proxmox:
