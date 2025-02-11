@@ -119,6 +119,7 @@ class AnsibleAutomationAWXManager(AnsibleAutomationAWX):
                 'inputs': {
                     'fields': [
                         {'id': "proxmox_api_host", 'type': "string", 'label': "Proxmox API Host"},
+                        {'id': "proxmox_api_port", 'type': "string", 'label': "Proxmox API Port"},
                         {'id': "proxmox_api_user", 'type': "string", 'label': "Proxmox API User"},
                         {'id': "proxmox_api_user_token", 'type': "string", 'label': "Proxmox API Token ID"},
                         {'id': "proxmox_node", 'type': "string", 'label': "Proxmox Node"},
@@ -128,15 +129,17 @@ class AnsibleAutomationAWXManager(AnsibleAutomationAWX):
                         {'id': "netbox_api_port", 'type': "string", 'label': "NetBox API port"},
                         {'id': "netbox_api_token", 'type': "string", 'label': "NetBox API token", 'secret': True}
                     ],
-                    'required': ['proxmox_api_host',
-                                'proxmox_api_user',
-                                'proxmox_api_user_token',
-                                'proxmox_node',
-                                'proxmox_api_token_secret',
-                                'netbox_api_host',
-                                'netbox_api_port',
-                                'netbox_api_proto',
-                                'netbox_api_token'
+                    'required': [
+                        'proxmox_api_host',
+                        'proxmox_api_port',
+                        'proxmox_api_user',
+                        'proxmox_api_user_token',
+                        'proxmox_node',
+                        'proxmox_api_token_secret',
+                        'netbox_api_host',
+                        'netbox_api_port',
+                        'netbox_api_proto',
+                        'netbox_api_token'
                     ]
                 },
                 'injectors': {
@@ -150,6 +153,7 @@ class AnsibleAutomationAWXManager(AnsibleAutomationAWX):
                         "proxmox_env_info": {
                             "node": '{{ proxmox_node }}',
                             "api_host": '{{ proxmox_api_host }}',
+                            "api_port": '{{ proxmox_api_port }}',
                             "api_user": '{{ proxmox_api_user }}',
                             "api_token_id": '{{ proxmox_api_user_token }}',
                             "api_token_secret": '{{ proxmox_api_token_secret }}'
@@ -181,6 +185,7 @@ class AnsibleAutomationAWXManager(AnsibleAutomationAWX):
                     'netbox_api_token': self.netbox_cfg_data['api_token'],
                     'proxmox_node': self.proxmox_cfg_data['node'],
                     'proxmox_api_host': self.proxmox_cfg_data['api_host'],
+                    'proxmox_api_port': str(self.proxmox_cfg_data['api_port']),
                     'proxmox_api_user': self.proxmox_cfg_data['api_user'],
                     'proxmox_api_user_token': self.proxmox_cfg_data['api_token_id'],
                     'proxmox_api_token_secret': self.proxmox_cfg_data['api_token_secret']
