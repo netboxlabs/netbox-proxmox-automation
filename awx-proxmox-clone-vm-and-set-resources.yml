@@ -5,10 +5,14 @@
 
   vars:
     collected_proxmox_vm: {}
+    collected_proxmox_lxc: {}
 
   tasks:
-  - name: Include Proxmox common discovery
+  - name: Include Proxmox VM discovery
     include_tasks: "ansible-tasks/collect-proxmox-vm.yml"
+
+  - name: Include Proxmox LXC discovery
+    include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
   - name: SHOW US vmconfig
     debug:
@@ -42,7 +46,7 @@
       #onboot: "{{ vm_config_create[item].auto_start }}"
       state: present
       timeout: 120
-    when: not vm_config['name'] in collected_proxmox_vm
+    when: not vm_config['name'] in collected_proxmox_vm and not vm_config['name'] in collected_proxmox_lxc
     register: clone_vm_job
     async: 180
     poll: 0

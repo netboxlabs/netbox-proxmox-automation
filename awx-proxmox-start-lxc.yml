@@ -4,10 +4,14 @@
   gather_facts: False
 
   vars:
+    collected_proxmox_vm: {}
     collected_proxmox_lxc: {}
 
   tasks:
-  - name: Include Proxmox common discovery
+  - name: Include Proxmox VM discovery
+    include_tasks: "ansible-tasks/collect-proxmox-vm.yml"
+
+  - name: Include Proxmox LXC discovery
     include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
   - name: Start specified LXC
@@ -20,7 +24,7 @@
       #name: "{{ vm_config['name'] }}"
       vmid: "{{ vm_config['vmid'] }}"
       state: started
-    when: vm_config['hostname'] in collected_proxmox_lxc
+    when: vm_config['hostname'] in collected_proxmox_lxc and collected_proxmox_lxc[vm_config['hostname']] == vm_config['vmid']
     register: start_vm_job
     async: 180
     poll: 0
