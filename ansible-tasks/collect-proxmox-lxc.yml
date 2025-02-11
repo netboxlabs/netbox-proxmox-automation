@@ -9,7 +9,7 @@
 
   - name: Discover / Collect Proxmox LXC
     set_fact:
-      collected_proxmox_lxc: "{{ collected_proxmox_vms | combine({item.name: item.vmid}) }}"
+      collected_proxmox_lxc: "{{ collected_proxmox_lxc | combine({item.name: item.vmid}) }}"
     loop: "{{ proxmox_discovered_lxc.proxmox_vms }}"
     when: not item.template and item.type == 'lxc'
 

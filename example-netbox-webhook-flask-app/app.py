@@ -8,7 +8,7 @@ from datetime import datetime
 
 from helpers.netbox_proxmox import NetBoxProxmoxHelper
 
-from flask import Flask, request, jsonify
+from flask import Flask, Response, request, jsonify
 from flask_restx import Api, Resource, fields
 
 VERSION = '1.1.0'
@@ -96,43 +96,85 @@ class WebhookListener(Resource):
             return {"result":"invalid input"}, 400
 
         if DEBUG:
-            print("INCOMING DATA FOR WEBHOOK", webhook_json_data)
+            print(f"INCOMING DATA FOR WEBHOOK {webhook_json_data['event']} --> {webhook_json_data['model']}\n", webhook_json_data)
 
-        if 'proxmox_node' in webhook_json_data['data']['custom_fields']:
-            proxmox_node = webhook_json_data['data']['custom_fields']['proxmox_node']
-        else:
-            proxmox_node = app_config['proxmox_api_config']['node']
+        """
+        LXC CREATE:
+        INCOMING DATA FOR WEBHOOK created --> virtualmachine
+        {'event': 'created', 'timestamp': '2025-02-01T15:57:37.884945+00:00', 'model': 'virtualmachine',
+        'username': 'admin', 'request_id': 'da4892d1-e8ea-4b7b-9245-40e5e92f0fc6',
+        'data': {'id': 433, 'url': '/api/virtualization/virtual-machines/433/', 'display_url': '/virtualization/virtual-machines/433/',
+        'display': 'foo2', 'name': 'foo2', 'status': {'value': 'active', 'label': 'Active'},
+        'site': None,
+        'cluster': {'id': 1, 'url': '/api/virtualization/clusters/1/', 'display': 'proxmox-ve', 'name': 'proxmox-ve', 'description': ''},
+        'device': None, 'serial': '', 'role': None, 'tenant': None, 'platform': None, 'primary_ip': None, 'primary_ip4': None, 'primary_ip6': None,
+        'vcpus': 1.0, 'memory': 2048, 'disk': 20000, 'description': '', 'comments': '', 'config_template': None, 'local_context_data': None, 'tags': [],
+        'custom_fields': {'proxmox_node': 'proxmox-ve', 'proxmox_vm_type': 'lxc', 'proxmox_vmid': None, 
+        'proxmox_lxc_templates': 'local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst',
+        'proxmox_public_ssh_key': None, 'proxmox_vm_storage': 'local-lvm', 'proxmox_vm_templates': '9000'},
+        'created': '2025-02-01T15:57:37.836976Z', 'last_updated': '2025-02-01T15:57:37.837007Z', 'interface_count': 0, 'virtual_disk_count': 0},
+        'snapshots': {'prechange': None, 'postchange': {'created': '2025-02-01T15:57:37.836Z', 'last_updated': '2025-02-01T15:57:37.837Z', 'description': '', 'comments': '', 'local_context_data': None, 'config_template': None, 'site': None, 'cluster': 1, 'device': None, 'tenant': None, 'platform': None, 'name': 'foo2', '_name': 'foo00000002', 'status': 'active', 'role': None, 'primary_ip4': None, 'primary_ip6': None, 'vcpus': '1', 'memory': 2048, 'disk': 20000, 'serial': '', 'interface_count': 0, 'virtual_disk_count': 0, 'custom_fields': {'proxmox_node': 'proxmox-ve', 'proxmox_vm_type': 'lxc', 'proxmox_vmid': None, 'proxmox_lxc_templates': 'local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst', 'proxmox_public_ssh_key': None, 'proxmox_vm_storage': 'local-lvm', 'proxmox_vm_templates': '9000'}, 'tags': []}}}
+ 
+        LXC REMOVE:
+        INCOMING DATA FOR WEBHOOK deleted --> virtualmachine
+        {'event': 'deleted', 'timestamp': '2025-02-01T16:00:29.618552+00:00', 'model': 'virtualmachine', 'username': 'admin', 'request_id': '7d5fca97-2919-4f87-b86b-091d74f10018', 'data': {'id': 433, 'url': '/api/virtualization/virtual-machines/433/', 'display_url': '/virtualization/virtual-machines/433/', 'display': 'foo2', 'name': 'foo2', 'status': {'value': 'active', 'label': 'Active'}, 'site': None, 'cluster': {'id': 1, 'url': '/api/virtualization/clusters/1/', 'display': 'proxmox-ve', 'name': 'proxmox-ve', 'description': ''}, 'device': None, 'serial': '', 'role': None, 'tenant': None, 'platform': None, 'primary_ip': None, 'primary_ip4': None, 'primary_ip6': None, 'vcpus': 1.0, 'memory': 2048, 'disk': 20000, 'description': '', 'comments': '', 'config_template': None, 'local_context_data': None, 'tags': [], 'custom_fields': {'proxmox_node': 'proxmox-ve', 'proxmox_vm_type': 'lxc', 'proxmox_vmid': None, 'proxmox_lxc_templates': 'local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst', 'proxmox_public_ssh_key': None, 'proxmox_vm_storage': 'local-lvm', 'proxmox_vm_templates': '9000'}, 'created': '2025-02-01T15:57:37.836976Z', 'last_updated': '2025-02-01T15:57:37.837007Z', 'interface_count': 0, 'virtual_disk_count': 0}, 'snapshots': {'prechange': {'created': '2025-02-01T15:57:37.836Z', 'description': '', 'comments': '', 'local_context_data': None, 'config_template': None, 'site': None, 'cluster': 1, 'device': None, 'tenant': None, 'platform': None, 'name': 'foo2', '_name': 'foo00000002', 'status': 'active', 'role': None, 'primary_ip4': None, 'primary_ip6': None, 'vcpus': '1.00', 'memory': 2048, 'disk': 20000, 'serial': '', 'interface_count': 0, 'virtual_disk_count': 0, 'custom_fields': {'proxmox_node': 'proxmox-ve', 'proxmox_vmid': None, 'proxmox_vm_type': 'lxc', 'proxmox_vm_storage': 'local-lvm', 'proxmox_vm_templates': '9000', 'proxmox_lxc_templates': 'local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst', 'proxmox_public_ssh_key': None}, 'tags': []}, 'postchange': None}}
+        """
 
+        if not 'proxmox_node' in webhook_json_data['data']['custom_fields']:
+            return jsonify({'missing Proxmox node': 'missing Proxmox node'}), 500
+        
+        proxmox_node = webhook_json_data['data']['custom_fields']['proxmox_node']
 
         tc = NetBoxProxmoxHelper(app_config, proxmox_node)
 
+        if webhook_json_data['model'] == 'virtualmachine':
+            if webhook_json_data['data']['custom_fields']['proxmox_vm_type'] == 'vm':
+                if webhook_json_data['data']['status']['value'] == 'staged':
+                    if webhook_json_data['event'] == 'created':
+                        results = tc.proxmox_clone_vm(webhook_json_data)
+                    elif webhook_json_data['event'] == 'updated':
+                        results = tc.proxmox_update_vm_resources(webhook_json_data)
 
-        if webhook_json_data['event'] == 'created' and webhook_json_data['model'] == 'virtualmachine' and webhook_json_data['data']['status']['value'] == 'staged':
-            tc.proxmox_clone_vm(webhook_json_data)
-        elif webhook_json_data['event'] == 'updated' and webhook_json_data['model'] == 'virtualmachine' and webhook_json_data['data']['status']['value'] == 'staged':
-            tc.proxmox_update_vm_resources(webhook_json_data)
+                        if webhook_json_data['data']['primary_ip'] and webhook_json_data['data']['primary_ip']['address']:
+                            results = tc.proxmox_set_ipconfig0(webhook_json_data)
 
-            if webhook_json_data['data']['primary_ip'] and webhook_json_data['data']['primary_ip']['address']:
-                tc.proxmox_set_ipconfig0(webhook_json_data)
+                        if 'proxmox_public_ssh_key' in webhook_json_data['data']['custom_fields'] and webhook_json_data['data']['custom_fields']['proxmox_public_ssh_key']:
+                            results = tc.proxmox_set_ssh_public_key(webhook_json_data) 
+                elif webhook_json_data['event'] == 'updated' and webhook_json_data['data']['status']['value'] == 'offline':
+                    results = tc.proxmox_stop_vm(webhook_json_data)
+                elif webhook_json_data['event'] == 'updated' and webhook_json_data['data']['status']['value'] == 'active':
+                    results = tc.proxmox_start_vm(webhook_json_data)
+                elif webhook_json_data['event'] == 'deleted':
+                    results = tc.proxmox_delete_vm(webhook_json_data)
 
-            if 'proxmox_public_ssh_key' in webhook_json_data['data']['custom_fields'] and webhook_json_data['data']['custom_fields']['proxmox_public_ssh_key']:
-                tc.proxmox_set_ssh_public_key(webhook_json_data) 
-        elif webhook_json_data['event'] == 'updated' and webhook_json_data['model'] == 'virtualmachine' and webhook_json_data['data']['status']['value'] == 'offline':
-            tc.proxmox_stop_vm(webhook_json_data)
-        elif webhook_json_data['event'] == 'updated' and webhook_json_data['model'] == 'virtualmachine' and webhook_json_data['data']['status']['value'] == 'active':
-            tc.proxmox_start_vm(webhook_json_data)
-        elif webhook_json_data['event'] == 'deleted' and webhook_json_data['model'] == 'virtualmachine':
-            tc.proxmox_delete_vm(webhook_json_data)
+            # disk stuff
+            if webhook_json_data['model'] == 'virtualdisk':
+                if webhook_json_data['event'] == 'created':
+                    results = tc.proxmox_add_disk(webhook_json_data)
+                elif webhook_json_data['event'] == 'updated':
+                    results = tc.proxmox_resize_disk(webhook_json_data)
+                elif webhook_json_data['event'] == 'deleted':
+                    results = tc.proxmox_delete_disk(webhook_json_data)
+            elif webhook_json_data['data']['custom_fields']['proxmox_vm_type'] == 'lxc':
+                print(f"AFFFFF LXC {webhook_json_data['data']}", webhook_json_data['event'])
 
-        # disk stuff
-        if webhook_json_data['event'] == 'created' and webhook_json_data['model'] == 'virtualdisk':
-            tc.proxmox_add_disk(webhook_json_data)
-        elif webhook_json_data['event'] == 'updated' and webhook_json_data['model'] == 'virtualdisk':
-            tc.proxmox_resize_disk(webhook_json_data)
-        elif webhook_json_data['event'] == 'deleted' and webhook_json_data['model'] == 'virtualdisk':
-            tc.proxmox_delete_disk(webhook_json_data)
+                if webhook_json_data['event'] == 'created':
+                    results = tc.proxmox_create_lxc(webhook_json_data)
+                elif webhook_json_data['event'] == 'updated':
+                    results = tc.proxmox_resize_disk(webhook_json_data)
+                elif webhook_json_data['event'] == 'deleted':
+                    results = tc.proxmox_delete_lxc(webhook_json_data)
+            else:
+                results = (500, {f"result": f"Unknown VM type {webhook_json_data['data']['custom_fields']['proxmox_vm_type']}"})
 
-        return {"result":"ok"}, 200
+            response = Response(
+                json.dumps(results[1]),
+                status = results[0],
+                mimetype = 'application/json'
+            )
+
+            #print(f"RESPONSE {response} | {response.status_code} | {response.response} | {response.json} | {response.status} | {response.get_data()}")
+            return response.status_code, {'result': response.json['result']}
 
 
 if __name__ == "__main__":

@@ -138,7 +138,6 @@ def main():
                 ],
                 'event_types': [
                     "object_created",
-                    "object_deleted",
                     "object_updated"
                 ],
                 'conditions': {
