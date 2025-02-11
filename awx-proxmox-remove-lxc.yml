@@ -25,7 +25,7 @@
       vmid: "{{ vm_config['vmid'] }}"
       state: stopped
       force: true
-    when: vm_config['hostname'] in collected_proxmox_lxc and collected_proxmox_lxc[vm_config['hostname']] == vm_config['vmid']
+    when: (vm_config['hostname'] in collected_proxmox_lxc) and (collected_proxmox_lxc[vm_config['hostname']] | int == vm_config['vmid'] | int)
     register: stop_vm_job
     async: 180
     poll: 0
@@ -50,7 +50,7 @@
       #vmid: "{{ nb_remove_vms[item] }}"
       state: absent
       force: true
-    when: vm_config['hostname'] in collected_proxmox_lxc
+    when: (vm_config['hostname'] in collected_proxmox_lxc) and (collected_proxmox_lxc[vm_config['hostname']] | int == vm_config['vmid'] | int)
     register: remove_vms_job
     async: 180
     poll: 0
