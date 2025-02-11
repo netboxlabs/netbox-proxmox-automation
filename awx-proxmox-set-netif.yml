@@ -18,6 +18,7 @@
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
       api_host: "{{ proxmox_env_info.api_host }}"
       hostname: "{{ vm_config['hostname'] }}"
+      vmid: 104
       netif:
         #ipconfig0: "ip={{ item.ip }},gw={{ item.ip.split('.')[:3] | join('.') }}.{{ item.gw if item.gw is defined else gw_last_quad }}"
         net0: "name=eth0,ip={{ vm_config['ip'] }},gw={{ vm_config['ip'].split('.')[:3] | join('.') }}.1,bridge=vmbr0,firewall=1"
