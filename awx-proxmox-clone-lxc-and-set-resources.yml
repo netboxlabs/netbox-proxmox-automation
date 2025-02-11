@@ -69,6 +69,9 @@
     debug:
       msg: "HEY LXC JOB: {{ create_lxc_job }}"
 
+  - name: Include Proxmox LXC discovery
+    include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
+
   - name: "Discover information for newly-created Proxmox LXC"
     community.general.proxmox_vm_info:
       api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
@@ -77,12 +80,13 @@
       api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
       node: "{{ proxmox_env_info.node }}"
       name: "{{ vm_config['hostname'] }}"
+      config: current
     register: new_proxmox_lxc
 
   - name: "Newly-created Proxmox LXC information"
     debug:
       msg: "NCPLI: {{ new_proxmox_lxc}}"
-      
+
   - name: "Update proxmox_vmid (for LXC) in NetBox"
     netbox.netbox.netbox_virtual_machine:
       netbox_url: "{{ netbox_env_info.api_proto }}://{{ netbox_env_info.api_host }}:{{ netbox_env_info.api_port}}"
@@ -94,3 +98,15 @@
       state: present
     when: new_proxmox_lxc is defined and new_proxmox_lxc.proxmox_vms is defined and new_proxmox_lxc.proxmox_vms | length > 0
 
+  - name: "Update Proxmox storage (for LXC) in NetBox"
+    netbox.netbox.netbox_virtual_disk:
+      netbox_url: "{{ netbox_env_info.api_proto }}://{{ netbox_env_info.api_host }}:{{ netbox_env_info.api_port}}"
+      netbox_token: "{{ netbox_env_info.api_token }}"
+      data:
+        virtual_machine: "{{ vm_config['hostname'] }}"
+        name: rootfs
+        size: 5
+        custom_fields:
+          proxmox_disk_storage_volume: "{{ vm_config['storage'] }}"
+      state: present
+    when: new_proxmox_lxc is defined and new_proxmox_lxc.proxmox_vms is defined and new_proxmox_lxc.proxmox_vms | length > 0
