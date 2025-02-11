@@ -14,6 +14,14 @@
   - name: Include Proxmox LXC discovery
     include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
+  - name: Show collected VM
+    debug:
+      msg: "Collected VM: {{ collected_proxmox_lxc }}"
+
+  - name: Show collected LXC
+    debug:
+      msg: "Collected LXC: {{ collected_proxmox_lxc }}"
+
   - name: Start specified LXC
     community.general.proxmox:
       #node: "{{ proxmox_env_info.node }}"
@@ -24,7 +32,7 @@
       #name: "{{ vm_config['name'] }}"
       vmid: "{{ vm_config['vmid'] }}"
       state: started
-    when: vm_config['hostname'] in collected_proxmox_lxc and collected_proxmox_lxc[((collected_proxmox_lxc | selectattr('name', 'equalto', vm_config['hostname']) | list | first).name)] == vm_config['vmid']
+    when: vm_config['hostname'] in collected_proxmox_lxc and collected_proxmox_lxc[vm_config['hostname']] == vm_config['vmid']
     register: start_vm_job
     async: 180
     poll: 0
