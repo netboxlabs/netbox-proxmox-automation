@@ -21,7 +21,7 @@
       vmid: "{{ vm_config['vmid'] }}"
       state: stopped
       force: true
-    when: vm_config['name'] in collected_proxmox_vms
+    when: vm_config['hostname'] in collected_proxmox_vms
     register: stop_vm_job
     async: 180
     poll: 0
@@ -29,7 +29,7 @@
   - name: Wait for LXC stop process to finish
     async_status:
       jid: "{{ stop_vm_job.ansible_job_id }}"
-    when: vm_config['name'] in collected_proxmox_vms
+    when: vm_config['hostname'] in collected_proxmox_vms
     register: _sjobs_alias_vc_0
     until: _sjobs_alias_vc_0.finished
     retries: 100
@@ -46,7 +46,7 @@
       #vmid: "{{ nb_remove_vms[item] }}"
       state: absent
       force: true
-    when: vm_config['name'] in collected_proxmox_vms
+    when: vm_config['hostname'] in collected_proxmox_vms
     register: remove_vms_job
     async: 180
     poll: 0
@@ -54,7 +54,7 @@
   - name: "Proxmox: Wait for LXC removal"
     async_status:
       jid: "{{ remove_vms_job.ansible_job_id }}"
-    when: vm_config['name'] in collected_proxmox_vms
+    when: vm_config['hostname'] in collected_proxmox_vms
     register: _rjobs_alias_vc_0
     until: _rjobs_alias_vc_0.finished
     retries: 100
