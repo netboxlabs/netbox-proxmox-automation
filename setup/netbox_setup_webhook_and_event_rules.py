@@ -73,290 +73,320 @@ def main():
         raise ValueError(f"No known configuration for {app_config['automation_type']}")
     
     netbox_proxmox_event_rules = {
-            'proxmox-clone-vm-and-set-resources': {
-                'enabled': True,
-                'action_type': 'webhook',
-                'action_object_type': 'extras.webhook',
-                'action_object_id': -1,
-                'object_types': [
-                    "virtualization.virtualmachine"
-                ],
-                'event_types': [
-                    "object_created"
-                ],
-                'conditions': {
-                    "and": [
-                        {
-                            "attr": "status.value",
-                            "value": "staged"
-                        },
-                        {
-                            "attr": "vcpus",
-                            "negate": True,
-                            "value": None
-                        },
-                        {
-                            "attr": "memory",
-                            "negate": True,
-                            "value": None
-                        },
-                        {
-                            "attr": "custom_fields.proxmox_vm_type",
-                            "value": "vm"
-                        },
-                        {
-                            "attr": "custom_fields.proxmox_vm_templates",
-                            "negate": True,
-                            "value": None
-                        }
-                    ]
-                }
-            },
-            'proxmox-remove-vm': {
-                'enabled': True,
-                'action_type': 'webhook',
-                'action_object_type': 'extras.webhook',
-                'action_object_id': -1,
-                'object_types': [
-                    "virtualization.virtualmachine"
-                ],
-                'event_types': [
-                    "object_deleted"
-                ],
-                'conditions': {
-                    "attr": "custom_fields.proxmox_vm_type",
-                    "value": "vm"
-                }
-            },
-            'proxmox-set-ipconfig0': {
-                'enabled': True,
-                'action_type': 'webhook',
-                'action_object_type': 'extras.webhook',
-                'action_object_id': -1,
-                'object_types': [
-                    "virtualization.virtualmachine"
-                ],
-                'event_types': [
-                    "object_created",
-                    "object_updated"
-                ],
-                'conditions': {
-                    "and": [
-                        {
-                            "attr": "primary_ip4",
-                            "negate": True,
-                            "value": None
-                        },
-                        {
-                            "attr": "status.value",
-                            "value": "staged"
-                        },
-                        {
-                            "attr": "custom_fields.proxmox_vm_type",
-                            "value": "vm"
-                        }
-                    ]
-                }
-            },
-            'proxmox-resize-vm-disk': {
-                'enabled': True,
-                'action_type': 'webhook',
-                'action_object_type': 'extras.webhook',
-                'action_object_id': -1,
-                'object_types': [
-                    "virtualization.virtualdisk"
-                ],
-                'event_types': [
-                    "object_updated"
-                ],
-                'conditions': ''
-            },
-            'proxmox-add-vm-disk': {
-                'enabled': True,
-                'action_type': 'webhook',
-                'action_object_type': 'extras.webhook',
-                'action_object_id': -1,
-                'object_types': [
-                    "virtualization.virtualdisk"
-                ],
-                'event_types': [
-                    "object_created"
-                ],
-                'conditions': ''
-            },
-            'proxmox-remove-vm-disk': {
-                'enabled': True,
-                'action_type': 'webhook',
-                'action_object_type': 'extras.webhook',
-                'action_object_id': -1,
-                'object_types': [
-                    "virtualization.virtualdisk"
-                ],
-                'event_types': [
-                    "object_deleted"
-                ],
-                'conditions': {
-                    "attr": "name",
-                    "negate": True,
-                    "value": "scsi0"
-                }              
-            },
-            'proxmox-stop-vm': {
-                'enabled': True,
-                'action_type': 'webhook',
-                'action_object_type': 'extras.webhook',
-                'action_object_id': -1,
-                'object_types': [
-                    "virtualization.virtualmachine"
-                ],
-                'event_types': [
-                    "object_updated"
-                ],
-                'conditions': {
-                    "and": [
-                        {
-                            "attr": "status.value",
-                            "value": "offline"
-                        },
-                        {
-                            "attr": "custom_fields.proxmox_vm_type",
-                            "value": "vm"
-                        }
-                    ]
-                }
-            },
-            'proxmox-start-vm': {
-                'enabled': True,
-                'action_type': 'webhook',
-                'action_object_type': 'extras.webhook',
-                'action_object_id': -1,
-                'object_types': [
-                    "virtualization.virtualmachine"
-                ],
-                'event_types': [
-                    "object_updated"
-                ],
-                'conditions': {
-                    "and": [
-                        {
-                            "attr": "status.value",
-                            "value": "active"
-                        },
-                        {
-                            "attr": "custom_fields.proxmox_vm_type",
-                            "value": "vm"
-                        }
-                    ]
-                }
-            },
-            'proxmox-create-lxc-and-set-resources': {
-                'enabled': True,
-                'action_type': 'webhook',
-                'action_object_type': 'extras.webhook',
-                'action_object_id': -1,
-                'object_types': [
-                    "virtualization.virtualmachine"
-                ],
-                'event_types': [
-                    "object_created"
-                ],
-                'conditions': {
-                    "and": [
-                        {
-                            "attr": "status.value",
-                            "value": "staged"
-                        },
-                        {
-                            "attr": "vcpus",
-                            "negate": True,
-                            "value": None
-                        },
-                        {
-                            "attr": "memory",
-                            "negate": True,
-                            "value": None
-                        },
-                        {
-                            "attr": "custom_fields.proxmox_vm_type",
-                            "value": "lxc"
-                        },
-                        {
-                            "attr": "custom_fields.proxmox_lxc_templates",
-                            "negate": True,
-                            "value": None
-                        },
-                        {
-                            "attr": "custom_fields.proxmox_public_ssh_key",
-                            "negate": True,
-                            "value": None
-                        }
-                    ]
-                }
-            },
-            'proxmox-remove-lxc': {
-                'enabled': True,
-                'action_type': 'webhook',
-                'action_object_type': 'extras.webhook',
-                'action_object_id': -1,
-                'object_types': [
-                    "virtualization.virtualmachine"
-                ],
-                'event_types': [
-                    "object_deleted"
-                ],
-                'conditions': {
-                    "attr": "custom_fields.proxmox_vm_type",
-                    "value": "lxc"
-                }
-            },
-            'proxmox-stop-lxc': {
-                'enabled': True,
-                'action_type': 'webhook',
-                'action_object_type': 'extras.webhook',
-                'action_object_id': -1,
-                'object_types': [
-                    "virtualization.virtualmachine"
-                ],
-                'event_types': [
-                    "object_updated"
-                ],
-                'conditions': {
-                    "and": [
-                        {
-                            "attr": "status.value",
-                            "value": "offline"
-                        },
-                        {
-                            "attr": "custom_fields.proxmox_vm_type",
-                            "value": "lxc"
-                        }
-                    ]
-                }
-            },
-            'proxmox-start-lxc': {
-                'enabled': True,
-                'action_type': 'webhook',
-                'action_object_type': 'extras.webhook',
-                'action_object_id': -1,
-                'object_types': [
-                    "virtualization.virtualmachine"
-                ],
-                'event_types': [
-                    "object_updated"
-                ],
-                'conditions': {
-                    "and": [
-                        {
-                            "attr": "status.value",
-                            "value": "active"
-                        },
-                        {
-                            "attr": "custom_fields.proxmox_vm_type",
-                            "value": "lxc"
-                        }
-                    ]
-                }
-            },
+        'proxmox-clone-vm-and-set-resources': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualmachine"
+            ],
+            'event_types': [
+                "object_created"
+            ],
+            'conditions': {
+                "and": [
+                    {
+                        "attr": "status.value",
+                        "value": "staged"
+                    },
+                    {
+                        "attr": "vcpus",
+                        "negate": True,
+                        "value": None
+                    },
+                    {
+                        "attr": "memory",
+                        "negate": True,
+                        "value": None
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_vm_type",
+                        "value": "vm"
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_vm_templates",
+                        "negate": True,
+                        "value": None
+                    }
+                ]
+            }
+        },
+        'proxmox-remove-vm': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualmachine"
+            ],
+            'event_types': [
+                "object_deleted"
+            ],
+            'conditions': {
+                "attr": "custom_fields.proxmox_vm_type",
+                "value": "vm"
+            }
+        },
+        'proxmox-set-ipconfig0': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualmachine"
+            ],
+            'event_types': [
+                "object_created",
+                "object_updated"
+            ],
+            'conditions': {
+                "and": [
+                    {
+                        "attr": "primary_ip4",
+                        "negate": True,
+                        "value": None
+                    },
+                    {
+                        "attr": "status.value",
+                        "value": "staged"
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_vm_type",
+                        "value": "vm"
+                    }
+                ]
+            }
+        },
+        'proxmox-resize-vm-disk': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualdisk"
+            ],
+            'event_types': [
+                "object_updated"
+            ],
+            'conditions': ''
+        },
+        'proxmox-add-vm-disk': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualdisk"
+            ],
+            'event_types': [
+                "object_created"
+            ],
+            'conditions': ''
+        },
+        'proxmox-remove-vm-disk': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualdisk"
+            ],
+            'event_types': [
+                "object_deleted"
+            ],
+            'conditions': {
+                "attr": "name",
+                "negate": True,
+                "value": "scsi0"
+            }              
+        },
+        'proxmox-stop-vm': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualmachine"
+            ],
+            'event_types': [
+                "object_updated"
+            ],
+            'conditions': {
+                "and": [
+                    {
+                        "attr": "status.value",
+                        "value": "offline"
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_vm_type",
+                        "value": "vm"
+                    }
+                ]
+            }
+        },
+        'proxmox-start-vm': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualmachine"
+            ],
+            'event_types': [
+                "object_updated"
+            ],
+            'conditions': {
+                "and": [
+                    {
+                        "attr": "status.value",
+                        "value": "active"
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_vm_type",
+                        "value": "vm"
+                    }
+                ]
+            }
+        },
+        'proxmox-clone-lxc-and-set-resources': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualmachine"
+            ],
+            'event_types': [
+                "object_created"
+            ],
+            'conditions': {
+                "and": [
+                    {
+                        "attr": "status.value",
+                        "value": "staged"
+                    },
+                    {
+                        "attr": "vcpus",
+                        "negate": True,
+                        "value": None
+                    },
+                    {
+                        "attr": "memory",
+                        "negate": True,
+                        "value": None
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_vm_type",
+                        "value": "lxc"
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_lxc_templates",
+                        "negate": True,
+                        "value": None
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_public_ssh_key",
+                        "negate": True,
+                        "value": None
+                    }
+                ]
+            }
+        },
+        'proxmox-set-netif': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualmachine"
+            ],
+            'event_types': [
+                "object_created",
+                "object_updated"
+            ],
+            'conditions': {
+                "and": [
+                    {
+                        "attr": "primary_ip4",
+                        "negate": True,
+                        "value": None
+                    },
+                    {
+                        "attr": "status.value",
+                        "value": "staged"
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_vm_type",
+                        "value": "lxc"
+                    }
+                ]
+            }
+        },
+        'proxmox-remove-lxc': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualmachine"
+            ],
+            'event_types': [
+                "object_deleted"
+            ],
+            'conditions': {
+                "attr": "custom_fields.proxmox_vm_type",
+                "value": "lxc"
+            }
+        },
+        'proxmox-stop-lxc': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualmachine"
+            ],
+            'event_types': [
+                "object_updated"
+            ],
+            'conditions': {
+                "and": [
+                    {
+                        "attr": "status.value",
+                        "value": "offline"
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_vm_type",
+                        "value": "lxc"
+                    }
+                ]
+            }
+        },
+        'proxmox-start-lxc': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualmachine"
+            ],
+            'event_types': [
+                "object_updated"
+            ],
+            'conditions': {
+                "and": [
+                    {
+                        "attr": "status.value",
+                        "value": "active"
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_vm_type",
+                        "value": "lxc"
+                    }
+                ]
+            }
+        },
 
 #            'update-dns': {
 #                'enabled': True,
@@ -406,10 +436,11 @@ def main():
             'proxmox-remove-vm-disk': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['virtual_machine']['name'] }}\",\r\n      \"remove_disk\": \"{{ data['name'] }}\"\r\n    }\r\n  }\r\n}",
             'proxmox-stop-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\"\r\n    }\r\n  }\r\n}",
             'proxmox-start-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\"\r\n    }\r\n  }\r\n}",
-            'proxmox-create-lxc-and-set-resources': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"hostname\": \"{{ data['name'] }}\",\r\n      \"cpus\": \"{{ data['vcpus'] }}\",\r\n      \"memory\": \"{{ data['memory'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\",\r\n      \"template\": \"{{ data['custom_fields']['proxmox_lxc_templates'] }}\",\r\n      \"storage\": \"{{ data['custom_fields']['proxmox_vm_storage'] }}\",\r\n      \"pubkey\": \"{{ data['custom_fields']['proxmox_public_ssh_key'] }}\"\r\n    }\r\n  }\r\n}",
+            'proxmox-clone-lxc-and-set-resources': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"hostname\": \"{{ data['name'] }}\",\r\n      \"cpus\": \"{{ data['vcpus'] }}\",\r\n      \"memory\": \"{{ data['memory'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\",\r\n      \"template\": \"{{ data['custom_fields']['proxmox_lxc_templates'] }}\",\r\n      \"storage\": \"{{ data['custom_fields']['proxmox_vm_storage'] }}\",\r\n      \"pubkey\": \"{{ data['custom_fields']['proxmox_public_ssh_key'] }}\"\r\n    }\r\n  }\r\n}",
             'proxmox-remove-lxc': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"hostname\": \"{{ data['name'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\"\r\n    }\r\n  }\r\n}",
             'proxmox-start-lxc': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"hostname\": \"{{ data['name'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\"\r\n    }\r\n  }\r\n}",
-            'proxmox-stop-lxc': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"hostname\": \"{{ data['name'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\"\r\n    }\r\n  }\r\n}"
+            'proxmox-stop-lxc': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"hostname\": \"{{ data['name'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\"\r\n    }\r\n  }\r\n}",
+            'proxmox-set-netif': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"hostname\": \"{{ data['name'] }}\",\r\n      \"ip\": \"{{ data['primary_ip4']['address'] }}\"\r\n    }\r\n  }\r\n}"
             #'update-dns': "{\r\n  \"extra_vars\": {\r\n    \"dns_stuff\": {\r\n      \"dns_zone_id\": \"{{ data['zone']['id'] }}\",\r\n      \"dns_zone_name\": \"{{ data['zone']['name'] }}\",\r\n      \"dns_integrations\": \"{{ data['custom_fields']['dns_integrations'] }}\"\r\n    }\r\n  }\r\n}"
         }
         
