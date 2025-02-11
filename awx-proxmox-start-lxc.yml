@@ -1,0 +1,57 @@
+- name: "Proxmox: start LXC"
+  connection: local
+  hosts: all
+  gather_facts: False
+
+  vars:
+    collected_proxmox_vms: {}
+
+  tasks:
+  - name: Include Proxmox common discovery
+    include_tasks: "ansible-tasks/collect-proxmox-vms.yml"
+
+  - name: Start specified LXC
+    community.general.proxmox_kvm:
+      #node: "{{ proxmox_env_info.node }}"
+      api_user: "{{ proxmox_env_info.api_user }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
+      api_host: "{{ proxmox_env_info.api_host }}"
+      #name: "{{ vm_config['name'] }}"
+      vmid: "{{ vm_config['vmid'] }}"
+      state: started
+    when: vm_config['hostname'] in collected_proxmox_vms
+    register: start_vm_job
+    async: 180
+    poll: 0
+
+  - name: Wait for LXC start process to finish
+    async_status:
+      jid: "{{ start_vm_job.ansible_job_id }}"
+    when: vm_config['hostname'] in collected_proxmox_vms
+    register: _sjobs_alias_vc_0
+    until: _sjobs_alias_vc_0.finished
+    retries: 100
+    delay: 10
+
+  - name: Discover Proxmox started LXC on node
+    community.general.proxmox_vm_info:
+      api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
+      api_user: "{{ proxmox_env_info.api_user | default(omit) }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
+      node: "{{ proxmox_env_info.node }}"
+      #name: "{{ vm_config['name'] }}"
+      vmid: "{{ vm_config['vmid'] }}"
+      config: "current"
+    register: proxmox_started_vm
+
+  - name: Show started LXC info
+    debug:
+      msg: "started vm info: {{ proxmox_started_vm }}"
+
+#  - name: Wait for SSH on VMs to become available
+#    wait_for: host="{{ nb_vm_interface_assigned_ip[item] | regex_replace('/.*$', '') }}" port=22 delay=10 timeout=300
+#    with_items: "{{ proxmox_all_vm_interfaces }}"
+#    when: proxmox_all_vm_interfaces[item].primary
+
