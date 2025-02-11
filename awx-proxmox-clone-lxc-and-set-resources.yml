@@ -37,6 +37,7 @@
       ostemplate: "{{ vm_config ['template'] }}"
       #vmid: "{{ vm_config['template'] }}"
       name: "{{ vm_config['name'] }}"
+      hostname: "{{ vm_config['name'] }}"
       cores: "{{ vm_config['cpus'] | int | default(1) }}"
       cpus: "{{ vm_config['cpus'] | int | default(1) }}"
       memory: "{{ vm_config['memory'] | default(512) }}"
