@@ -21,6 +21,10 @@
   - name: Show collected LXC
     debug:
       msg: "Collected LXC: {{ collected_proxmox_lxc }}"
+  
+  - name: Show start key
+    debug:
+      msg: "start key {{ vm_config['vmid'] }} ||| {{ collected_proxmox_lxc[vm_config['hostname']] }}"
 
   - name: Start specified LXC
     community.general.proxmox:
