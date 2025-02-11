@@ -4,11 +4,11 @@
   gather_facts: False
 
   vars:
-    collected_proxmox_vms: {}
+    collected_proxmox_lxc: {}
 
   tasks:
   - name: Include Proxmox common discovery
-    include_tasks: "ansible-tasks/collect-proxmox-vms.yml"
+    include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
   - name: SHOW US vmconfig
     debug:
@@ -47,7 +47,7 @@
       unprivileged: true
       state: present
       timeout: 120
-    when: not vm_config['hostname'] in collected_proxmox_vms
+    when: not vm_config['hostname'] in collected_proxmox_lxc
     register: create_lxc_job
     async: 180
     poll: 0
@@ -59,7 +59,7 @@
     until: _jobs_alias_vc_0.finished
     retries: 60
     delay: 5
-    when: not vm_config['hostname'] in collected_proxmox_vms
+    when: not vm_config['hostname'] in collected_proxmox_lxc
 
   - name: Show us LXC settings
     debug:

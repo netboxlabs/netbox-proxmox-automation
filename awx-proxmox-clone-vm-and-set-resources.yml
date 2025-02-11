@@ -4,11 +4,11 @@
   gather_facts: False
 
   vars:
-    collected_proxmox_vms: {}
+    collected_proxmox_vm: {}
 
   tasks:
   - name: Include Proxmox common discovery
-    include_tasks: "ansible-tasks/collect-proxmox-vms.yml"
+    include_tasks: "ansible-tasks/collect-proxmox-vm.yml"
 
   - name: SHOW US vmconfig
     debug:
@@ -42,7 +42,7 @@
       #onboot: "{{ vm_config_create[item].auto_start }}"
       state: present
       timeout: 120
-    when: not vm_config['name'] in collected_proxmox_vms
+    when: not vm_config['name'] in collected_proxmox_vm
     register: clone_vm_job
     async: 180
     poll: 0
@@ -54,7 +54,7 @@
     until: _jobs_alias_vc_0.finished
     retries: 60
     delay: 5
-    when: not vm_config['name'] in collected_proxmox_vms
+    when: not vm_config['name'] in collected_proxmox_vm
 
   - name: Update Proxmox VMs resource settings
     community.general.proxmox_kvm:

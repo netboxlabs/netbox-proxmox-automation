@@ -4,11 +4,11 @@
   gather_facts: False
 
   vars:
-    collected_proxmox_vms: {}
+    collected_proxmox_vm: {}
 
   tasks:
   - name: Include Proxmox common discovery
-    include_tasks: "ansible-tasks/collect-proxmox-vms.yml"
+    include_tasks: "ansible-tasks/collect-proxmox-vm.yml"
 
   - name: Start specified VM
     community.general.proxmox_kvm:
@@ -20,7 +20,7 @@
       #name: "{{ vm_config['name'] }}"
       vmid: "{{ vm_config['vmid'] }}"
       state: started
-    when: vm_config['name'] in collected_proxmox_vms
+    when: vm_config['name'] in collected_proxmox_vm
     register: start_vm_job
     async: 180
     poll: 0
@@ -28,7 +28,7 @@
   - name: Wait for VM start process to finish
     async_status:
       jid: "{{ start_vm_job.ansible_job_id }}"
-    when: vm_config['name'] in collected_proxmox_vms
+    when: vm_config['name'] in collected_proxmox_vm
     register: _sjobs_alias_vc_0
     until: _sjobs_alias_vc_0.finished
     retries: 100

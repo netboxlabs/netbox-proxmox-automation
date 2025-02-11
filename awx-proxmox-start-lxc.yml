@@ -4,11 +4,11 @@
   gather_facts: False
 
   vars:
-    collected_proxmox_vms: {}
+    collected_proxmox_lxc: {}
 
   tasks:
   - name: Include Proxmox common discovery
-    include_tasks: "ansible-tasks/collect-proxmox-vms.yml"
+    include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
   - name: Start specified LXC
     community.general.proxmox:
@@ -20,7 +20,7 @@
       #name: "{{ vm_config['name'] }}"
       vmid: "{{ vm_config['vmid'] }}"
       state: started
-    when: vm_config['hostname'] in collected_proxmox_vms
+    when: vm_config['hostname'] in collected_proxmox_lxc
     register: start_vm_job
     async: 180
     poll: 0
@@ -28,7 +28,7 @@
   - name: Wait for LXC start process to finish
     async_status:
       jid: "{{ start_vm_job.ansible_job_id }}"
-    when: vm_config['hostname'] in collected_proxmox_vms
+    when: vm_config['hostname'] in collected_proxmox_lxc
     register: _sjobs_alias_vc_0
     until: _sjobs_alias_vc_0.finished
     retries: 100

@@ -4,11 +4,11 @@
   gather_facts: False
 
   vars:
-    collected_proxmox_vms: {}
+    collected_proxmox_vm: {}
 
   tasks:
   - name: Include Proxmox common discovery
-    include_tasks: "ansible-tasks/collect-proxmox-vms.yml"
+    include_tasks: "ansible-tasks/collect-proxmox-vm.yml"
 
   - name: "Update VM settings (ipconfig0, ssh key)"
     community.general.proxmox_kvm:
@@ -23,7 +23,7 @@
         #ipconfig0: "ip={{ item.ip }},gw={{ item.ip.split('.')[:3] | join('.') }}.{{ item.gw if item.gw is defined else gw_last_quad }}"
         ipconfig0: "ip={{ vm_config['ip'] }},gw={{ vm_config['ip'].split('.')[:3] | join('.') }}.1"
       update: true
-    when: vm_config['name'] in collected_proxmox_vms
+    when: vm_config['name'] in collected_proxmox_vm
     register: update_vm_settings_job
     async: 180
     poll: 0
@@ -31,7 +31,7 @@
   - name: Wait for VM settings updates processes to finish
     async_status:
       jid: "{{ update_vm_settings_job.ansible_job_id }}"
-    when: vm_config['name'] in collected_proxmox_vms
+    when: vm_config['name'] in collected_proxmox_vm
     register: _ujobs_alias_vc_0
     until: _ujobs_alias_vc_0.finished
     retries: 60
