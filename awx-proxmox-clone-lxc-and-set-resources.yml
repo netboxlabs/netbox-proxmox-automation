@@ -79,6 +79,10 @@
       name: "{{ vm_config['hostname'] }}"
     register: new_proxmox_lxc
 
+  - name: "Newly-created Proxmox LXC information"
+    debug:
+      msg: "NCPLI: {{ new_proxmox_lxc}}"
+      
   - name: "Update proxmox_vmid (for LXC) in NetBox"
     netbox.netbox.netbox_virtual_machine:
       netbox_url: "{{ netbox_env_info.api_proto }}://{{ netbox_env_info.api_host }}:{{ netbox_env_info.api_port}}"
