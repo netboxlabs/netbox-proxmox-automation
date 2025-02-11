@@ -11,7 +11,7 @@
     include_tasks: "ansible-tasks/collect-proxmox-vms.yml"
 
   - name: Start specified LXC
-    community.general.proxmox_kvm:
+    community.general.proxmox:
       #node: "{{ proxmox_env_info.node }}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
