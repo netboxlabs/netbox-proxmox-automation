@@ -9,7 +9,7 @@
 
   - name: Discover / Collect Proxmox VMs
     set_fact:
-      collected_proxmox_vms: "{{ collected_proxmox_vm | combine({item.name: item.vmid}) }}"
-    loop: "{{ proxmox_discovered_vms.proxmox_vms }}"
+      collected_proxmox_vm: "{{ collected_proxmox_vm | combine({item.name: item.vmid}) }}"
+    loop: "{{ proxmox_discovered_vm.proxmox_vms }}"
     when: not item.template and item.type == 'qemu'
 
