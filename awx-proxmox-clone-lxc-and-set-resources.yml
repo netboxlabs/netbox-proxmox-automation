@@ -108,7 +108,7 @@
       data:
         virtual_machine: "{{ new_proxmox_lxc.proxmox_vms[0].name }}"
         name: rootfs
-        size: "{{ (rootfs_size / (1024*1024/1000)) | string }}"
+        size: "{{ rootfs_size / (1024*1024/1000) | string }}"
         custom_fields:
           proxmox_disk_storage_volume: "{{ vm_config['storage'] }}"
       state: present
