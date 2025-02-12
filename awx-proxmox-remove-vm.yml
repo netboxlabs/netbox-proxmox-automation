@@ -25,7 +25,7 @@
       vmid: "{{ vm_config['vmid'] }}"
       state: stopped
       force: true
-    when: vm_config['name'] in collected_proxmox_vm and collected_proxmox_vm[vm_config['name']] == vm_config['vmid']
+    when: vm_config['name'] in collected_proxmox_vm and collected_proxmox_vm[vm_config['name']] | int == vm_config['vmid'] | int
     register: stop_vm_job
     async: 180
     poll: 0

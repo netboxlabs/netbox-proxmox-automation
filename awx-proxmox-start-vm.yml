@@ -24,7 +24,7 @@
       #name: "{{ vm_config['name'] }}"
       vmid: "{{ vm_config['vmid'] }}"
       state: started
-    when: vm_config['name'] in collected_proxmox_vm and collected_proxmox_vm[vm_config['name']] == vm_config['vmid']
+    when: vm_config['name'] in collected_proxmox_vm and collected_proxmox_vm[vm_config['name']] | int == vm_config['vmid'] | int
     register: start_vm_job
     async: 180
     poll: 0

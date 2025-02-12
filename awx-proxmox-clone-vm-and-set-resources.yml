@@ -94,6 +94,10 @@
       name: "{{ vm_config['name'] }}"
     register: new_proxmox_vm
 
+  - name: Show us new VM info
+    debug:
+      msg: "New VM info: {{ new_proxmox_vm }}"
+      
   - name: "Update proxmox_vmid in NetBox"
     netbox.netbox.netbox_virtual_machine:
       netbox_url: "{{ netbox_env_info.api_proto }}://{{ netbox_env_info.api_host }}:{{ netbox_env_info.api_port}}"
