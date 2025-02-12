@@ -103,7 +103,7 @@
         virtual_machine: "{{ new_proxmox_lxc.proxmox_vms[0].name }}"
         name: rootfs
         #size: "{{ new_proxmox_lxc.proxmox_vms[0].maxdisk | human_readable(unit='M') }}"
-        size: "{{ 1 }}"
+        size: "{{ 5 * 1000 }}"
         custom_fields:
           proxmox_disk_storage_volume: "{{ vm_config['storage'] }}"
       state: present
