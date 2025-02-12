@@ -97,15 +97,30 @@
   - name: Show us new VM info
     debug:
       msg: "New VM info: {{ new_proxmox_vm }}"
-      
-  - name: "Update proxmox_vmid in NetBox"
+
+  - name: "Update Proxmox vmid for VM in NetBox"
     netbox.netbox.netbox_virtual_machine:
       netbox_url: "{{ netbox_env_info.api_proto }}://{{ netbox_env_info.api_host }}:{{ netbox_env_info.api_port}}"
       netbox_token: "{{ netbox_env_info.api_token }}"
       data:
-        name: "{{ vm_config['name'] }}"
+        name: "{{ new_proxmox_vm.proxmox_vms[0].name }}"
         custom_fields:
           proxmox_vmid: "{{ new_proxmox_vm.proxmox_vms[0].vmid }}"
       state: present
     when: new_proxmox_vm is defined and new_proxmox_vm.proxmox_vms is defined and new_proxmox_vm.proxmox_vms | length > 0
 
+# ok: [localhost] => {
+#    "msg": "New VM info: {'changed': False, 'proxmox_vms': [{'maxcpu': 1, 'status': 'stopped', 'netout': 0, 'vmid': 104, 'diskwrite': 0, 'id': 'qemu/104', 'uptime': 0, 'node': 'proxmox-ve', 'disk': 0, 'maxdisk': 2361393152, 'type': 'qemu', 'maxmem': 268435456, 'template': False, 'mem': 0, 'diskread': 0, 'netin': 0, 'cpu': 0, 'name': 'test2', 'cpus': 1, 'serial': 1}], 'failed': False}"
+#}
+  - name: "Update Proxmox storage for VM in NetBox"
+    netbox.netbox.netbox_virtual_disk:
+      netbox_url: "{{ netbox_env_info.api_proto }}://{{ netbox_env_info.api_host }}:{{ netbox_env_info.api_port}}"
+      netbox_token: "{{ netbox_env_info.api_token }}"
+      data:
+        virtual_machine: "{{ new_proxmox_vm.proxmox_vms[0].name }}"
+        name: scsi0
+        size: "{{ (new_proxmox_vm.proxmox_vms[0].maxdisk / (1024*1024)) / 1000 }}"
+        custom_fields:
+          proxmox_disk_storage_volume: "{{ vm_config['storage'] }}"
+      state: present
+    when: new_proxmox_vm is defined and new_proxmox_vm.proxmox_vms is defined and new_proxmox_vm.proxmox_vms | length > 0
