@@ -6,6 +6,7 @@
   vars:
     collected_proxmox_vm: {}
     collected_proxmox_lxc: {}
+    rootfs_size: ''
 
   tasks:
   - name: Include Proxmox VM discovery
@@ -95,6 +96,11 @@
       state: present
     when: new_proxmox_lxc is defined and new_proxmox_lxc.proxmox_vms is defined and new_proxmox_lxc.proxmox_vms | length > 0
 
+  - name: "Collect size of rootfs from created LXC"
+    set_fact:
+      rootfs_size: "{{ new_proxmox_lxc.proxmox_vms[0].maxdisk }}"
+    when: new_proxmox_lxc is defined and new_proxmox_lxc.proxmox_vms is defined and new_proxmox_lxc.proxmox_vms | length > 0
+
   - name: "Update Proxmox storage for LXC in NetBox"
     netbox.netbox.netbox_virtual_disk:
       netbox_url: "{{ netbox_env_info.api_proto }}://{{ netbox_env_info.api_host }}:{{ netbox_env_info.api_port}}"
@@ -102,7 +108,7 @@
       data:
         virtual_machine: "{{ new_proxmox_lxc.proxmox_vms[0].name }}"
         name: rootfs
-        size: "{{ (new_proxmox_lxc.proxmox_vms[0].maxdisk / (1024*1024/1000)) | string }}"
+        size: "{{ (rootfs_size | int / (1024*1024/1000)) }}"
         custom_fields:
           proxmox_disk_storage_volume: "{{ vm_config['storage'] }}"
       state: present
