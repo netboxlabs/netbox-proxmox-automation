@@ -414,7 +414,7 @@ def main():
             raise ValueError(f"Unable to create webhook for {netbox_webhook_payload['name']}")
         
         for event_rule in netbox_proxmox_event_rules:
-            netbox_event_rule_payload['name'] = f"{app_config['automation_type']}-{event_rule}-{re.sub(r'_', '-', app_config['automation_type'])}"
+            netbox_event_rule_payload['name'] = f"{event_rule}-{re.sub(r'_', '-', app_config['automation_type'])}"
             netbox_event_rule_payload['enabled'] = netbox_proxmox_event_rules[event_rule]['enabled']
             netbox_event_rule_payload['object_types'] = netbox_proxmox_event_rules[event_rule]['object_types']
             netbox_event_rule_payload['event_types'] = netbox_proxmox_event_rules[event_rule]['event_types']
