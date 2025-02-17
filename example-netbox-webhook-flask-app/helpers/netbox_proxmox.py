@@ -6,7 +6,9 @@ import urllib
 from proxmoxer import ProxmoxAPI, ResourceException
 
 class NetBoxProxmoxHelper:
-    def __init__(self, cfg_data, proxmox_node):
+    def __init__(self, cfg_data, proxmox_node, debug=False):
+        self.debug = debug
+
         self.netbox_api_config = {
             'api_proto': cfg_data['netbox_api_config']['api_proto'],
             'api_host': cfg_data['netbox_api_config']['api_host'],
@@ -44,12 +46,12 @@ class NetBoxProxmoxHelper:
         self.netbox_api.http_session.verify = self.netbox_api_config['verify_ssl']
 
 
-    def __json_data_check_proxmox_vmid_exists(self, json_in):
+    def json_data_check_proxmox_vmid_exists(self, json_in):
         if not json_in['data']['custom_fields']['proxmox_vmid']:
             raise ValueError("Missing value for 'proxmox_vmid'")
 
 
-    def __netbox_get_proxmox_vmid(self, nb_vm_obj_proxmox_vmid):
+    def netbox_get_proxmox_vmid(self, nb_vm_obj_proxmox_vmid):
         try:
             nb_obj = self.netbox_api.virtualization.virtual_machines.get(id=nb_vm_obj_proxmox_vmid)
 
@@ -63,44 +65,22 @@ class NetBoxProxmoxHelper:
             raise pynetbox.core.query.RequestError(e)
 
 
-    def __proxmox_job_get_status(self, job_in):
+    def proxmox_job_get_status(self, job_in):
         try:
             while True:
                 task_status = self.proxmox_api.nodes(self.proxmox_api_config['node']).tasks(job_in).status.get()
 
-                if task_status['status'] == 'stopped':
+                if 'status' in task_status and task_status['status'] == 'stopped':
                     break
         except ResourceException as e:
             raise ResourceException(e)
-
-
-    def __proxmox_update_vm_vcpus(self, vmid, vcpus):
-        try:
-            update_vm_vcpus = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(vmid).config.post(
-                cores=int(vcpus)
-            )
-
-            self.__proxmox_job_get_status(update_vm_vcpus)
-
-            return 200, {'result': f"Updated CPU information (cpus: {vcpus}) for {vmid}"}
-        except ResourceException as e:
-            return 500, {'result': e.content}
         
 
-    def __proxmox_update_vm_memory(self, vmid, memory):
-        try:
-            update_vm_memory = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(vmid).config.post(
-                memory=int(memory)
-            )
+    def generate_gateway_from_ip_address(self, ip_address, last_quad=1):
+        return '.'.join(''.join(ip_address.split('/')[0]).split('.')[0:3]) + f'.{last_quad}'
+    
 
-            self.__proxmox_job_get_status(update_vm_memory)
-
-            return 200, {'result': f"Updated memory information (memory: {memory}) for {vmid}"}
-        except ResourceException as e:
-            return 500, {'result': e.content}
-
-
-    def __proxmox_get_vms(self):
+    def proxmox_get_vms(self):
         try:
             proxmox_vms = {}
 
@@ -114,19 +94,68 @@ class NetBoxProxmoxHelper:
             return proxmox_vms
         except ResourceException as e:
             return ResourceException(e)
+        
+
+    def create_vm_root_disk_in_netbox(self, netbox_vm_obj_id = 0, full_root_disk_info = None):
+        try:
+            disk_info, disk_size = full_root_disk_info.split(',')
+            storage_volume = disk_info.split(':')[0]
+
+            m = re.search(r'^size=(\d+)([MG])$', disk_size)
+
+            if m:
+                disk_raw_size = m.group(1)
+
+                if m.group(2) == 'G':
+                    disk_size = int(disk_raw_size) * 1000
+                elif m.group(2) == 'M':
+                    disk_size = int(disk_raw_size)
+
+                netbox_vm_disk_info = {
+                    'virtual_machine': netbox_vm_obj_id,
+                    'name': 'rootfs',
+                    'custom_fields': {
+                        'proxmox_disk_storage_volume': storage_volume
+                    },
+                    'size': disk_size
+                }
+
+                self.netbox_api.virtualization.virtual_disks.create(**netbox_vm_disk_info)
+        except pynetbox.lib.query.RequestError as e:
+            return pynetbox.lib.query.RequestError(e)
 
 
-    def __generate_gateway_from_ip_address(self, ip_address, last_quad=1):
-        return '.'.join(''.join(ip_address.split('/')[0]).split('.')[0:3]) + f'.{last_quad}'
+class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
+    def __proxmox_update_vm_vcpus(self, vmid, vcpus):
+        try:
+            update_vm_vcpus = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(vmid).config.post(
+                cores=int(vcpus)
+            )
+
+            self.proxmox_job_get_status(update_vm_vcpus)
+
+            return 200, {'result': f"Updated CPU information (cpus: {vcpus}) for {vmid}"}
+        except ResourceException as e:
+            return 500, {'result': e.content}
+        
+
+    def __proxmox_update_vm_memory(self, vmid, memory):
+        try:
+            update_vm_memory = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(vmid).config.post(
+                memory=int(memory)
+            )
+
+            self.proxmox_job_get_status(update_vm_memory)
+
+            return 200, {'result': f"Updated memory information (memory: {memory}) for {vmid}"}
+        except ResourceException as e:
+            return 500, {'result': e.content}
 
 
-    #
-    # VM stuff
-    #
     def proxmox_check_if_vm_exists(self, vm_name = None):
         vm_exists = False
 
-        proxmox_vms = self.__proxmox_get_vms()
+        proxmox_vms = self.proxmox_get_vms()
 
         if vm_name in proxmox_vms:
             vm_exists = True
@@ -136,7 +165,7 @@ class NetBoxProxmoxHelper:
  
     def proxmox_clone_vm(self, json_in):
         try:
-            for required_netbox_object in ['proxmox_vm_template', 'proxmox_vm_storage']:
+            for required_netbox_object in ['proxmox_vm_templates', 'proxmox_vm_storage']:
                 if not required_netbox_object in json_in['data']['custom_fields']:
                     raise ValueError(f"Missing {required_netbox_object} in VM configuration")
 
@@ -161,7 +190,7 @@ class NetBoxProxmoxHelper:
 
             if json_in['data']['tenant'] not in netbox_collected_vms[json_in['data']['name']]['tenant'] or not self.proxmox_check_if_vm_exists(json_in['data']['name']):
                 try:
-                    if 'data' in json_in and 'custom_fields' in json_in['data'] and 'proxmox_vmid' in json_in['data']['custom_fields']:
+                    if 'data' in json_in and 'custom_fields' in json_in['data'] and 'proxmox_vmid' in json_in['data']['custom_fields'] and json_in['data']['custom_fields']['proxmox_vmid']:
                         self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(int(json_in['data']['custom_fields']['proxmox_vmid'])).config.get()
                     else:
                         new_vm_id = self.proxmox_api.cluster.get('nextid')
@@ -174,14 +203,14 @@ class NetBoxProxmoxHelper:
                 if not new_vm_id:
                     raise ValueError(f"Unable to create VM id for {json_in['data']['name']}")
 
-                clone_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(int(json_in['data']['custom_fields']['proxmox_vm_template'])).clone.post(
+                clone_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(int(json_in['data']['custom_fields']['proxmox_vm_templates'])).clone.post(
                     newid=new_vm_id,
                     full=1,
                     name=json_in['data']['name'],
                     storage=json_in['data']['custom_fields']['proxmox_vm_storage']
                 )
 
-                self.__proxmox_job_get_status(clone_data)
+                self.proxmox_job_get_status(clone_data)
 
                 # set vmid in NetBox
                 try:
@@ -196,7 +225,7 @@ class NetBoxProxmoxHelper:
                         nb_obj_update_vmid['custom_fields']['proxmox_vmid'] = new_vm_id
                         nb_obj_update_vmid.save()
                 except pynetbox.core.query.RequestError as e:
-                    raise e
+                    raise pynetbox.core.query.RequestError(e)
                 
                 # set scsi0 in NetBox
                 try:
@@ -205,28 +234,10 @@ class NetBoxProxmoxHelper:
                     if 'bootdisk' in proxmox_vm_config:
                         os_disk = proxmox_vm_config['bootdisk']
 
-                    if os_disk in proxmox_vm_config:
-                        m = re.search(r'size=(\d+)([MG]){1}', proxmox_vm_config[os_disk])
-
-                        if m:
-                            disk_raw_size = m.group(1)
-
-                            if m.group(2) == 'G':
-                                disk_size = int(disk_raw_size) * 1000
-                            elif m.group(2) == 'M':
-                                disk_size = int(disk_raw_size)
-
-                    nb_obj_add_vm_disk = self.netbox_api.virtualization.virtual_disks.create(
-                        virtual_machine=nb_obj_update_vmid['id'],
-                        name=proxmox_vm_config['bootdisk'],
-                        size=disk_size,
-                        description=f"OS/boot disk for {json_in['data']['name']}"
-                    )
-
-                    if not nb_obj_add_vm_disk:
-                        raise ValueError("Unable to add VM disk to NetBox")
+                        if os_disk in proxmox_vm_config:
+                            self.create_vm_root_disk_in_netbox(nb_obj_update_vmid['id'], proxmox_vm_config[os_disk])
                 except pynetbox.core.query.RequestError as e:
-                    raise e
+                    raise pynetbox.core.query.RequestError(e)
 
             # update VM vcpus and memory if defined
             if json_in['data']['vcpus']:
@@ -241,7 +252,7 @@ class NetBoxProxmoxHelper:
 
 
     def proxmox_update_vm_resources(self, json_in):
-        self.__json_data_check_proxmox_vmid_exists(json_in)
+        self.json_data_check_proxmox_vmid_exists(json_in)
         
         # update VM vcpus and/or memory if defined
         if json_in['data']['vcpus']:
@@ -253,11 +264,11 @@ class NetBoxProxmoxHelper:
 
     def proxmox_start_vm(self, json_in):
         try:
-            self.__json_data_check_proxmox_vmid_exists(json_in)
+            self.json_data_check_proxmox_vmid_exists(json_in)
 
             start_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).status.start.post()
 
-            self.__proxmox_job_get_status(start_data)
+            self.proxmox_job_get_status(start_data)
 
             return 200, {'result': f"VM {json_in['data']['custom_fields']['proxmox_vmid']} started successfully"}
         except ResourceException as e:
@@ -266,11 +277,11 @@ class NetBoxProxmoxHelper:
 
     def proxmox_stop_vm(self, json_in):
         try: 
-            self.__json_data_check_proxmox_vmid_exists(json_in)
+            self.json_data_check_proxmox_vmid_exists(json_in)
 
             stop_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).status.stop.post()
 
-            self.__proxmox_job_get_status(stop_data)
+            self.proxmox_job_get_status(stop_data)
 
             return 200, {'result': f"VM {json_in['data']['custom_fields']['proxmox_vmid']} stopped successfully"}
         except ResourceException as e:
@@ -279,13 +290,13 @@ class NetBoxProxmoxHelper:
 
     def proxmox_delete_vm(self, json_in):
         try:
-            self.__json_data_check_proxmox_vmid_exists(json_in)
+            self.json_data_check_proxmox_vmid_exists(json_in)
 
             self.proxmox_stop_vm(json_in)
 
             delete_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).delete()
 
-            self.__proxmox_job_get_status(delete_data)
+            self.proxmox_job_get_status(delete_data)
 
             return 200, {'result': f"VM {json_in['data']['custom_fields']['proxmox_vmid']} deleted successfully"}
         except ResourceException as e:
@@ -294,16 +305,16 @@ class NetBoxProxmoxHelper:
     
     def proxmox_set_ipconfig0(self, json_in):
         try:
-            self.__json_data_check_proxmox_vmid_exists(json_in)
+            self.json_data_check_proxmox_vmid_exists(json_in)
 
             primary_ip = json_in['data']['primary_ip']['address']
-            gateway = self.__generate_gateway_from_ip_address(primary_ip)
+            gateway = self.generate_gateway_from_ip_address(primary_ip)
 
             create_ipconfig0 = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).config.post(
                 ipconfig0=f"ip={primary_ip},gw={gateway}"
             )
 
-            self.__proxmox_job_get_status(create_ipconfig0)
+            self.proxmox_job_get_status(create_ipconfig0)
 
             return 200, {'result': f"ipconfig0 set for VM {json_in['data']['custom_fields']['proxmox_vmid']} successfully"}
         except ResourceException as e:
@@ -312,7 +323,7 @@ class NetBoxProxmoxHelper:
 
     def proxmox_set_ssh_public_key(self, json_in):
         try:
-            self.__json_data_check_proxmox_vmid_exists(json_in)
+            self.json_data_check_proxmox_vmid_exists(json_in)
 
             proxmox_public_ssh_key = urllib.parse.quote(json_in['data']['custom_fields']['proxmox_public_ssh_key'].rstrip(), safe='')
 
@@ -320,7 +331,7 @@ class NetBoxProxmoxHelper:
                 sshkeys=f"{proxmox_public_ssh_key}"
             )
 
-            self.__proxmox_job_get_status(create_ssh_public_key)
+            self.proxmox_job_get_status(create_ssh_public_key)
 
             return 200, {'result': f"SSH public key for VM {json_in['data']['custom_fields']['proxmox_vmid']} set successfully"}
         except ResourceException as e:
@@ -335,7 +346,7 @@ class NetBoxProxmoxHelper:
                 self.proxmox_resize_disk(json_in)
                 the_proxmox_vmid = json_in['data']['custom_fields']['proxmox_vmid']
             else:
-                proxmox_vmid = self.__netbox_get_proxmox_vmid(json_in['data']['virtual_machine']['id'])
+                proxmox_vmid = self.netbox_get_proxmox_vmid(json_in['data']['virtual_machine']['id'])
 
                 config_data = {
                     f"{json_in['data']['name']}": f"{json_in['data']['custom_fields']['proxmox_disk_storage_volume']}:{int(json_in['data']['size'])/1000},backup=0,ssd=0"
@@ -345,7 +356,7 @@ class NetBoxProxmoxHelper:
                     **config_data
                 )
 
-                self.__proxmox_job_get_status(add_disk_data)
+                self.proxmox_job_get_status(add_disk_data)
 
                 the_proxmox_vmid = proxmox_vmid
 
@@ -356,14 +367,14 @@ class NetBoxProxmoxHelper:
 
     def proxmox_resize_disk(self, json_in):
         try:
-            proxmox_vmid = self.__netbox_get_proxmox_vmid(json_in['data']['virtual_machine']['id'])
+            proxmox_vmid = self.netbox_get_proxmox_vmid(json_in['data']['virtual_machine']['id'])
 
             disk_resize_info = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(proxmox_vmid).resize.put(
                 disk=json_in['data']['name'],
                 size=f"{int(json_in['data']['size'])/1000}G"
             )
 
-            self.__proxmox_job_get_status(disk_resize_info)
+            self.proxmox_job_get_status(disk_resize_info)
 
             return 200, {'result': f"Disk {json_in['data']['name']} for VM {proxmox_vmid} resized successfully"}
         except ResourceException as e:
@@ -375,7 +386,7 @@ class NetBoxProxmoxHelper:
             if json_in['data']['name'] == 'scsi0':
                 raise ValueError("Cannot delete VM OS disk")
 
-            proxmox_vmid = self.__netbox_get_proxmox_vmid(json_in['data']['virtual_machine']['id'])
+            proxmox_vmid = self.netbox_get_proxmox_vmid(json_in['data']['virtual_machine']['id'])
 
             self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(proxmox_vmid).unlink.put(idlist=json_in['data']['name'], force=1)
 
@@ -384,28 +395,57 @@ class NetBoxProxmoxHelper:
             return 500, {'result': e.content}
 
 
-    #
-    # LXC stuff
-    #
+class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
+    def __proxmox_update_lxc_vcpus(self, vmid, vcpus):
+        try:
+            update_lxc_vcpus = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(vmid).config.put(
+                cores=int(vcpus)
+                #cpus=int(vcpus)
+            )
+
+            self.proxmox_job_get_status(update_lxc_vcpus)
+
+            return 200, {'result': f"Updated CPU information (cpus: {vcpus}) for {vmid}"}
+        except ResourceException as e:
+            return 500, {'result': e.content}
+        
+
+    def __proxmox_update_lxc_memory(self, vmid, memory):
+        try:
+            update_lxc_memory = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(vmid).config.put(
+                memory=int(memory)
+            )
+
+            self.proxmox_job_get_status(update_lxc_memory)
+
+            return 200, {'result': f"Updated memory information (memory: {memory}) for {vmid}"}
+        except ResourceException as e:
+            return 500, {'result': e.content}
+
+
     def proxmox_create_lxc(self, json_in):
         try:
             # json_in['data']['name']
             # json_in['data']['custom_fields']['proxmox_lxc_template']
             try:
-                print("JSON IN", json_in['data'])
+                if self.debug:
+                    print("JSON IN", json_in['data'])
+
                 if 'data' in json_in and 'custom_fields' in json_in['data'] and 'proxmox_vmid' in json_in['data']['custom_fields'] and json_in['data']['custom_fields']['proxmox_vmid']:
                     self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).config.get()
                 else:
                     new_vm_id = self.proxmox_api.cluster.get('nextid')
             except ResourceException as e:
                 if re.search(r'does\s+not\s+exist$', e.content):
-                    print("SF", json_in['data']['custom_fields']['proxmox_vmid'])                
+                    if self.debug:
+                        print("VMID IN PROXMOX DOES NOT EXIST (setting new vmid)", json_in['data']['custom_fields']['proxmox_vmid'])
+
                     new_vm_id = json_in['data']['custom_fields']['proxmox_vmid']
                 else:
                     return 500, {'result': e.content}
             
             if not new_vm_id:
-                return 500, {'result': f"Unable to create VM id for {json_in['data']['name']}"}
+                return 500, {'result': f"Unable to create LXC id for {json_in['data']['name']}"}
 
             lxc_create_data = {
                 'vmid': new_vm_id,
@@ -416,55 +456,89 @@ class NetBoxProxmoxHelper:
                 'storage': json_in['data']['custom_fields']['proxmox_vm_storage'],
                 'password': 'netbox-proxmox-automation',
                 'onboot': 1,
-                'unprivileged': 1
+                'unprivileged': 1,
+                'swap': 0
             }
 
-# ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC5MttN0meoS8aVfK/9E2V7XU0VpFO9+pkwcjzyvUW6GLyA/PURs7K3DU90EZki4TYbonSo0CwGDZanCsdsBHMpTADt6snbUU0LYa+LyjnLoatDkrjWDVks6uGcPuMIDJEAw2fTdW2/wXc483QIPUWS/ZMDXjvOoAL7WTlcDvV7LkRYgdi1nOC6pe2Bxn3FU+Bm5RwBS3iJZ/CplKFi0OtTz4miobC7Ke2gbQoQ3AcbYhz24zR9QzFqdmXmNV2Fhob7H5FXhWr/xMx16n3YRSWyX2yBi7HIq56GWdCEZLv8vB1Dj/mtcFxhZ0LQ9isg0o7qrQlpjo9bZ/PY0QiC6e51 identity-proxmox-vm
-
             if json_in['data']['custom_fields']['proxmox_public_ssh_key']:
-                print("HAI PUBLIC SSH KEY")
+                if self.debug:
+                    print("  LXC got public SSH key")
                 lxc_create_data['ssh-public-keys'] = json_in['data']['custom_fields']['proxmox_public_ssh_key']
 
-            print("LXC CREATE DATA", lxc_create_data, new_vm_id)
+            if self.debug:
+                print("LXC CREATE DATA", lxc_create_data, new_vm_id)
 
             create_lxc_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc.create(**lxc_create_data)
 
-            self.__proxmox_job_get_status(create_lxc_data)
+            self.proxmox_job_get_status(create_lxc_data)
 
-            nb_obj_update_vmid = self.netbox_api.virtualization.virtual_machines.get(name=json_in['data']['name'])
+            try:
+                nb_obj_update_vmid = self.netbox_api.virtualization.virtual_machines.get(name=json_in['data']['name'])
+            except pynetbox.lib.query.RequestError as e:
+                return 500, {'result': e.content}
 
             if nb_obj_update_vmid:
+                netbox_vm_obj_id = nb_obj_update_vmid['id']
+
+                if self.debug:
+                    print("  ID", netbox_vm_obj_id)
+
                 nb_obj_update_vmid['custom_fields']['proxmox_vmid'] = new_vm_id
                 nb_obj_update_vmid.save()
 
-            print("AFTER LXC CREATE")
+                """
+                'rootfs': 'local-lvm:vm-104-disk-0,size=4G'}
+                """
+                
+                lxc_config_info = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(new_vm_id).config.get()
+
+                if self.debug:
+                    print("LXC CONFIG INFO", lxc_config_info)
+
+                if 'rootfs' in lxc_config_info:
+                    if self.debug:
+                        print("ROOTFS INFO", lxc_config_info['rootfs'])
+
+                    self.create_vm_root_disk_in_netbox(netbox_vm_obj_id, lxc_config_info['rootfs'])
+
+            if self.debug:
+                print("AFTER LXC CREATE")
 
             return 200, {'result': f"LXC {json_in['data']['name']} (vmid: {new_vm_id}) created successfully"}
         except ResourceException as e:
             return 500, {'result': e.content}
 
 
+    def proxmox_update_lxc_resources(self, json_in):
+        self.json_data_check_proxmox_vmid_exists(json_in)
+        
+        # update VM vcpus and/or memory if defined
+        if json_in['data']['vcpus']:
+            self.__proxmox_update_lxc_vcpus(json_in['data']['custom_fields']['proxmox_vmid'], json_in['data']['vcpus'])
+
+        if json_in['data']['memory']:
+            self.__proxmox_update_lxc_memory(json_in['data']['custom_fields']['proxmox_vmid'], json_in['data']['memory'])
+
 
     def proxmox_lxc_set_net0(self, json_in):
         try:
-            self.__json_data_check_proxmox_vmid_exists(json_in)
+            self.json_data_check_proxmox_vmid_exists(json_in)
 
             primary_ip = json_in['data']['primary_ip']['address']
-            gateway = self.__generate_gateway_from_ip_address(primary_ip)
+            gateway = self.generate_gateway_from_ip_address(primary_ip)
 
             self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(json_in['data']['custom_fields']['proxmox_vmid']).config.put(
                     net0=f"name=net0,bridge=vmbr0,ip={primary_ip},gw={gateway},firewall=1"
             )
 
-            return 200, {'result': f"net0 for vmid {json_in['data']['custom_fields']['proxmox_vmid']} configured with IP {primary_ip} and gateway {gateway}"}
+            return 200, {'result': f"net0 for (LXC) vmid {json_in['data']['custom_fields']['proxmox_vmid']} configured with IP {primary_ip} and gateway {gateway}"}
         except ResourceException as e:
             return 500, {'result': e.content}
 
 
-
     def proxmox_lxc_resize_disk(self, json_in):
         try:
-            proxmox_vmid = self.__netbox_get_proxmox_vmid(json_in['data']['virtual_machine']['id'])
+            proxmox_vmid = self.netbox_get_proxmox_vmid(json_in['data']['virtual_machine']['id'])
 
             disk_size = f"{int(json_in['data']['size'])/1000}G"
 
@@ -473,7 +547,7 @@ class NetBoxProxmoxHelper:
                     size=disk_size
             )
 
-            self.__proxmox_job_get_status(disk_resize_info)
+            self.proxmox_job_get_status(disk_resize_info)
 
             return 200, {'result': f"Disk rootfs resized to {disk_size}"}
         except ResourceException as e:
@@ -482,11 +556,11 @@ class NetBoxProxmoxHelper:
 
     def proxmox_start_lxc(self, json_in):
         try:
-            self.__json_data_check_proxmox_vmid_exists(json_in)
+            self.json_data_check_proxmox_vmid_exists(json_in)
 
             start_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(json_in['data']['custom_fields']['proxmox_vmid']).status.start.post()
 
-            self.__proxmox_job_get_status(start_data)
+            self.proxmox_job_get_status(start_data)
 
             return 200, {'result': f"LXC (vmid: {json_in['data']['custom_fields']['proxmox_vmid']}) has been started"}
         except ResourceException as e:
@@ -495,11 +569,11 @@ class NetBoxProxmoxHelper:
 
     def proxmox_stop_lxc(self, json_in):
         try: 
-            self.__json_data_check_proxmox_vmid_exists(json_in)
+            self.json_data_check_proxmox_vmid_exists(json_in)
 
             stop_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(json_in['data']['custom_fields']['proxmox_vmid']).status.stop.post()
 
-            self.__proxmox_job_get_status(stop_data)
+            self.proxmox_job_get_status(stop_data)
 
             return 200, {'result': f"LXC (vmid: {json_in['data']['custom_fields']['proxmox_vmid']}) has been stopped"}
         except ResourceException as e:
@@ -508,13 +582,13 @@ class NetBoxProxmoxHelper:
 
     def proxmox_delete_lxc(self, json_in):
         try:
-            self.__json_data_check_proxmox_vmid_exists(json_in)
+            self.json_data_check_proxmox_vmid_exists(json_in)
 
-            #self.proxmox_stop_vm(json_in)
+            self.proxmox_stop_lxc(json_in)
 
             delete_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc.delete(json_in['data']['custom_fields']['proxmox_vmid'])
 
-            self.__proxmox_job_get_status(delete_data)
+            self.proxmox_job_get_status(delete_data)
 
             return 200, {'result': f"LXC (vmid: {json_in['data']['custom_fields']['proxmox_vmid']}) has been deleted"}
         except ResourceException as e:
