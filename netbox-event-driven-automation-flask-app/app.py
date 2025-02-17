@@ -25,7 +25,7 @@ if not 'netbox_webhook_name' in app_config:
     raise ValueError(f"'netbox_webhook_name' missing in {app_config_file}")
 
 app = Flask(__name__)
-api = Api(app, version="1.0.0", title="NetBox-Proxmox Webhook Listener",
+api = Api(app, version=VERSION, title="NetBox-Proxmox Webhook Listener",
         description="NetBox-Proxmox Webhook Listener")
 ns = api.namespace(app_config['netbox_webhook_name'])
 

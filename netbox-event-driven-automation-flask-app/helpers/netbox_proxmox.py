@@ -113,7 +113,7 @@ class NetBoxProxmoxHelper:
             return ResourceException(e)
         
 
-    def create_vm_root_disk_in_netbox(self, netbox_vm_obj_id = 0, full_root_disk_info = None):
+    def create_vm_root_disk_in_netbox(self, netbox_vm_obj_id = 0, disk_name = 'dummy', full_root_disk_info = None):
         try:
             disk_info, disk_size = full_root_disk_info.split(',')
             storage_volume = disk_info.split(':')[0]
@@ -130,7 +130,7 @@ class NetBoxProxmoxHelper:
 
                 netbox_vm_disk_info = {
                     'virtual_machine': netbox_vm_obj_id,
-                    'name': 'rootfs',
+                    'name': disk_name,
                     'custom_fields': {
                         'proxmox_disk_storage_volume': storage_volume
                     },
@@ -146,7 +146,7 @@ class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
     def __proxmox_update_vm_vcpus_and_memory(self, vmid=1, vcpus=1, memory=500):
         try:
             update_vm_vcpus = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(vmid).config.post(
-                cores=int(vcpus),
+                cores=int(float(vcpus)),
                 memory=int(memory)
             )
 
@@ -239,25 +239,25 @@ class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
                     if 'bootdisk' in proxmox_vm_config:
                         os_disk = proxmox_vm_config['bootdisk']
 
-                        if os_disk in proxmox_vm_config:
-                            self.create_vm_root_disk_in_netbox(nb_obj_update_vmid['id'], proxmox_vm_config[os_disk])
+                        self.create_vm_root_disk_in_netbox(nb_obj_update_vmid['id'], os_disk, proxmox_vm_config[os_disk])
                 except pynetbox.core.query.RequestError as e:
                     raise pynetbox.core.query.RequestError(e)
 
             # update VM vcpus and memory if defined
-            if json_in['data']['vcpus']:
-                self.__proxmox_update_vm_vcpus(new_vm_id, json_in['data']['vcpus'])
+            if json_in['data']['vcpus'] and json_in['data']['memory']:
+                if not 'custom_fields' in json_in['data']:
+                    json_in['data']['custom_fields'] = {}
 
-            if json_in['data']['memory']:
-                self.__proxmox_update_vm_memory(new_vm_id, json_in['data']['memory'])
+                if not 'proxmox_vmid' in json_in['data']['custom_fields']:
+                    json_in['data']['custom_fields']['proxmox_vmid'] = new_vm_id
 
-            return 200, {'result': f"VM {json_in['data']['name']} cloned successfully"}
+                return self.proxmox_update_vm_vcpus_and_memory(json_in)
         except ResourceException as e:
             return 500, {'result': e.content}
 
 
     def proxmox_update_vm_vcpus_and_memory(self, json_in):
-        self.json_data_check_proxmox_vmid_exists(json_in)
+        #self.json_data_check_proxmox_vmid_exists(json_in)
         
         # update VM vcpus and/or memory if defined
         if json_in['data']['custom_fields']['proxmox_vmid'] and json_in['snapshots']['postchange']['vcpus'] and json_in['snapshots']['postchange']['memory']:
@@ -490,7 +490,7 @@ class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
                     if self.debug:
                         print("ROOTFS INFO", lxc_config_info['rootfs'])
 
-                    self.create_vm_root_disk_in_netbox(netbox_vm_obj_id, lxc_config_info['rootfs'])
+                    self.create_vm_root_disk_in_netbox(netbox_vm_obj_id, 'rootfs', lxc_config_info['rootfs'])
 
             if self.debug:
                 print("AFTER LXC CREATE")
