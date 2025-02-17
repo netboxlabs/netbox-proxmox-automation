@@ -112,6 +112,45 @@ def main():
                 ]
             }
         },
+        'proxmox-vm-set-resources': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualmachine"
+            ],
+            'event_types': [
+                "object_updated"
+            ],
+            'conditions': {
+                "and": [
+                    {
+                        "attr": "status.value",
+                        "value": "staged"
+                    },
+                    {
+                        "attr": "vcpus",
+                        "negate": True,
+                        "value": None
+                    },
+                    {
+                        "attr": "memory",
+                        "negate": True,
+                        "value": None
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_vm_type",
+                        "value": "vm"
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_vm_templates",
+                        "negate": True,
+                        "value": None
+                    }
+                ]
+            }
+        },
         'proxmox-remove-vm': {
             'enabled': True,
             'action_type': 'webhook',
@@ -272,6 +311,50 @@ def main():
             ],
             'event_types': [
                 "object_created"
+            ],
+            'conditions': {
+                "and": [
+                    {
+                        "attr": "status.value",
+                        "value": "staged"
+                    },
+                    {
+                        "attr": "vcpus",
+                        "negate": True,
+                        "value": None
+                    },
+                    {
+                        "attr": "memory",
+                        "negate": True,
+                        "value": None
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_vm_type",
+                        "value": "lxc"
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_lxc_templates",
+                        "negate": True,
+                        "value": None
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_public_ssh_key",
+                        "negate": True,
+                        "value": None
+                    }
+                ]
+            }
+        },
+        'proxmox-lxc-set-resources': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualmachine"
+            ],
+            'event_types': [
+                "object_updated"
             ],
             'conditions': {
                 "and": [
