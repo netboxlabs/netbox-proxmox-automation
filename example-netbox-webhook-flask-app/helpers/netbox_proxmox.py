@@ -65,6 +65,20 @@ class NetBoxProxmoxHelper:
             raise pynetbox.core.query.RequestError(e)
 
 
+    def netbox_get_proxmox_node_from_vm_id(self, nb_vm_id=0):
+        try:
+            nb_obj = self.netbox_api.virtualization.virtual_machines.get(id=nb_vm_id)
+
+            if not nb_obj:
+                raise ValueError("Unable to get Proxmox vmid from NetBox")
+
+            nb_obj_data = dict(nb_obj)
+
+            return nb_obj_data['custom_fields']['proxmox_node']
+        except pynetbox.core.query.RequestError as e:
+            raise pynetbox.core.query.RequestError(e)
+    
+
     def proxmox_job_get_status(self, job_in):
         try:
             while True:
@@ -129,31 +143,19 @@ class NetBoxProxmoxHelper:
 
 
 class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
-    def __proxmox_update_vm_vcpus(self, vmid, vcpus):
+    def __proxmox_update_vm_vcpus_and_memory(self, vmid=1, vcpus=1, memory=500):
         try:
             update_vm_vcpus = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(vmid).config.post(
-                cores=int(vcpus)
+                cores=int(vcpus),
+                memory=int(memory)
             )
 
             self.proxmox_job_get_status(update_vm_vcpus)
 
-            return 200, {'result': f"Updated CPU information (cpus: {vcpus}) for {vmid}"}
+            return 200, {'result': f"Updated CPU information (cpus: {vcpus}, memory: {memory}) for {vmid}"}
         except ResourceException as e:
             return 500, {'result': e.content}
         
-
-    def __proxmox_update_vm_memory(self, vmid, memory):
-        try:
-            update_vm_memory = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(vmid).config.post(
-                memory=int(memory)
-            )
-
-            self.proxmox_job_get_status(update_vm_memory)
-
-            return 200, {'result': f"Updated memory information (memory: {memory}) for {vmid}"}
-        except ResourceException as e:
-            return 500, {'result': e.content}
-
 
     def proxmox_check_if_vm_exists(self, vm_name = None):
         vm_exists = False
@@ -254,15 +256,14 @@ class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
             return 500, {'result': e.content}
 
 
-    def proxmox_update_vm_resources(self, json_in):
+    def proxmox_update_vm_vcpus_and_memory(self, json_in):
         self.json_data_check_proxmox_vmid_exists(json_in)
         
         # update VM vcpus and/or memory if defined
-        if json_in['data']['vcpus']:
-            self.__proxmox_update_vm_vcpus(json_in['data']['custom_fields']['proxmox_vmid'], json_in['data']['vcpus'])
-
-        if json_in['data']['memory']:
-            self.__proxmox_update_vm_memory(json_in['data']['custom_fields']['proxmox_vmid'], json_in['data']['memory'])
+        if json_in['data']['custom_fields']['proxmox_vmid'] and json_in['snapshots']['postchange']['vcpus'] and json_in['snapshots']['postchange']['memory']:
+            return self.__proxmox_update_vm_vcpus_and_memory(json_in['data']['custom_fields']['proxmox_vmid'], json_in['snapshots']['postchange']['vcpus'], json_in['snapshots']['postchange']['memory'])
+        
+        return 500, {'result': f"Unable to update vcpus (json_in['snapshots']['postchange']['vcpus']) and/or memory (json_in['snapshots']['postchange']['memory']) for {json_in['data']['custom_fields']['proxmox_vmid']}"}
 
 
     def proxmox_start_vm(self, json_in):
@@ -503,7 +504,7 @@ class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
         self.json_data_check_proxmox_vmid_exists(json_in)
         
         # update VM vcpus and/or memory if defined
-        if json_in['data']['custom_fields']['proxmox_vmid'] and json_in['data']['vcpus'] and json_in['data']['memory']:
+        if json_in['data']['custom_fields']['proxmox_vmid'] and json_in['snapshots']['postchange']['vcpus'] and json_in['snapshots']['postchange']['memory']:
             return self.__proxmox_update_lxc_vcpus_and_memory(json_in['data']['custom_fields']['proxmox_vmid'], json_in['snapshots']['postchange']['vcpus'], json_in['snapshots']['postchange']['memory'])
         
         return 500, {'result': f"Unable to set vcpus ({json_in['data']['vcpus']}) and/or memory ({json_in['data']['memory']}) for LXC (vmid: {json_in['data']['custom_fields']['proxmox_vmid']})"}
@@ -526,7 +527,9 @@ class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
 
 
     def proxmox_lxc_resize_disk(self, json_in):
-        print("PROXMOX LXC RESIZE DISK")
+        if self.debug:
+            print("PROXMOX LXC RESIZE DISK")
+
         try:
             proxmox_vmid = self.netbox_get_proxmox_vmid(json_in['data']['virtual_machine']['id'])
 

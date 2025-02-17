@@ -6,7 +6,7 @@ from datetime import datetime
 
 # adapted from: https://majornetwork.net/2019/10/webhook-listener-for-netbox/
 
-from helpers.netbox_proxmox import NetBoxProxmoxHelperVM, NetBoxProxmoxHelperLXC
+from helpers.netbox_proxmox import NetBoxProxmoxHelper, NetBoxProxmoxHelperVM, NetBoxProxmoxHelperLXC
 
 from flask import Flask, Response, request, jsonify
 from flask_restx import Api, Resource, fields
@@ -95,21 +95,17 @@ class WebhookListener(Resource):
         if not webhook_json_data or "model" not in webhook_json_data or "event" not in webhook_json_data:
             return {"result":"invalid input"}, 400
 
+        results = (500, {'result': 'Default error message (obviously something has gone wrong)'})
+
         if DEBUG:
             print(f"INCOMING DATA FOR WEBHOOK {webhook_json_data['event']} --> {webhook_json_data['model']}\n", json.dumps(webhook_json_data, indent=4))
 
-        if webhook_json_data['model'] == 'virtualdisk':
-            print("I GUESS I HAVE TO DO SOMETHING WITH VIRTUALDISK")
-
-        if not 'proxmox_node' in webhook_json_data['data']['custom_fields']:
-            return jsonify({'missing Proxmox node': 'missing Proxmox node'}), 500
-        
-        proxmox_node = webhook_json_data['data']['custom_fields']['proxmox_node']
-
-        results = (500, {'result': 'Default error message (obviously something has gone wrong)'})
-
         if webhook_json_data['model'] == 'virtualmachine':
-            print("HERE VM")
+            if not 'proxmox_node' in webhook_json_data['data']['custom_fields']:
+                results = 500, {'result': 'Missing proxmox_node in custom_fields'}
+            
+            proxmox_node = webhook_json_data['data']['custom_fields']['proxmox_node']
+
             if webhook_json_data['data']['custom_fields']['proxmox_vm_type'] == 'vm':
                 tc = NetBoxProxmoxHelperVM(app_config, proxmox_node, DEBUG)
 
@@ -117,7 +113,7 @@ class WebhookListener(Resource):
                     if webhook_json_data['event'] == 'created':
                         results = tc.proxmox_clone_vm(webhook_json_data)
                     elif webhook_json_data['event'] == 'updated':
-                        results = tc.proxmox_update_vm_resources(webhook_json_data)
+                        results = tc.proxmox_update_vm_vcpus_and_memory(webhook_json_data)
 
                         if webhook_json_data['data']['primary_ip'] and webhook_json_data['data']['primary_ip']['address']:
                             results = tc.proxmox_set_ipconfig0(webhook_json_data)
@@ -135,17 +131,7 @@ class WebhookListener(Resource):
                         results = (500, {'result': f"Unknown value {webhook_json_data['data']['status']['value']}"})
                 elif webhook_json_data['event'] == 'deleted':
                     results = tc.proxmox_delete_vm(webhook_json_data)
-
-                # disk stuff
-                if webhook_json_data['model'] == 'virtualdisk':
-                    if webhook_json_data['event'] == 'created':
-                        results = tc.proxmox_add_disk(webhook_json_data)
-                    elif webhook_json_data['event'] == 'updated':
-                        results = tc.proxmox_resize_disk(webhook_json_data)
-                    elif webhook_json_data['event'] == 'deleted':
-                        results = tc.proxmox_delete_disk(webhook_json_data)
             elif webhook_json_data['data']['custom_fields']['proxmox_vm_type'] == 'lxc':
-                print("YAY LXC")
                 tc = NetBoxProxmoxHelperLXC(app_config, proxmox_node, DEBUG)
 
                 if webhook_json_data['data']['status']['value'] == 'staged':
@@ -175,15 +161,38 @@ class WebhookListener(Resource):
                     results = tc.proxmox_delete_lxc(webhook_json_data)
                 else:
                     results = (500, {'result': f"Unknown event: {webhook_json_data['event']}"})
-
-        # disk stuff
         elif webhook_json_data['model'] == 'virtualdisk':
-            print("HERE VIRTUALDISK")
-            if webhook_json_data['event'] == 'updated':
-                print("ADFAFADFASD")
-                results = tc.proxmox_lxc_resize_disk(webhook_json_data)
+            results = 500, {'result': 'Something has gone wrong with virtualdisk management'}
+            is_lxc = False
+
+            if webhook_json_data['data']['name'] == 'rootfs':
+                is_lxc = True
+
+            if DEBUG:
+                print("HERE VIRTUALDISK", is_lxc)
+
+            tcall = NetBoxProxmoxHelper(app_config, None, DEBUG)
+            proxmox_node = tcall.netbox_get_proxmox_node_from_vm_id(webhook_json_data['data']['virtual_machine']['id'])
+
+            if is_lxc:
+                if DEBUG:
+                    print("change disk lxc")
+
+                if webhook_json_data['event'] == 'updated':
+                    if webhook_json_data['snapshots']['prechange']['size'] != webhook_json_data['snapshots']['postchange']['size']:
+                        tc = NetBoxProxmoxHelperLXC(app_config, proxmox_node, DEBUG)
+                        results = tc.proxmox_lxc_resize_disk(webhook_json_data)
+                elif webhook_json_data['event'] == 'deleted':
+                    results = 200, {'result': 'All good'}
             else:
-                results = (500, {f"result": f"Unknown VM type {webhook_json_data['data']['custom_fields']['proxmox_vm_type']}"})
+                tc = NetBoxProxmoxHelperVM(app_config, proxmox_node, DEBUG)
+
+                if webhook_json_data['event'] == 'created':
+                    results = tc.proxmox_add_disk(webhook_json_data)
+                elif webhook_json_data['event'] == 'updated':
+                    results = tc.proxmox_resize_disk(webhook_json_data)
+                elif webhook_json_data['event'] == 'deleted':
+                    results = tc.proxmox_delete_disk(webhook_json_data)
 
         if DEBUG:
             print("RAW RESULTS", results)
