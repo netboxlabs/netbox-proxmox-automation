@@ -70,6 +70,9 @@ class NetBoxProxmoxHelper:
             while True:
                 task_status = self.proxmox_api.nodes(self.proxmox_api_config['node']).tasks(job_in).status.get()
 
+                if self.debug:
+                    print("RAW TASK STATUS", task_status)
+
                 if 'status' in task_status and task_status['status'] == 'stopped':
                     break
         except ResourceException as e:
@@ -396,32 +399,19 @@ class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
 
 
 class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
-    def __proxmox_update_lxc_vcpus(self, vmid, vcpus):
+    def __proxmox_update_lxc_vcpus_and_memory(self, vmid=1, vcpus=1, memory=512):
         try:
             update_lxc_vcpus = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(vmid).config.put(
-                cores=int(vcpus)
-                #cpus=int(vcpus)
-            )
-
-            self.proxmox_job_get_status(update_lxc_vcpus)
-
-            return 200, {'result': f"Updated CPU information (cpus: {vcpus}) for {vmid}"}
-        except ResourceException as e:
-            return 500, {'result': e.content}
-        
-
-    def __proxmox_update_lxc_memory(self, vmid, memory):
-        try:
-            update_lxc_memory = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(vmid).config.put(
+                cores=int(float(vcpus)),
                 memory=int(memory)
             )
 
-            self.proxmox_job_get_status(update_lxc_memory)
+            #self.proxmox_job_get_status(update_lxc_vcpus)
 
-            return 200, {'result': f"Updated memory information (memory: {memory}) for {vmid}"}
+            return 200, {'result': f"Updated CPU and/or memory information (cpus: {vcpus}, memory {memory}) for {vmid}"}
         except ResourceException as e:
             return 500, {'result': e.content}
-
+        
 
     def proxmox_create_lxc(self, json_in):
         try:
@@ -509,15 +499,14 @@ class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
             return 500, {'result': e.content}
 
 
-    def proxmox_update_lxc_resources(self, json_in):
+    def proxmox_update_lxc_vpus_and_memory(self, json_in):
         self.json_data_check_proxmox_vmid_exists(json_in)
         
         # update VM vcpus and/or memory if defined
-        if json_in['data']['vcpus']:
-            self.__proxmox_update_lxc_vcpus(json_in['data']['custom_fields']['proxmox_vmid'], json_in['data']['vcpus'])
-
-        if json_in['data']['memory']:
-            self.__proxmox_update_lxc_memory(json_in['data']['custom_fields']['proxmox_vmid'], json_in['data']['memory'])
+        if json_in['data']['custom_fields']['proxmox_vmid'] and json_in['data']['vcpus'] and json_in['data']['memory']:
+            return self.__proxmox_update_lxc_vcpus_and_memory(json_in['data']['custom_fields']['proxmox_vmid'], json_in['snapshots']['postchange']['vcpus'], json_in['snapshots']['postchange']['memory'])
+        
+        return 500, {'result': f"Unable to set vcpus ({json_in['data']['vcpus']}) and/or memory ({json_in['data']['memory']}) for LXC (vmid: {json_in['data']['custom_fields']['proxmox_vmid']})"}
 
 
     def proxmox_lxc_set_net0(self, json_in):
@@ -537,15 +526,19 @@ class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
 
 
     def proxmox_lxc_resize_disk(self, json_in):
+        print("PROXMOX LXC RESIZE DISK")
         try:
             proxmox_vmid = self.netbox_get_proxmox_vmid(json_in['data']['virtual_machine']['id'])
 
             disk_size = f"{int(json_in['data']['size'])/1000}G"
+            print(f"LXC RESIZE DISK SIZE {json_in['data']['virtual_machine']} {disk_size}")
 
-            disk_resize_info = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(proxmox_vmid).resize.put(
-                    disk='rootfs',
-                    size=disk_size
-            )
+            lxc_disk_size_info = {
+                'disk': 'rootfs',
+                'size': disk_size
+            }
+
+            disk_resize_info = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(proxmox_vmid).resize.put(**lxc_disk_size_info)
 
             self.proxmox_job_get_status(disk_resize_info)
 
