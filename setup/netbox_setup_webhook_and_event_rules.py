@@ -182,7 +182,20 @@ def main():
             'event_types': [
                 "object_created"
             ],
-            'conditions': ''
+            'conditions': {
+                "and": [
+                    {
+                        "attr": "name",
+                        "value": "scsi0",
+                        "negate": True
+                    },
+                    {
+                        "attr": "name",
+                        "value": "rootfs",
+                        "negate": True
+                    }
+                    ]                          
+            }
         },
         'proxmox-remove-vm-disk': {
             'enabled': True,
