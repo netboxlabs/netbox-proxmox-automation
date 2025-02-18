@@ -78,6 +78,7 @@
       api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
       node: "{{ proxmox_env_info.node }}"
       name: "{{ vm_config['hostname'] }}"
+      type: lxc
       config: current
     register: new_proxmox_lxc
 
