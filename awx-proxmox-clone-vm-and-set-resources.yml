@@ -114,7 +114,7 @@
 #}
   - name: Show human-readable disk size from newly-created VM
     debug:
-      msg: "human readable disk size: {{ new_proxmox_vm.proxmox_vms[0].maxdisk | human_readable(unit='M') }} ||| {{ new_proxmox_vm.proxmox_vms[0].maxdisk | human_readable(unit='M') | regex_replace('\s+[A-Z][A-Za-z]$', '') | int | string }}"
+      msg: "human readable disk size: {{ new_proxmox_vm.proxmox_vms[0].maxdisk | human_readable(unit='M') }} ||| {{ new_proxmox_vm.proxmox_vms[0].maxdisk | human_readable(unit='M') | regex_replace('\\s+[M][Bb]$', '') | int | string }}"
 
   - name: "Update Proxmox storage for VM in NetBox"
     netbox.netbox.netbox_virtual_disk:
