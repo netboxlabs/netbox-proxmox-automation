@@ -65,9 +65,9 @@
     delay: 5
     when: not vm_config['hostname'] in collected_proxmox_lxc
 
-  #- name: Show us LXC settings
-  #  debug:
-  #    msg: "HEY LXC JOB: {{ create_lxc_job }}"
+  - name: Show us LXC settings
+    debug:
+      msg: "Show LXC settings: {{ create_lxc_job }}"
 
   - name: "Discover information for newly-created Proxmox LXC"
     community.general.proxmox_vm_info:
@@ -81,9 +81,9 @@
       config: current
     register: new_proxmox_lxc
 
-  #- name: "Newly-created Proxmox LXC information"
-  #  debug:
-  #    msg: "NCPLI: {{ new_proxmox_lxc}}"
+  - name: "Newly-created Proxmox LXC information"
+    debug:
+      msg: "Newly-created Proxmox LXC information: {{ new_proxmox_lxc}}"
 
   - name: "Update Proxmox vmid for LXC in NetBox"
     netbox.netbox.netbox_virtual_machine:
