@@ -6,7 +6,6 @@
   vars:
     collected_proxmox_vm: {}
     collected_proxmox_lxc: {}
-    lxc_default_disk_size: 5 # GB
 
   tasks:
   - name: Include Proxmox VM discovery
@@ -47,7 +46,6 @@
       memory: "{{ vm_config['memory'] | default(512) }}"
       pubkey: "{{ vm_config['pubkey']}}"
       clone_type: "full"
-      #disk: "{{ vm_config['storage'] }}:{{ lxc_default_disk_size }}"
       storage: "{{ vm_config['storage'] }}"
       #onboot: "{{ vm_config_create[item].auto_start }}"
       unprivileged: true
@@ -67,9 +65,9 @@
     delay: 5
     when: not vm_config['hostname'] in collected_proxmox_lxc
 
-  - name: Show us LXC settings
-    debug:
-      msg: "HEY LXC JOB: {{ create_lxc_job }}"
+  #- name: Show us LXC settings
+  #  debug:
+  #    msg: "HEY LXC JOB: {{ create_lxc_job }}"
 
   - name: "Discover information for newly-created Proxmox LXC"
     community.general.proxmox_vm_info:
@@ -83,9 +81,9 @@
       config: current
     register: new_proxmox_lxc
 
-  - name: "Newly-created Proxmox LXC information"
-    debug:
-      msg: "NCPLI: {{ new_proxmox_lxc}}"
+  #- name: "Newly-created Proxmox LXC information"
+  #  debug:
+  #    msg: "NCPLI: {{ new_proxmox_lxc}}"
 
   - name: "Update Proxmox vmid for LXC in NetBox"
     netbox.netbox.netbox_virtual_machine:
@@ -105,8 +103,6 @@
       data:
         virtual_machine: "{{ new_proxmox_lxc.proxmox_vms[0].name }}"
         name: rootfs
-        #size: "{{ new_proxmox_lxc.proxmox_vms[0].maxdisk | human_readable(unit='M') }}"
-        #size: "{{ lxc_default_disk_size * 1000 }}"
         size: "{{ new_proxmox_lxc.proxmox_vms[0].maxdisk | human_readable(unit='M') | regex_replace('\\s+[M][Bb]$', '') | int | string }}"
         custom_fields:
           proxmox_disk_storage_volume: "{{ vm_config['storage'] }}"
