@@ -47,7 +47,8 @@
       memory: "{{ vm_config['memory'] | default(512) }}"
       pubkey: "{{ vm_config['pubkey']}}"
       clone_type: "full"
-      disk: "{{ vm_config['storage'] }}:{{ lxc_default_disk_size }}"
+      #disk: "{{ vm_config['storage'] }}:{{ lxc_default_disk_size }}"
+      storage: "{{ vm_config['storage'] }}"
       #onboot: "{{ vm_config_create[item].auto_start }}"
       unprivileged: true
       state: present
@@ -105,7 +106,8 @@
         virtual_machine: "{{ new_proxmox_lxc.proxmox_vms[0].name }}"
         name: rootfs
         #size: "{{ new_proxmox_lxc.proxmox_vms[0].maxdisk | human_readable(unit='M') }}"
-        size: "{{ lxc_default_disk_size * 1000 }}"
+        #size: "{{ lxc_default_disk_size * 1000 }}"
+        size: "{{ new_proxmox_lxc.proxmox_vms[0].maxdisk | human_readable(unit='M') | regex_replace('\\s+[M][Bb]$', '') | int | string }}"
         custom_fields:
           proxmox_disk_storage_volume: "{{ vm_config['storage'] }}"
       state: present
