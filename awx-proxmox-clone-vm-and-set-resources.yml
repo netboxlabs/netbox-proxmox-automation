@@ -119,8 +119,8 @@
       data:
         virtual_machine: "{{ new_proxmox_vm.proxmox_vms[0].name }}"
         name: scsi0
-        #size: "{{ ((new_proxmox_vm.proxmox_vms[0].maxdisk / (1024*1024)) / 1000) }}"
-        size: "{{ new_proxmox_vm.proxmox_vms[0].maxdisk }}"
+        size: "{{ ((new_proxmox_vm.proxmox_vms[0].maxdisk / (1024*1024)) / 1000) | string }}"
+        #size: "{{ new_proxmox_vm.proxmox_vms[0].maxdisk }}"
         custom_fields:
           proxmox_disk_storage_volume: "{{ vm_config['storage'] }}"
       state: present
