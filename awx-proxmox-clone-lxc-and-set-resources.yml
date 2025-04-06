@@ -40,6 +40,7 @@
       api_port: "{{ proxmox_env_info.api_port }}"
       ostemplate: "{{ vm_config ['template'] }}"
       #vmid: "{{ vm_config['template'] }}"
+      vmid: "{{ vm_config['vmid'] | int | default(omit) }}"
       hostname: "{{ vm_config['hostname'] }}"
       cores: "{{ vm_config['cpus'] | int | default(1) }}"
       cpus: "{{ vm_config['cpus'] | int | default(1) }}"
@@ -68,6 +69,9 @@
   - name: Show us LXC settings
     debug:
       msg: "Show LXC settings: {{ create_lxc_job }}"
+
+  - name: Include Proxmox LXC discovery post-provisioning
+    include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
   - name: "Discover information for newly-created Proxmox LXC"
     community.general.proxmox_vm_info:

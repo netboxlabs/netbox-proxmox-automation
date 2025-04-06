@@ -41,6 +41,7 @@
       clone: "{{ vm_config['template'] }}"
       vmid: "{{ vm_config['template'] }}"
       name: "{{ vm_config['name'] }}"
+      newid: "{{ vm_config['vmid'] | int | default(omit) }}"
       agent: 'enabled=1'
       storage: "{{ vm_config['storage'] }}"
       #onboot: "{{ vm_config_create[item].auto_start }}"
