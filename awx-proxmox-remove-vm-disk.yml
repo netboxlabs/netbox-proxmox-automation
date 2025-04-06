@@ -4,11 +4,15 @@
   gather_facts: False
 
   vars:
-    collected_proxmox_vms: {}
+    collected_proxmox_vm: {}
+    collected_proxmox_lxc: {}
 
   tasks:
-  - name: Include Proxmox common discovery
-    include_tasks: "ansible-tasks/collect-proxmox-vms.yml"
+  - name: Include Proxmox VM discovery
+    include_tasks: "ansible-tasks/collect-proxmox-vm.yml"
+
+  - name: Include Proxmox LXC discovery
+    include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
   - name: Remove VM disk
     community.general.proxmox_disk:
@@ -19,7 +23,7 @@
       name: "{{ vm_config['name'] }}"
       disk: "{{ vm_config['remove_disk'] }}"
       state: absent
-    when: vm_config['name'] in collected_proxmox_vms
+    when: vm_config['name'] in collected_proxmox_vm
     register: vm_remove_disk_job
     async: 180
     poll: 0
@@ -27,7 +31,7 @@
   - name: Wait for VM disk removal process to finish
     async_status:
       jid: "{{ vm_remove_disk_job.ansible_job_id }}"
-    when: vm_config['name'] in collected_proxmox_vms
+    when: vm_config['name'] in collected_proxmox_vm
     register: _ujobs_alias_vc_0
     until: _ujobs_alias_vc_0.finished
     retries: 60

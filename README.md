@@ -39,6 +39,16 @@ If you see errors like this...
 
  Try uninstalling `mkdocs` from your package manager, (e.g. `brew uninstall mkdocs`) and just using the version installed by `pip`. It seems that `mkdocs` doesn't like it when you've installed it using different methods.
 
+# What's New in 1.2.0
+  - Adds LXC support
+  - Adds the ability to define 'vmid' for both VM and LXC, rather than taking a default value from Proxmox
+  - Adds "discovery" of Proxmox VM and LXC disks and auto-creation of VM disk objects in NetBox
+  - Adds rudimentary Proxmox VM and LXC discovery through convenience script
+  - Adds AWX initial setup through convenience script (uses awxkit)
+  - Convenience script changes to accommodate LXC requirements
+  - Can dynamically build webhooks and event rules from current AWX state through convenience script
+  - Adds customization changes for LXC-specific requirements
+
 # Developers
 - Nate Patwardhan &lt;npatwardhan@netboxlabs.com&gt;
 
@@ -47,8 +57,8 @@ If you see errors like this...
 ## Known Issues
 - *Only* supports SCSI disk types (this is possibly fine as Proxmox predomininantly provisions disks as SCSI)
 - Does not currently support Proxmox VM creation to a Proxmox cluster, but is only node-based
-- Needs better reconciliation on the NetBox end when Proxmox->NetBox discovery is used
 
 ## Roadmap -- Delivery
+- Integration with NetBox Discovery/Assurance
 - DNS update support (requires NetBox `netbox-dns` plugin)
 - Maybe evolve into to a NetBox plugin for Proxmox

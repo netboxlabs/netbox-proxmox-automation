@@ -9,9 +9,11 @@
 
 `netbox-proxmox-automation` is an implementation where you define your *desired* (Proxmox) VM states in NetBox.  Your desired VM state in NetBox then gets synchronized to Proxmox.
 
-`netbox-proxmox-automation` uses cloud-init images to induce VM changes on Proxmox based on the *desired* state in NetBox.  Proxmox is highly conducive to using cloud-init images -- when said cloud-init images are converted to templates.  You can define items like ssh keys and network configurations in Proxmox by way of using cloud-init images, and cloud-init will cascade these settings into your Proxmox VMs: *dynamically*.  Further, Proxmox has a comprehensive API -- you can define VM resources, plus disk configurations and more -- which makes it easy for you to automate your desired Proxmox VM states with little effort.
+For Virtual Machine automation, `netbox-proxmox-automation` uses cloud-init images to induce VM changes on Proxmox based on the *desired* state in NetBox.  Proxmox is highly conducive to using cloud-init images -- when said cloud-init images are converted to templates.  You can define items like ssh keys and network configurations in Proxmox by way of using cloud-init images, and cloud-init will cascade these settings into your Proxmox VMs: *dynamically*.  Further, Proxmox has a comprehensive API -- you can define VM resources, plus disk configurations and more -- which makes it easy for you to automate your desired Proxmox VM states with little effort.
 
 Almost always these cloud-init images will be Debian or Debian-derived images (e.g. Debian or Ubuntu), RHEL-derived images (e.g. Rocky Linux), or maybe even Windows-based cloud-init images.  *(Windows cloud-init images are currently un-tested.)*  While you should be able to use a cloud-init image of choice with this automation, and due to the uncertain future of RHEL-derived Linuxes, *only* Ubuntu/Debian cloud images (cloud-init) are supported for the time being.  We welcome any reports around other cloud-init images, and will address this functionality as we are able.
+
+For LXC automation, `netbox-proxmox-automation` uses LXC (container images) on Proxmox to induce LXC changes on Proxmox based on the *desired* state in NetBox.
 
 NetBox models VMs in an intuitive way.  You can define roles for VMs, such as for Proxmox, and from there you can define both VM state (Staged, Active, Offline, etc) and other resources like vcpus, memory, network configuration, VM disks, and more (through customizations in NetBox).
 
@@ -20,7 +22,7 @@ This automation is based on the premise(s) that:
   1. You are using Python (version 3)
   2. You are using NetBox 4.1.0 or newer (NetBox 3.7.x should also work)
   3. You have a running Proxmox instance or cluster
-  4. You have a running [AWX](https://github.com/ansible/awx) instance or are running [your own web application](https://github.com/netboxlabs/netbox-proxmox-automation/tree/main/example-netbox-webhook-flask-app) to handle webhooks and event rules
+  4. You have a running [AWX](https://github.com/ansible/awx) instance or are running [your own web application](https://github.com/netboxlabs/netbox-proxmox-automation/tree/main/netbox-event-driven-automation-flask-app) to handle webhooks and event rules
   5. You have converted a cloud-init image to a Proxmox VM template
   6. Your Promox VM template(s) has/have qemu-guest-agent installed, and that qemu-guest-agent has been enabled via cloud-init
   7. You have access to the NetBox and Proxmox APIs (via API tokens, respectively)

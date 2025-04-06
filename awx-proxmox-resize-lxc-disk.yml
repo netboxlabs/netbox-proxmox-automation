@@ -1,4 +1,4 @@
-- name: "Proxmox: add VM disk"
+- name: "Proxmox: resize rootfs"
   connection: local
   hosts: all
   gather_facts: False
@@ -14,31 +14,30 @@
   - name: Include Proxmox LXC discovery
     include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
-  - name: Add VM disk
-    community.general.proxmox_disk:
+  - name: "Grow LXC disk"
+    community.general.proxmox:
+      node: "{{ proxmox_env_info.node }}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
       api_host: "{{ proxmox_env_info.api_host }}"
-      name: "{{ vm_config['name'] }}"
-      disk: "{{ vm_config['add_disk'] }}"
-      size: "{{ (vm_config['add_disk_size']|int / 1024) | round | int }}"
-      storage: "{{ vm_config['storage_volume'] }}"
-      backup: false
-      ssd: false
-      create: regular
+      #hostname: "{{ vm_config['hostname'] }}"
+      vmid: "{{ collected_proxmox_lxc[vm_config['name']] | int }}"
+      disk: "{{ vm_config['storage_volume'] }}:{{ (vm_config['resize_disk_size']|int / 1024) | round | int }}"
       state: present
-    when: vm_config['name'] in collected_proxmox_vm
-    register: vm_add_disk_job
+      update: true
+    when: vm_config['name'] in collected_proxmox_lxc
+    register: grow_lxc_disk_status
     async: 180
     poll: 0
 
-  - name: Wait for VM disk add process to finish
+  - name: Wait for VM settings updates processes to finish
     async_status:
-      jid: "{{ vm_add_disk_job.ansible_job_id }}"
-    when: vm_config['name'] in collected_proxmox_vm
+      jid: "{{ grow_lxc_disk_status.ansible_job_id }}"
+    when: vm_config['name'] in collected_proxmox_lxc
     register: _ujobs_alias_vc_0
     until: _ujobs_alias_vc_0.finished
     retries: 60
     delay: 10
+
 

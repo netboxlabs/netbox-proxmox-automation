@@ -67,6 +67,35 @@ class Netbox:
                     self.findBy('name')
 
 
+class NetBoxDeviceRoles(Netbox):
+    def __init__(self, url, token, payload, find_key = 'name') -> None:
+        # Initialize the Netbox superclass with URL and token
+        super().__init__(url, token, payload)
+        self.object_type = self.nb.dcim.device_roles
+        self.required_fields = [ 
+            "name",
+            "slug",
+            "vm_role"
+        ]
+        self.find_key = find_key
+        self.findBy(self.find_key)
+        self.createOrUpdate()
+
+
+class NetBoxTags(Netbox):
+    def __init__(self, url, token, payload, find_key = 'name') -> None:
+        # Initialize the Netbox superclass with URL and token
+        super().__init__(url, token, payload)
+        self.object_type = self.nb.extras.tags
+        self.required_fields = [ 
+            "name",
+            "slug"
+        ]
+        self.find_key = find_key
+        self.findBy(self.find_key)
+        self.createOrUpdate()
+
+
 class NetboxCustomFields(Netbox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
@@ -136,12 +165,33 @@ class NetboxVirtualMachines(Netbox):
         self.object_type = self.nb.virtualization.virtual_machines
         self.required_fields = [ 
             "name",
+            "cluster",
             "status"
         ]
         self.find_key = find_key
         self.findBy(self.find_key)
         self.createOrUpdate()
 
+
+class NetboxVirtualMachineInterface(Netbox):
+    def __init__(self, url, token, payload, find_key = 'name') -> None:
+        # Initialize the Netbox superclass with URL and token
+        super().__init__(url, token, payload)
+
+        """
+        self.object_type = self.nb.virtualization.interfaces
+        self.required_fields = [ 
+            "name",
+            "virtual_machine"
+        ]
+        self.find_key = find_key
+        self.findBy(self.find_key)
+        self.createOrUpdate()
+        """
+
+        self.object_type = self.nb.virtualization.interfaces
+        nb_vm_int = self.object_type.create(payload)
+        
 
 class NetboxIPAddresses(Netbox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:

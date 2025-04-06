@@ -1,0 +1,114 @@
+- name: "Proxmox: Clone LXC and set resources"
+  connection: local
+  hosts: all
+  gather_facts: False
+
+  vars:
+    collected_proxmox_vm: {}
+    collected_proxmox_lxc: {}
+
+  tasks:
+  - name: Include Proxmox VM discovery
+    include_tasks: "ansible-tasks/collect-proxmox-vm.yml"
+
+  - name: Include Proxmox LXC discovery
+    include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
+
+  - name: SHOW US vmconfig
+    debug:
+      msg: "vm_config {{ vm_config }}"
+
+  - name: Show us NetBox config
+    debug:
+      msg: "NetBox config {{ netbox_env_info }}"
+
+  - name: Show us Proxmox config
+    debug:
+      msg: "Proxmox config {{ proxmox_env_info }}"
+
+  - name: Show us id of template (integer)
+    debug:
+      msg: "ID of template (integer) {{ vm_config['template'] | int }}"
+
+  - name: Create LXC (Container) from a template
+    community.general.proxmox:
+      node: "{{ proxmox_env_info.node }}"
+      api_user: "{{ proxmox_env_info.api_user }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
+      api_host: "{{ proxmox_env_info.api_host }}"
+      api_port: "{{ proxmox_env_info.api_port }}"
+      ostemplate: "{{ vm_config ['template'] }}"
+      #vmid: "{{ vm_config['template'] }}"
+      vmid: "{{ vm_config['vmid'] | int | default(omit) }}"
+      hostname: "{{ vm_config['hostname'] }}"
+      cores: "{{ vm_config['cpus'] | int | default(1) }}"
+      cpus: "{{ vm_config['cpus'] | int | default(1) }}"
+      memory: "{{ vm_config['memory'] | default(512) }}"
+      pubkey: "{{ vm_config['pubkey']}}"
+      clone_type: "full"
+      storage: "{{ vm_config['storage'] }}"
+      #onboot: "{{ vm_config_create[item].auto_start }}"
+      unprivileged: true
+      state: present
+      timeout: 120
+    when: not vm_config['hostname'] in collected_proxmox_lxc and not vm_config['hostname'] in collected_proxmox_vm
+    register: create_lxc_job
+    async: 180
+    poll: 0
+
+  - name: Wait for LXC cloning processes to finish
+    async_status:
+      jid: "{{ create_lxc_job.ansible_job_id }}"
+    register: _jobs_alias_vc_0
+    until: _jobs_alias_vc_0.finished
+    retries: 60
+    delay: 5
+    when: not vm_config['hostname'] in collected_proxmox_lxc
+
+  - name: Show us LXC settings
+    debug:
+      msg: "Show LXC settings: {{ create_lxc_job }}"
+
+  - name: Include Proxmox LXC discovery post-provisioning
+    include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
+
+  - name: "Discover information for newly-created Proxmox LXC"
+    community.general.proxmox_vm_info:
+      api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
+      api_user: "{{ proxmox_env_info.api_user | default(omit) }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
+      node: "{{ proxmox_env_info.node }}"
+      name: "{{ vm_config['hostname'] }}"
+      type: lxc
+      config: current
+    register: new_proxmox_lxc
+
+  - name: "Newly-created Proxmox LXC information"
+    debug:
+      msg: "Newly-created Proxmox LXC information: {{ new_proxmox_lxc}}"
+
+  - name: "Update Proxmox vmid for LXC in NetBox"
+    netbox.netbox.netbox_virtual_machine:
+      netbox_url: "{{ netbox_env_info.api_proto }}://{{ netbox_env_info.api_host }}:{{ netbox_env_info.api_port}}"
+      netbox_token: "{{ netbox_env_info.api_token }}"
+      data:
+        name: "{{ vm_config['hostname'] }}"
+        custom_fields:
+          proxmox_vmid: "{{ new_proxmox_lxc.proxmox_vms[0].vmid }}"
+      state: present
+    when: new_proxmox_lxc is defined and new_proxmox_lxc.proxmox_vms is defined and new_proxmox_lxc.proxmox_vms | length > 0 and vm_config['vmid'] is defined and vm_config['vmid'] == "None"
+
+  - name: "Update Proxmox storage for LXC in NetBox"
+    netbox.netbox.netbox_virtual_disk:
+      netbox_url: "{{ netbox_env_info.api_proto }}://{{ netbox_env_info.api_host }}:{{ netbox_env_info.api_port}}"
+      netbox_token: "{{ netbox_env_info.api_token }}"
+      data:
+        virtual_machine: "{{ new_proxmox_lxc.proxmox_vms[0].name }}"
+        name: rootfs
+        size: "{{ new_proxmox_lxc.proxmox_vms[0].maxdisk | human_readable(unit='M') | regex_replace('\\s+[M][Bb]$', '') | int | string }}"
+        custom_fields:
+          proxmox_disk_storage_volume: "{{ vm_config['storage'] }}"
+      state: present
+    when: new_proxmox_lxc is defined and new_proxmox_lxc.proxmox_vms is defined and new_proxmox_lxc.proxmox_vms | length > 0

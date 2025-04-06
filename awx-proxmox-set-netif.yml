@@ -1,4 +1,4 @@
-- name: "Proxmox: set ipconfig0"
+- name: "Proxmox: set netif (LXC)"
   connection: local
   hosts: all
   gather_facts: False
@@ -14,29 +14,28 @@
   - name: Include Proxmox LXC discovery
     include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
-  - name: "Update VM settings (ipconfig0, ssh key)"
-    community.general.proxmox_kvm:
+  - name: "Update LXC settings (netif)"
+    community.general.proxmox:
       node: "{{ proxmox_env_info.node }}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
       api_host: "{{ proxmox_env_info.api_host }}"
-      #name: "{{ vm_config['name'] }}"
-      vmid: "{{ collected_proxmox_vm[vm_config['name']] }}"
-      sshkeys: "{{ vm_config['ssh_key'] }}"
-      ipconfig:
+      hostname: "{{ vm_config['hostname'] }}"
+      vmid: "{{ collected_proxmox_lxc[vm_config['hostname']] | int }}"
+      netif:
         #ipconfig0: "ip={{ item.ip }},gw={{ item.ip.split('.')[:3] | join('.') }}.{{ item.gw if item.gw is defined else gw_last_quad }}"
-        ipconfig0: "ip={{ vm_config['ip'] }},gw={{ vm_config['ip'].split('.')[:3] | join('.') }}.1"
+        net0: "name=eth0,ip={{ vm_config['ip'] }},gw={{ vm_config['ip'].split('.')[:3] | join('.') }}.1,bridge=vmbr0,firewall=1"
       update: true
-    when: vm_config['name'] in collected_proxmox_vm
-    register: update_vm_settings_job
+    when: vm_config['hostname'] in collected_proxmox_lxc
+    register: update_lxc_settings_job
     async: 180
     poll: 0
 
   - name: Wait for VM settings updates processes to finish
     async_status:
-      jid: "{{ update_vm_settings_job.ansible_job_id }}"
-    when: vm_config['name'] in collected_proxmox_vm
+      jid: "{{ update_lxc_settings_job.ansible_job_id }}"
+    when: vm_config['hostname'] in collected_proxmox_lxc
     register: _ujobs_alias_vc_0
     until: _ujobs_alias_vc_0.finished
     retries: 60
