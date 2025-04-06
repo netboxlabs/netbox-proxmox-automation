@@ -108,7 +108,7 @@
         custom_fields:
           proxmox_vmid: "{{ new_proxmox_vm.proxmox_vms[0].vmid }}"
       state: present
-    when: new_proxmox_vm is defined and new_proxmox_vm.proxmox_vms is defined and new_proxmox_vm.proxmox_vms | length > 0 and vm_config['vmid'] is defined and vm_config['vmid'] == None
+    when: new_proxmox_vm is defined and new_proxmox_vm.proxmox_vms is defined and new_proxmox_vm.proxmox_vms | length > 0 and vm_config['vmid'] is defined and vm_config['vmid'] == "None"
 
 # ok: [localhost] => {
 #    "msg": "New VM info: {'changed': False, 'proxmox_vms': [{'maxcpu': 1, 'status': 'stopped', 'netout': 0, 'vmid': 104, 'diskwrite': 0, 'id': 'qemu/104', 'uptime': 0, 'node': 'proxmox-ve', 'disk': 0, 'maxdisk': 2361393152, 'type': 'qemu', 'maxmem': 268435456, 'template': False, 'mem': 0, 'diskread': 0, 'netin': 0, 'cpu': 0, 'name': 'test2', 'cpus': 1, 'serial': 1}], 'failed': False}"
