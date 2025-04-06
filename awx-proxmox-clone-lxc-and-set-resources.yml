@@ -98,7 +98,7 @@
         custom_fields:
           proxmox_vmid: "{{ new_proxmox_lxc.proxmox_vms[0].vmid }}"
       state: present
-    when: new_proxmox_lxc is defined and new_proxmox_lxc.proxmox_vms is defined and new_proxmox_lxc.proxmox_vms | length > 0
+    when: new_proxmox_lxc is defined and new_proxmox_lxc.proxmox_vms is defined and new_proxmox_lxc.proxmox_vms | length > 0 and vm_config['vmid'] is defined and vm_config['vmid']|length == 0
 
   - name: "Update Proxmox storage for LXC in NetBox"
     netbox.netbox.netbox_virtual_disk:
