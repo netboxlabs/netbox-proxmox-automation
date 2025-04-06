@@ -60,6 +60,7 @@ nav:
   - NetBox IPAM: netbox-ipam.md
   - NetBox API Key and Permissions: netbox-key-and-permissions.md
   - NetBox Customization: netbox-customization.md
+  - Discover Proxmox VMs and LXCs: proxmox-discover-vm-and-lxc.md
   - Proxmox API User and Key: proxmox-api-user-and-key.md
   - Configure Flask Application: configure-flask-application.md
   - Configure AWX or Tower/AAP: configure-awx-aap.md
