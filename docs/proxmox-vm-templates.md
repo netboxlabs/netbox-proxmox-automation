@@ -6,7 +6,7 @@
   2. You have defined an event rule that uses the webhook in Step 1 -- for automating Proxmox VM operations based on VM state in NetBox
   3. You have a web application that handles events via webhooks
 
-    - For example, [example-netbox-webhook-flask-app](https://github.com/netboxlabs/netbox-proxmox-automation/tree/main/example-netbox-webhook-flask-app) is an example web application that you can use to facilitate Proxmox automation by handling event rules from NetBox.
+    - [netbox-event-driven-automation-flask-app](https://github.com/netboxlabs/netbox-proxmox-automation/tree/main/netbox-event-driven-automation-flask-app) is a web application that you can use to facilitate Proxmox automation by handling event rules from NetBox.
     
         *-or-*
     
@@ -15,7 +15,7 @@
 
 ## Initial Configuration: Creating Proxmox VM templates from (cloud-init) images
 
-`netbox-proxmox-automation` *only* supports cloud-init images.  The dynamic nature of Proxmox VM automation requires this implementation to be able to set things, during the Proxmox VM provisioning process, like network configuration, hostnames, and more.  While it's *possible* that `netbox-proxmox-automation` *might* support your existing Proxmox VM templates, it's *highly* recommended that you follow the procedure below -- for the best results.
+For Proxmox Virtual Machine automation, `netbox-proxmox-automation` *only* supports cloud-init images.  The dynamic nature of Proxmox VM automation requires this implementation to be able to set things, during the Proxmox VM provisioning process, like network configuration, hostnames, and more.  While it's *possible* that `netbox-proxmox-automation` *might* support your existing Proxmox VM templates, it's *highly* recommended that you follow the procedure below -- for the best results.
 
 As a cloud-init image is sufficient "bare bones", meaning that there is not broad network or SSH key or package configuration(s), this allows us to have total flexibility in the way that this automation takes a *desired* Proxmox VM state from NetBox and generates anticipated changes to VMs -- in Proxmox.
 

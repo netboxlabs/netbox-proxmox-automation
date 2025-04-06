@@ -116,6 +116,36 @@ collections:
 
 Once you have built your Execution Environment, which is based on the default AWX Execution Environment, you can proceed with Proxmox automation in AWX.
 
+### Automating AWX NetBox/Proxmox Configuration
+
+There exists a convenience script in `netbox-proxmox-automation` that's called `./setup/configure_ansible_automation.py`, and it uses `awxkit` to manage objects in AWX.  It leverages the configuration that you wrote based on the sample configuration called `./conf.d/netbox_setup_objects.yml-sample`, and will save you an *immense* amount of time.
+
+Usage (inital setup):
+
+```
+shell$ cd /path/to/netbox-proxmox-automation/setup
+
+shell$ deactivate
+
+shell$ rm -rf venv
+
+shell$ python3 -m venv venv
+
+shell$ source venv/bin/activate
+
+shell$ pip install -r requirements.txt
+```
+
+Then make sure that you've made a copy of `../conf.d/netbox_setup_objects.yml-sample` and seasoned it to taste before proceeding.
+
+Usage (creation) of AWX objects that will be used for NetBox/Proxmox automation: `./configure_ansible_automation.py create --config /path/to/netbox-setup-objects.yml`
+
+Usage (removal) of *all* AWX objects that would be used for NetBox/Proxmox automation (*proceed with caution!*): `./configure_ansible_automation.py destroy --config /path/to/netbox-setup-objects.yml`
+
+### Manual AWX NetBox/Proxmox Configuration
+
+*This is not required if you have been able to run the convenience script, `./configure_ansible_automation.py`.*
+
 #### Add NetBox and Proxmox Credential Types to AWX
 
 Navigate to Administration > Credential Types in AWX, and create a credential type called 'NetBox Proxmox Creds'.

@@ -56,7 +56,7 @@ webhook_request = api.model("Webhook request from NetBox", {
 
 # For session logging, c/o sol1
 session = {
-  'name': "example-netbox-webhook-flask-app",
+  'name': "netbox-webhook-flask-app",
   'version': VERSION,
   'version_lastrun': VERSION,
   'server_start': "",

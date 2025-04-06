@@ -6,7 +6,7 @@
   2. You have defined an event rule that uses the webhook in Step 1 -- for automating Proxmox VM operations based on VM state in NetBox
   3. You have a web application that handles events via webhooks
 
-    - [netbox-webhook-flask-app](https://github.com/netboxlabs/netbox-proxmox-automation/tree/main/netbox-webhook-flask-app) is a web application that you can use to facilitate Proxmox automation by handling event rules from NetBox.
+    - [netbox-event-driven-automation-flask-app](https://github.com/netboxlabs/netbox-proxmox-automation/tree/main/netbox-event-driven-automation-flask-app) is a web application that you can use to facilitate Proxmox automation by handling event rules from NetBox.
     
         *-or-*
     

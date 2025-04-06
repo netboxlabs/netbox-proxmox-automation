@@ -56,6 +56,7 @@ nav:
   - Home: index.md
   - Usage: usage.md
   - Proxmox VM Templates: proxmox-vm-templates.md
+  - Proxmox LXC Templates: proxmox-lxc-templates.md
   - NetBox IPAM: netbox-ipam.md
   - NetBox API Key and Permissions: netbox-key-and-permissions.md
   - NetBox Customization: netbox-customization.md
@@ -73,4 +74,4 @@ extra:
   analytics:
     provider: google
     property: G-Q107GMDTJM
-copyright: Copyright &copy; 2024 NetBox Labs
+copyright: Copyright &copy; 2024-2025 NetBox Labs
