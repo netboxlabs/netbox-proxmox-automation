@@ -90,7 +90,8 @@ class WebhookListener(Resource):
         except:
             webhook_json_data = {}
 
-        logger.info("{}".format(webhook_json_data))
+        sanitized_data = json.dumps(webhook_json_data).replace('\n', '').replace('\r', '')
+        logger.info("User-provided data: {}".format(sanitized_data))
 
         if not webhook_json_data or "model" not in webhook_json_data or "event" not in webhook_json_data:
             return {"result":"invalid input"}, 400
