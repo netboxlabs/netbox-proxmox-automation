@@ -59,14 +59,14 @@ class Netbox:
                         child_key = next(iter(value))
                         child_value = value[child_key]
                         if not hasattr(self.obj, key) or not hasattr(getattr(self.obj, key), child_key) or getattr(getattr(self.obj, key), child_key) != child_value:
-                            print(f"Updating '{key}' from '***' to '{self._sanitize_value(key, value)}'")
                             setattr(self.obj, key, value)
-                            updated = True 
+                            updated = True
+                            print(f"Updated field '{key}' successfully.")
                 else:
                     if getattr(self.obj, key) != value:
-                        print(f"Updating '{key}' from '***' to '{self._sanitize_value(key, value)}'")
                         setattr(self.obj, key, value)
-                        updated = True                
+                        updated = True
+                        print(f"Updated field '{key}' successfully.")
             if updated:
                 self.obj.save()
                 # TODO: error handling here
