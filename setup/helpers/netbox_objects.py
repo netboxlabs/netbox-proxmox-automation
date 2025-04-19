@@ -1,6 +1,21 @@
 import pynetbox
 
 class Netbox:
+
+    def _sanitize_value(self, key, value):
+        # Mask sensitive fields
+        sensitive_keys = {'password', 'token', 'secret'}
+        if key in sensitive_keys:
+            return '***'
+        elif isinstance(value, dict):
+            return {k: self._sanitize_value(k, v) for k, v in value.items()}
+        elif isinstance(value, list):
+            return [self._sanitize_value(key, v) for v in value]
+        return value
+
+    def _sanitize_payload(self):
+        # Return a sanitized version of the payload
+        return {key: self._sanitize_value(key, value) for key, value in self.payload.items()}
     def __init__(self, url, token, payload) -> None:
         # NetBox API details
         self.netbox_url = url
@@ -44,20 +59,20 @@ class Netbox:
                         child_key = next(iter(value))
                         child_value = value[child_key]
                         if not hasattr(self.obj, key) or not hasattr(getattr(self.obj, key), child_key) or getattr(getattr(self.obj, key), child_key) != child_value:
-                            print(f"Updating '{key}' from '{getattr(self.obj, key)}' to '{value}'")
                             setattr(self.obj, key, value)
-                            updated = True 
+                            updated = True
+                            print(f"Updated field '{key}' successfully.")
                 else:
                     if getattr(self.obj, key) != value:
-                        print(f"Updating '{key}' from '{getattr(self.obj, key)}' to '{value}'")
                         setattr(self.obj, key, value)
-                        updated = True                
+                        updated = True
+                        print(f"Updated field '{key}' successfully.")
             if updated:
                 self.obj.save()
                 # TODO: error handling here
-                print(f"Object '{self.payload}' updated successfully.")
+                print(f"Object updated successfully with sanitized payload: '{self._sanitize_payload()}'.")
             else:
-                print(f"No changes detected for '{self.payload}'.")
+                print(f"No changes detected for sanitized payload: '{self._sanitize_payload()}'.")
         # If the object doesn't exist then create it
         else:
             if self.hasRequired:
