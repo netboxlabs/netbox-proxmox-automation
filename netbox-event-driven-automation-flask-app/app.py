@@ -76,7 +76,10 @@ class WebhookListener(Resource):
         _session['version_lastrun'] = VERSION
         _session['status']['requests'] += 1
         _session['status']['last_called'] = datetime.now()
-        logger.info(f"{request.full_path}, {request.remote_addr}, Status request with data {request.get_data()}")
+        sanitized_full_path = request.full_path.replace('\r\n', '').replace('\n', '')
+        sanitized_remote_addr = request.remote_addr.replace('\r\n', '').replace('\n', '') if request.remote_addr else 'Unknown'
+        sanitized_data = request.get_data(as_text=True).replace('\r\n', '').replace('\n', '') if request.get_data() else ''
+        logger.info(f"{sanitized_full_path}, {sanitized_remote_addr}, Status request with data {sanitized_data}")
         return jsonify(_session)
 
 
