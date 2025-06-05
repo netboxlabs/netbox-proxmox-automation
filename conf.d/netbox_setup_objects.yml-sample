@@ -1,4 +1,5 @@
 proxmox_api_config:
+  node: pve # or your Proxmox node name
   api_host: proxmox-ip-or-hostname
   api_port: 8006
   api_user: proxmox_api_user
