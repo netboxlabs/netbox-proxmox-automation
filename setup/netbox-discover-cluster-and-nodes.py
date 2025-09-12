@@ -227,8 +227,8 @@ def main():
             '[ TP ]': 'twisted pair'
         },
         'twisted pair': {
-            '1000Mb/s': '1000BASE-T (1GE)',
-            '2500Mb/s': '2.5GBASE-T (2.5GE)'
+            '1000Mb/s': '1gbase-t',
+            '2500Mb/s': '2.5gbase-t'
         }
     }
 
@@ -339,6 +339,12 @@ def main():
             if not 'logicalname' in ni:
                 continue
 
+            temp_h = {
+                'name': ni['logicalname'],
+                'mac': ni['serial'],
+                'enabled': network_interface_enabled_state_mappings[ni['configuration']['link']]
+            }
+
             if network_interface_enabled_state_mappings[ni['configuration']['link']]:
                 full_et_cmd_out = f"{app_config['proxmox']['node_commands']['ethtool_command']} {ni['logicalname']} | egrep -e '^.*(Speed|Duplex|Auto-negotiation|Supported ports):' | sed -e 's|^\t||g;'"
                 ethtool_info = get_proxmox_node_ethtool_info(proxmox_nodes_connection_info[pnci]['ip'], proxmox_nodes_connection_info[pnci], full_et_cmd_out)
@@ -346,16 +352,12 @@ def main():
                 if ethtool_info['port'] in network_interface_type_speed_mappings['supported_ports']:
                     if_type = network_interface_type_speed_mappings['supported_ports'][ethtool_info['port']]
                     if_type_speed = network_interface_type_speed_mappings[if_type][ethtool_info['speed']]
+                    temp_h['type'] = if_type_speed
 
-            discovered_proxmox_nodes_information[pnci]['system']['network_interfaces'].append(
-                {
-                    'name': ni['logicalname'],
-                    'mac': ni['serial'],
-                    'enabled': network_interface_enabled_state_mappings[ni['configuration']['link']],
-                    'type': if_type_speed
-                }
-            )
+            discovered_proxmox_nodes_information[pnci]['system']['network_interfaces'].append(temp_h)
 
+    # sample output
+    # {'pxmx-n2': {'system': {'network_interfaces': [{'name': 'enp1s0', 'mac': '64:62:66:23:bf:03', 'enabled': True, 'type': '1000BASE-T (1GE)'}, {'name': 'enp2s0', 'mac': '64:62:66:23:bf:04', 'enabled': True, 'type': '2.5GBASE-T (2.5GE)'}, {'name': 'enp3s0', 'mac': '64:62:66:23:bf:05', 'enabled': False, 'type': '2.5GBASE-T (2.5GE)'}, {'name': 'enp4s0', 'mac': '64:62:66:23:bf:06', 'enabled': False, 'type': '2.5GBASE-T (2.5GE)'}], 'manufacturer': 'Protectli', 'model': 'VP2430 (VP2430)', 'serial': 'Default string'}}, 'pxmx-n1': {'system': {'network_interfaces': [{'name': 'enp1s0', 'mac': '64:62:66:23:bf:13', 'enabled': True, 'type': '1000BASE-T (1GE)'}, {'name': 'enp2s0', 'mac': '64:62:66:23:bf:14', 'enabled': True, 'type': '2.5GBASE-T (2.5GE)'}, {'name': 'enp3s0', 'mac': '64:62:66:23:bf:15', 'enabled': False, 'type': '2.5GBASE-T (2.5GE)'}, {'name': 'enp4s0', 'mac': '64:62:66:23:bf:16', 'enabled': False, 'type': '2.5GBASE-T (2.5GE)'}], 'manufacturer': 'Protectli', 'model': 'VP2430 (VP2430)', 'serial': 'Default string'}}}
     print(discovered_proxmox_nodes_information)
 
     # create cluster and type in NetBox
