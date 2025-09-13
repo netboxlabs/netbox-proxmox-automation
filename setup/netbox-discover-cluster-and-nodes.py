@@ -83,15 +83,65 @@ def get_proxmox_cluster_info(proxmox_api_config: dict):
     return None
     
 
+def generate_proxmox_node_creds_configuration(proxmox_nodes: dict):
+    temp_nodes_cn_info = {}
+
+    # test nodes data
+    # PMCI 1 {'pxmx-n2': {'ip': '192.168.71.4', 'login': 'root', 'use_pass': False}, 'pxmx-n1': {'ip': '192.168.71.3', 'login': 'root', 'use_pass': False}}
+    for proxmox_node in proxmox_nodes:
+        if not proxmox_node in temp_nodes_cn_info:
+            temp_nodes_cn_info[proxmox_node] = {}
+
+        temp_nodes_cn_info[proxmox_node]['ip'] = proxmox_nodes[proxmox_node]['ip']
+
+        if not proxmox_nodes[proxmox_node]['online']:
+            print(f"Proxmox node {proxmox_node} is not online.  Skipping...")
+            continue
+
+        while True:
+            login_name = input(f"Enter login name for {proxmox_node}: ")
+            if login_name:
+                break
+
+        temp_nodes_cn_info[proxmox_node]['login'] = login_name
+
+        while True:
+            use_ssh_pass = input(f"Is password for {login_name} required for {proxmox_node}? ")
+            if use_ssh_pass and use_ssh_pass.lower() in ('y', 'yes', 'n', 'no'):
+                break
+
+        if use_ssh_pass.lower().startswith('y'):
+            while True:
+                ssh_pass = getpass.getpass(f"Enter password for {login_name} on {proxmox_node}: ")
+                if ssh_pass:
+                    break
+            temp_nodes_cn_info[proxmox_node]['use_pass'] = True
+            temp_nodes_cn_info[proxmox_node]['pass'] = ssh_pass
+        elif use_ssh_pass.lower().startswith('n'):
+            temp_nodes_cn_info[proxmox_node]['use_pass'] = False
+
+        if login_name != "root":
+            temp_nodes_cn_info[proxmox_node]['use_sudo'] = True
+
+            while True:
+                sudo_pass_required = input(f"Does sudo require a password? ")
+                if sudo_pass_required and sudo_pass_required.lower() in ('y', 'yes', 'n', 'no'):
+                    break
+
+            if sudo_pass_required.lower().startswith('y'):
+                while True:
+                    sudo_pass = getpass.getpass(f"Enter sudo password for {login_name} on {proxmox_node['name']}: ")
+                    if sudo_pass:
+                        break
+                temp_nodes_cn_info[proxmox_node]['sudo_pass'] = sudo_pass
+
+    return temp_nodes_cn_info
+
+
 def _get_proxmox_node_info_cmd(proxmox_node_name:str, proxmox_node_login_info: dict, lshw_command: str):
     do_get_pty = False
     output = None
     error = None
-
-    # Server details
-    hostname = "your_server_ip"
-    username = "your_username"
-    password = "your_password" # Or use key-based authentication
 
     # Create an SSH client instance
     client = paramiko.SSHClient()
@@ -149,17 +199,33 @@ def proxmox_node_lshw_test(proxmox_node_name:str, proxmox_node_login_info: dict,
     return output, error
 
 
-def get_proxmox_node_system_information(proxmox_node_name:str, proxmox_node_login_info: dict, lshw_command: str):
-    lshw_command = f"{lshw_command} -class system -json"
-    output, error = _get_proxmox_node_info_cmd(proxmox_node_name, proxmox_node_login_info, lshw_command)
+def get_proxmox_node_system_information(proxmox_node_name:str, proxmox_node_login_info: dict, dmidecode_command: str):
+    temp_system_info = {}
+    
+    dmidecode_command = f"{dmidecode_command} -t system"
+    output, error = _get_proxmox_node_info_cmd(proxmox_node_name, proxmox_node_login_info, dmidecode_command)
+
+    sys_info_lines = output.split('\n')
+
+    for sys_info_line in sys_info_lines:
+        if sys_info_line == "":
+            continue
+
+        if ':' in sys_info_line:
+            key, val = sys_info_line.split(':')
+            key = key.lower().lstrip().replace(' ', '_')
+            val = val.lstrip()
+
+            if key in ('manufacturer', 'product_name', 'serial_number'):
+                temp_system_info[key] = val
 
     if error:
         raise ValueError(error)
-    
+
     try:
-        return json.loads(output)
+        return json.loads(json.dumps(temp_system_info))
     except json.JSONDecodeError as e:
-        raise ValueError(f"JSON conversion error: {e}")    
+        raise ValueError(f"JSON conversion error: {e}")
 
 
 def get_proxmox_node_network_interfaces(proxmox_node_name:str, proxmox_node_login_info: dict, lshw_command: str):
@@ -184,29 +250,32 @@ def get_proxmox_node_ethtool_info(proxmox_node_name:str, proxmox_node_login_info
     if error:
         raise ValueError(error)
 
-    output_lines = output.split('\n')
-    for output_line in output_lines:
-        if output_line == "":
+    lines = output.split('\n')
+
+    for line in lines:
+        if line == "":
             continue
 
-        key, val = output_line.split(':')
-        key = re.sub(r'\s+$', '', key)
-        val = re.sub(r'^\s+', '', val)
+        if ':' in line:
+            key, val = line.split(':')
+            key = key.strip().lower().replace(' ', '_')
+            key = key.strip().lower().replace('-', '_')
 
-        tmp_ethtool_settings[key.lower()] = val
+            if val != "":
+                ethtool_settings[key] = val.lstrip()
+        else:
+            ethtool_settings[key] += re.sub(r'\s+', ' ', line)
 
-    for item in tmp_ethtool_settings:
-        if item == 'supported ports':
-            ethtool_settings['port'] = tmp_ethtool_settings[item]
-        
-        if item == 'auto-negotiation':
-            if tmp_ethtool_settings[item] == 'on':
-                ethtool_settings['duplex'] = 'Auto'
-            else:
-                ethtool_settings['duplex'] = tmp_ethtool_settings['duplex']
+    for parsed_line in ethtool_settings:
+        if parsed_line.endswith('link_modes'):
+            ethtool_settings[parsed_line] = ethtool_settings[parsed_line].split(' ')
 
-        if item == 'speed':
-            ethtool_settings['speed'] = tmp_ethtool_settings[item]
+    if 'supported_ports' in ethtool_settings:
+        ethtool_settings['port'] = ethtool_settings.pop('supported_ports')
+
+    if 'auto_negotiation' in ethtool_settings:
+        if ethtool_settings['auto_negotiation'] == 'on':
+            ethtool_settings['duplex'] = 'Auto'
 
     return ethtool_settings
 
@@ -222,13 +291,13 @@ def main():
         'no': False
     }
 
-    network_interface_type_speed_mappings = {
+    ethtool_to_netbox_speed_mappings = {
         'supported_ports': {
             '[ TP ]': 'twisted pair'
         },
         'twisted pair': {
-            '1000Mb/s': '1gbase-t',
-            '2500Mb/s': '2.5gbase-t'
+            '1000baseT': '1gbase-t',
+            '2500baseT': '2.5gbase-t'
         }
     }
 
@@ -256,76 +325,25 @@ def main():
     print(proxmox_cluster_name)
 
     # Collect Proxmox node login information
-    for proxmox_node in proxmox_nodes:
-        if not proxmox_node in proxmox_nodes_connection_info:
-            proxmox_nodes_connection_info[proxmox_node] = {}
-
-        proxmox_nodes_connection_info[proxmox_node]['ip'] = proxmox_nodes[proxmox_node]['ip']
-
-        if not proxmox_nodes[proxmox_node]['online']:
-            print(f"Proxmox node {proxmox_node} is not online.  Skipping...")
-            continue
-
-        while True:
-            login_name = input(f"Enter login name for {proxmox_node}: ")
-            if login_name:
-                break
-
-        proxmox_nodes_connection_info[proxmox_node]['login'] = login_name
-
-        while True:
-            use_ssh_pass = input(f"Is password for {login_name} required for {proxmox_node}? ")
-            if use_ssh_pass and use_ssh_pass.lower() in ('y', 'yes', 'n', 'no'):
-                break
-
-        if use_ssh_pass.lower().startswith('y'):
-            while True:
-                ssh_pass = getpass.getpass(f"Enter password for {login_name} on {proxmox_node}: ")
-                if ssh_pass:
-                    break
-            proxmox_nodes_connection_info[proxmox_node]['use_pass'] = True
-            proxmox_nodes_connection_info[proxmox_node]['pass'] = ssh_pass
-        elif use_ssh_pass.lower().startswith('n'):
-            proxmox_nodes_connection_info[proxmox_node]['use_pass'] = False
-
-        if login_name != "root":
-            proxmox_nodes_connection_info[proxmox_node]['use_sudo'] = True
-
-            while True:
-                sudo_pass_required = input(f"Does sudo require a password? ")
-                if sudo_pass_required and sudo_pass_required.lower() in ('y', 'yes', 'n', 'no'):
-                    break
-
-            if sudo_pass_required.lower().startswith('y'):
-                while True:
-                    sudo_pass = getpass.getpass(f"Enter sudo password for {login_name} on {proxmox_node['name']}: ")
-                    if sudo_pass:
-                        break
-                proxmox_nodes_connection_info[proxmox_node]['sudo_pass'] = sudo_pass
-
-    # test nodes data
-    # PMCI 1 {'pxmx-n2': {'ip': '192.168.71.4', 'login': 'root', 'use_pass': False}, 'pxmx-n1': {'ip': '192.168.71.3', 'login': 'root', 'use_pass': False}}
+    proxmox_nodes_connection_info = generate_proxmox_node_creds_configuration(proxmox_nodes)
 
     # discover nodes base system information
     for pnci in proxmox_nodes_connection_info:
-        system_info = get_proxmox_node_system_information(proxmox_nodes_connection_info[pnci]['ip'], proxmox_nodes_connection_info[pnci], app_config['proxmox']['node_commands']['lshw_command'])
+        system_info = get_proxmox_node_system_information(proxmox_nodes_connection_info[pnci]['ip'], proxmox_nodes_connection_info[pnci], app_config['proxmox']['node_commands']['dmidecode_command'])
 
         # raw output
-        # [{'id': 'pxmx-n1', 'class': 'system', 'claimed': True, 'handle': 'DMI:0001', 'description': 'Desktop Computer', 'product': 'VP2430 (VP2430)', 'vendor': 'Protectli', 'version': '1.00', 'serial': 'Default string', 'width': 64, 'configuration': {'boot': 'normal', 'chassis': 'desktop', 'family': 'Vault Pro', 'sku': 'VP2430', 'uuid': '03000200-0400-0500-0006-000700080009'}, 'capabilities': {'smbios-3.6.0': 'SMBIOS version 3.6.0', 'dmi-3.6.0': 'DMI version 3.6.0', 'smp': 'Symmetric Multi-Processing', 'vsyscall32': '32-bit processes'}}, {'id': 'pnp00:00', 'class': 'system', 'claimed': True, 'product': 'PnP device PNP0c02', 'physid': '0', 'configuration': {'driver': 'system'}, 'capabilities': {'pnp': True}}, {'id': 'pnp00:03', 'class': 'system', 'claimed': True, 'product': 'PnP device PNP0c02', 'physid': '3', 'configuration': {'driver': 'system'}, 'capabilities': {'pnp': True}}, {'id': 'pnp00:04', 'class': 'system', 'claimed': True, 'product': 'PnP device PNP0c02', 'physid': '4', 'configuration': {'driver': 'system'}, 'capabilities': {'pnp': True}}, {'id': 'pnp00:05', 'class': 'system', 'claimed': True, 'product': 'PnP device PNP0c02', 'physid': '5', 'configuration': {'driver': 'system'}, 'capabilities': {'pnp': True}}, {'id': 'pnp00:06', 'class': 'system', 'claimed': True, 'product': 'PnP device PNP0c02', 'physid': '6', 'configuration': {'driver': 'system'}, 'capabilities': {'pnp': True}}, {'id': 'pnp00:07', 'class': 'system', 'claimed': True, 'product': 'PnP device PNP0c02', 'physid': '7', 'configuration': {'driver': 'system'}, 'capabilities': {'pnp': True}}]
+        # {'manufacturer': 'Protectli', 'product_name': 'VP2430', 'serial_number': 'Default string'} 3
         print(system_info, len(system_info))
-        print(system_info[0]['id'], system_info[0]['product'], system_info[0]['vendor'], system_info[0]['serial'])
-
-        if system_info[0]['id'] != pnci:
-            raise ValueError(f"{system_info[0]['id']} not found in proxmox_nodes_connection_info")
+        print(system_info['manufacturer'], system_info['product_name'], system_info['serial_number'])
         
         if not pnci in discovered_proxmox_nodes_information:
             discovered_proxmox_nodes_information[pnci] = {}
             discovered_proxmox_nodes_information[pnci]['system'] = {}
             discovered_proxmox_nodes_information[pnci]['system']['network_interfaces'] = []
         
-        discovered_proxmox_nodes_information[pnci]['system']['manufacturer'] = system_info[0]['vendor']
-        discovered_proxmox_nodes_information[pnci]['system']['model'] = system_info[0]['product']
-        discovered_proxmox_nodes_information[pnci]['system']['serial'] = system_info[0]['serial']
+        discovered_proxmox_nodes_information[pnci]['system']['manufacturer'] = system_info['manufacturer']
+        discovered_proxmox_nodes_information[pnci]['system']['model'] = system_info['product_name']
+        discovered_proxmox_nodes_information[pnci]['system']['serial'] = system_info['serial_number']
 
     # discover nodes network interfaces information
     for pnci in proxmox_nodes_connection_info:
@@ -346,12 +364,14 @@ def main():
             }
 
             if network_interface_enabled_state_mappings[ni['configuration']['link']]:
-                full_et_cmd_out = f"{app_config['proxmox']['node_commands']['ethtool_command']} {ni['logicalname']} | egrep -e '^.*(Speed|Duplex|Auto-negotiation|Supported ports):' | sed -e 's|^\t||g;'"
+                full_et_cmd_out = f"{app_config['proxmox']['node_commands']['ethtool_command']} {ni['logicalname']}"
                 ethtool_info = get_proxmox_node_ethtool_info(proxmox_nodes_connection_info[pnci]['ip'], proxmox_nodes_connection_info[pnci], full_et_cmd_out)
 
-                if ethtool_info['port'] in network_interface_type_speed_mappings['supported_ports']:
-                    if_type = network_interface_type_speed_mappings['supported_ports'][ethtool_info['port']]
-                    if_type_speed = network_interface_type_speed_mappings[if_type][ethtool_info['speed']]
+                # need last supported_link_modes for type mapping
+                if ethtool_info['port'] in ethtool_to_netbox_speed_mappings['supported_ports']:
+                    if_type = ethtool_to_netbox_speed_mappings['supported_ports'][ethtool_info['port']]
+                    max_interface_link_mode = ethtool_info['supported_link_modes'][-1].split('/')[0]
+                    if_type_speed = ethtool_to_netbox_speed_mappings[if_type][max_interface_link_mode]
                     temp_h['type'] = if_type_speed
 
             discovered_proxmox_nodes_information[pnci]['system']['network_interfaces'].append(temp_h)
