@@ -12,7 +12,7 @@ import proxmoxer
 import urllib3
 
 from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
-from helpers.netbox_objects import Netbox, NetBoxTags, NetBoxDeviceRoles, NetboxClusterTypes, NetboxClusters, NetboxVirtualMachines, NetboxVirtualMachineInterface, NetboxIPAddresses
+from helpers.netbox_objects import Netbox, NetBoxSites, NetBoxManufacturers, NetBoxTags, NetBoxDeviceRoles, NetBoxDeviceTypes, NetBoxDevices, NetBoxDeviceInterfaceTemplates, NetboxClusterTypes, NetboxClusters, NetboxVirtualMachines, NetboxVirtualMachineInterface, NetboxIPAddresses
 
 from proxmoxer import ProxmoxAPI, ResourceException
 
@@ -241,10 +241,35 @@ def get_proxmox_node_network_interfaces(proxmox_node_name:str, proxmox_node_logi
         raise ValueError(f"JSON conversion error: {e}")    
 
 
+def get_proxmox_node_ip_addresses(proxmox_node_name: str, proxmox_node_login_info: dict, ip_command: str):
+    proxmox_node_ip_addresses = {}
+    output, error = _get_proxmox_node_info_cmd(proxmox_node_name, proxmox_node_login_info, ip_command)
+
+    if error:
+        raise ValueError(error)
+
+    output_lines = output.split('\n')
+
+    for output_line in output_lines:
+        if output_line == "":
+            continue
+
+        if_parts = ' '.join(output_line.split()).split(' ')
+
+        if len(if_parts) == 4 or len(if_parts) == 5:
+            if if_parts[0] != 'lo':
+                proxmox_node_ip_addresses[if_parts[0]] = {
+                    'ipv4address': if_parts[2],
+                    'ipv6address': if_parts[-1],
+                }
+    try:
+        return json.loads(json.dumps(proxmox_node_ip_addresses))
+    except json.JSONDecodeError as e:
+        raise ValueError(f"JSON conversion error: {e}")    
+
+
 def get_proxmox_node_ethtool_info(proxmox_node_name:str, proxmox_node_login_info: dict, ethtool_command: str):
     ethtool_settings = {}
-    tmp_ethtool_settings = {}
-
     output, error = _get_proxmox_node_info_cmd(proxmox_node_name, proxmox_node_login_info, ethtool_command)
     
     if error:
@@ -278,6 +303,71 @@ def get_proxmox_node_ethtool_info(proxmox_node_name:str, proxmox_node_login_info
             ethtool_settings['duplex'] = 'Auto'
 
     return ethtool_settings
+
+
+def netbox_create_site(netbox_url: str, netbox_api_token: str, site_name: str):
+    try:
+        return dict(NetBoxSites(netbox_url, netbox_api_token, {'name': site_name, 'slug': __netbox_make_slug(site_name), 'status': 'active'}).obj)['id']
+    except Exception as e:
+        raise ValueError(e)
+
+
+def netbox_create_device_manufacturer(netbox_url: str, netbox_api_token: str, manufacturer_name: str):
+    try:
+        return dict(NetBoxManufacturers(netbox_url, netbox_api_token, {'name': manufacturer_name, 'slug': __netbox_make_slug(manufacturer_name)}).obj)['id']
+    except Exception as e:
+        raise ValueError(e)
+
+
+def netbox_create_device_role(netbox_url: str, netbox_api_token: str, device_role_name: str):
+    try:
+        return dict(NetBoxDeviceRoles(netbox_url, netbox_api_token, {'name': device_role_name, 'slug': __netbox_make_slug(device_role_name), 'vm_role': False}).obj)['id']
+    except Exception as e:
+        raise ValueError(e)
+
+
+def netbox_create_device_type(netbox_url: str, netbox_api_token: str, manufacturer_id: int, model: str):
+    try:
+        return dict(NetBoxDeviceTypes(netbox_url, netbox_api_token, {'manufacturer': manufacturer_id, 'model': model, 'slug': __netbox_make_slug(model), 'u_height': 1}).obj)['id']
+    except Exception as e:
+        raise ValueError(e)
+
+
+def netbox_create_interface_for_device_type(nb_obj, device_type_id: int, interface_name: str, interface_type: str):
+    """
+    try:
+        return dict(NetBoxDeviceInterfaceTemplates(netbox_url, netbox_api_token, {'device_type': {'id': device_type_id}, 'name': interface_name, 'enabled': False, 'mgmt_only': False, 'type': {'value': interface_type}}).obj)['id']
+    except Exception as e:
+        raise ValueError(e)
+    """
+    try:
+        device_type_interface_payload = {
+            'device_type': {
+                    'id': device_type_id
+                },
+            'name': interface_name,
+            'enabled': False,
+            'mgmt_only': False,
+            'type': interface_type
+        }
+
+        created_device_type_interface = nb_obj.nb.dcim.interface_templates.get(device_type = device_type_id, name = interface_name)
+
+        if not created_device_type_interface:
+            created_device_type_interface = nb_obj.nb.dcim.interface_templates.create(device_type_interface_payload)
+
+        created_device_type_interface_id = dict(created_device_type_interface)['id']
+
+        return created_device_type_interface_id
+    except pynetbox.RequestError as e:
+        raise ValueError(e, e.error)
+
+
+def netbox_create_device_for_proxmox_node(netbox_url: str, netbox_api_token: str, device_name: str, device_role: int, device_type: int, site: int):
+    try:
+        return dict(NetBoxDevices(netbox_url, netbox_api_token, {'name': device_name, 'role': device_role, 'device_type': device_type, 'site': site, 'status': 'active'}).obj)['id']
+    except Exception as e:
+        raise ValueError(e)
 
 
 def main():
@@ -314,15 +404,20 @@ def main():
 
     nb_url = f"{app_config['netbox_api_config']['api_proto']}://{app_config['netbox_api_config']['api_host']}:{str(app_config['netbox_api_config']['api_port'])}/"
     nb_obj = Netbox(nb_url, app_config['netbox_api_config']['api_token'], None)
-    print(nb_obj, dir(nb_obj))
+    #print(nb_obj, dir(nb_obj))
+
+    if not 'site' in app_config['netbox']:
+        netbox_site = "Default NetBox Site"
+    else:
+        netbox_site = app_config['netbox']['site']
 
     proxmox_cluster_name, proxmox_nodes = get_proxmox_cluster_info(app_config['proxmox_api_config'])
-    print("PMCI", proxmox_cluster_name, proxmox_nodes)
+    #print("PMCI", proxmox_cluster_name, proxmox_nodes)
 
     if not proxmox_cluster_name:
         proxmox_cluster_name = f"proxmox-cluster-name-placeholder-{str(int(time.time()))}"
 
-    print(proxmox_cluster_name)
+    #print(proxmox_cluster_name)
 
     # Collect Proxmox node login information
     proxmox_nodes_connection_info = generate_proxmox_node_creds_configuration(proxmox_nodes)
@@ -333,8 +428,8 @@ def main():
 
         # raw output
         # {'manufacturer': 'Protectli', 'product_name': 'VP2430', 'serial_number': 'Default string'} 3
-        print(system_info, len(system_info))
-        print(system_info['manufacturer'], system_info['product_name'], system_info['serial_number'])
+        #print(system_info, len(system_info))
+        #print(system_info['manufacturer'], system_info['product_name'], system_info['serial_number'])
         
         if not pnci in discovered_proxmox_nodes_information:
             discovered_proxmox_nodes_information[pnci] = {}
@@ -351,7 +446,12 @@ def main():
 
         # raw output
         # [{'id': 'pxmx-n1', 'class': 'system', 'claimed': True, 'handle': 'DMI:0001', 'description': 'Desktop Computer', 'product': 'VP2430 (VP2430)', 'vendor': 'Protectli', 'version': '1.00', 'serial': 'Default string', 'width': 64, 'configuration': {'boot': 'normal', 'chassis': 'desktop', 'family': 'Vault Pro', 'sku': 'VP2430', 'uuid': '03000200-0400-0500-0006-000700080009'}, 'capabilities': {'smbios-3.6.0': 'SMBIOS version 3.6.0', 'dmi-3.6.0': 'DMI version 3.6.0', 'smp': 'Symmetric Multi-Processing', 'vsyscall32': '32-bit processes'}}, {'id': 'pnp00:00', 'class': 'system', 'claimed': True, 'product': 'PnP device PNP0c02', 'physid': '0', 'configuration': {'driver': 'system'}, 'capabilities': {'pnp': True}}, {'id': 'pnp00:03', 'class': 'system', 'claimed': True, 'product': 'PnP device PNP0c02', 'physid': '3', 'configuration': {'driver': 'system'}, 'capabilities': {'pnp': True}}, {'id': 'pnp00:04', 'class': 'system', 'claimed': True, 'product': 'PnP device PNP0c02', 'physid': '4', 'configuration': {'driver': 'system'}, 'capabilities': {'pnp': True}}, {'id': 'pnp00:05', 'class': 'system', 'claimed': True, 'product': 'PnP device PNP0c02', 'physid': '5', 'configuration': {'driver': 'system'}, 'capabilities': {'pnp': True}}, {'id': 'pnp00:06', 'class': 'system', 'claimed': True, 'product': 'PnP device PNP0c02', 'physid': '6', 'configuration': {'driver': 'system'}, 'capabilities': {'pnp': True}}, {'id': 'pnp00:07', 'class': 'system', 'claimed': True, 'product': 'PnP device PNP0c02', 'physid': '7', 'configuration': {'driver': 'system'}, 'capabilities': {'pnp': True}}]
-        print(ni_info, len(ni_info))
+        #print(ni_info, len(ni_info))
+
+        ip_addr_command = "/usr/sbin/ip -br a"
+        if_addr_info = get_proxmox_node_ip_addresses(proxmox_nodes_connection_info[pnci]['ip'], proxmox_nodes_connection_info[pnci], ip_addr_command)
+
+        print("IFADDRINFO", if_addr_info)
 
         for ni in ni_info:
             if not 'logicalname' in ni:
@@ -363,26 +463,75 @@ def main():
                 'enabled': network_interface_enabled_state_mappings[ni['configuration']['link']]
             }
 
-            if network_interface_enabled_state_mappings[ni['configuration']['link']]:
-                full_et_cmd_out = f"{app_config['proxmox']['node_commands']['ethtool_command']} {ni['logicalname']}"
-                ethtool_info = get_proxmox_node_ethtool_info(proxmox_nodes_connection_info[pnci]['ip'], proxmox_nodes_connection_info[pnci], full_et_cmd_out)
+            if ni['logicalname'] in if_addr_info:
+                temp_h['ipv4address'] = if_addr_info[ni['logicalname']]['ipv4address']
+                temp_h['ipv6address'] = if_addr_info[ni['logicalname']]['ipv6address']
 
-                # need last supported_link_modes for type mapping
-                if ethtool_info['port'] in ethtool_to_netbox_speed_mappings['supported_ports']:
-                    if_type = ethtool_to_netbox_speed_mappings['supported_ports'][ethtool_info['port']]
-                    max_interface_link_mode = ethtool_info['supported_link_modes'][-1].split('/')[0]
-                    if_type_speed = ethtool_to_netbox_speed_mappings[if_type][max_interface_link_mode]
-                    temp_h['type'] = if_type_speed
+            #if network_interface_enabled_state_mappings[ni['configuration']['link']]:
+            full_et_cmd_out = f"{app_config['proxmox']['node_commands']['ethtool_command']} {ni['logicalname']}"
+            ethtool_info = get_proxmox_node_ethtool_info(proxmox_nodes_connection_info[pnci]['ip'], proxmox_nodes_connection_info[pnci], full_et_cmd_out)
+
+            # need last supported_link_modes for type mapping
+            if ethtool_info['port'] in ethtool_to_netbox_speed_mappings['supported_ports']:
+                if_type = ethtool_to_netbox_speed_mappings['supported_ports'][ethtool_info['port']]
+                max_interface_link_mode = ethtool_info['supported_link_modes'][-1].split('/')[0]
+                if_type_speed = ethtool_to_netbox_speed_mappings[if_type][max_interface_link_mode]
+                temp_h['type'] = if_type_speed
 
             discovered_proxmox_nodes_information[pnci]['system']['network_interfaces'].append(temp_h)
+
+            # Perform serial (number) fixes for Protectli devices; for sure there will be others, but for now...
+            # (Newer) Protectli devices use the mac address of the first network interface as their serial number
+            if discovered_proxmox_nodes_information[pnci]['system']['manufacturer'].lower() == 'protectli':
+                if discovered_proxmox_nodes_information[pnci]['system']['serial'].lower().startswith('defau'):
+                    discovered_proxmox_nodes_information[pnci]['system']['serial'] = discovered_proxmox_nodes_information[pnci]['system']['network_interfaces'][0]['mac'].lower().replace(':', '-')
 
     # sample output
     # {'pxmx-n2': {'system': {'network_interfaces': [{'name': 'enp1s0', 'mac': '64:62:66:23:bf:03', 'enabled': True, 'type': '1000BASE-T (1GE)'}, {'name': 'enp2s0', 'mac': '64:62:66:23:bf:04', 'enabled': True, 'type': '2.5GBASE-T (2.5GE)'}, {'name': 'enp3s0', 'mac': '64:62:66:23:bf:05', 'enabled': False, 'type': '2.5GBASE-T (2.5GE)'}, {'name': 'enp4s0', 'mac': '64:62:66:23:bf:06', 'enabled': False, 'type': '2.5GBASE-T (2.5GE)'}], 'manufacturer': 'Protectli', 'model': 'VP2430 (VP2430)', 'serial': 'Default string'}}, 'pxmx-n1': {'system': {'network_interfaces': [{'name': 'enp1s0', 'mac': '64:62:66:23:bf:13', 'enabled': True, 'type': '1000BASE-T (1GE)'}, {'name': 'enp2s0', 'mac': '64:62:66:23:bf:14', 'enabled': True, 'type': '2.5GBASE-T (2.5GE)'}, {'name': 'enp3s0', 'mac': '64:62:66:23:bf:15', 'enabled': False, 'type': '2.5GBASE-T (2.5GE)'}, {'name': 'enp4s0', 'mac': '64:62:66:23:bf:16', 'enabled': False, 'type': '2.5GBASE-T (2.5GE)'}], 'manufacturer': 'Protectli', 'model': 'VP2430 (VP2430)', 'serial': 'Default string'}}}
     print(discovered_proxmox_nodes_information)
 
-    # create cluster and type in NetBox
+    # Create Site in NetBox
+    netbox_site_id = netbox_create_site(nb_url, app_config['netbox_api_config']['api_token'], netbox_site)
 
-    # create nodes in NetBox and associate with cluster
+    if not netbox_site_id:
+        raise ValueError(f"Unable to create site {netbox_site} in NetBox")
+
+    for proxmox_node in discovered_proxmox_nodes_information:
+        # Create Manufacturer in NetBox
+        netbox_manufacturer_id = netbox_create_device_manufacturer(nb_url, app_config['netbox_api_config']['api_token'], discovered_proxmox_nodes_information[proxmox_node]['system']['manufacturer'])
+
+        if not netbox_manufacturer_id:
+            raise ValueError(f"NetBox missing manufacturer id for {discovered_proxmox_nodes_information[proxmox_node]['system']['manufacturer']}")
+
+        # Create NetBox Device Role
+        netbox_device_role_id = netbox_create_device_role(nb_url, app_config['netbox_api_config']['api_token'], app_config['netbox']['device_role'])
+
+        if not netbox_device_role_id:
+            raise ValueError(f"NetBox missing device role for {app_config['netbox']['device_role']}")
+
+        # Create Device Type in NetBox
+        netbox_device_type_id = netbox_create_device_type(nb_url, app_config['netbox_api_config']['api_token'], netbox_manufacturer_id, discovered_proxmox_nodes_information[proxmox_node]['system']['model'])
+
+        if not netbox_device_type_id:
+            raise ValueError(f"Netbox missing device type for {discovered_proxmox_nodes_information[proxmox_node]['system']['manufacturer']}, model {discovered_proxmox_nodes_information[proxmox_node]['system']['model']}")
+
+        # Create Interfaces for Device Type in NetBox
+        for network_interface in discovered_proxmox_nodes_information[pnci]['system']['network_interfaces']:
+            #netbox_interface_templates_id = netbox_create_interface_for_device_type(nb_url, app_config['netbox_api_config']['api_token'], netbox_device_type_id, network_interface['name'], network_interface['type'])
+            netbox_interface_templates_id = netbox_create_interface_for_device_type(nb_obj, netbox_device_type_id, network_interface['name'], network_interface['type'])
+
+            if not netbox_interface_templates_id:
+                raise ValueError(f"Unable to create interface-type {network_interface['type']} (interface: {network_interface['name']}) for device type id {netbox_device_type_id}")
+
+        # Create Device in NetBox
+        netbox_device_id = netbox_create_device_for_proxmox_node(nb_url, app_config['netbox_api_config']['api_token'], pnci, netbox_device_role_id, netbox_device_type_id, netbox_site_id)
+
+        if not netbox_device_id:
+            raise ValueError(f"Netbox missing device id for {pnci}, device type id {netbox_device_type_id}")
+
+        # create cluster and type in NetBox
+
+        # create nodes in NetBox and associate with cluster
 
 
 if __name__ == "__main__":

@@ -80,6 +80,69 @@ class Netbox:
                 if 'name' in self.payload:
                     print(f"Object (has required) '{self.payload['name']}' created successfully.")
                     self.findBy('name')
+                elif 'model' in self.payload:
+                    print(f"Object (has required) '{self.payload['model']}' created successfully.")
+                    self.findBy('model')
+
+
+class NetBoxSites(Netbox):
+    def __init__(self, url, token, payload, find_key = 'name') -> None:
+        # Initialize the Netbox superclass with URL and token
+        super().__init__(url, token, payload)
+        self.object_type = self.nb.dcim.sites
+        self.required_fields = [ 
+            "name",
+            "slug",
+            "status"
+        ]
+        self.find_key = find_key
+        self.findBy(self.find_key)
+        self.createOrUpdate()
+
+
+class NetBoxManufacturers(Netbox):
+    def __init__(self, url, token, payload, find_key = 'name') -> None:
+        # Initialize the Netbox superclass with URL and token
+        super().__init__(url, token, payload)
+        self.object_type = self.nb.dcim.manufacturers
+        self.required_fields = [ 
+            "name",
+            "slug"
+        ]
+        self.find_key = find_key
+        self.findBy(self.find_key)
+        self.createOrUpdate()
+
+
+class NetBoxDeviceTypes(Netbox):
+    def __init__(self, url, token, payload, find_key = 'model') -> None:
+        # Initialize the Netbox superclass with URL and token
+        super().__init__(url, token, payload)
+        self.object_type = self.nb.dcim.device_types
+        self.required_fields = [
+            "manufacturer",
+            "model", 
+            "slug",
+            "u_height"
+        ]
+        self.find_key = find_key
+        self.findBy(self.find_key)
+        self.createOrUpdate()
+
+
+class NetBoxDeviceInterfaceTemplates(Netbox):
+    def __init__(self, url, token, payload, find_key = 'name') -> None:
+        # Initialize the Netbox superclass with URL and token
+        super().__init__(url, token, payload)
+        self.object_type = self.nb.dcim.device_types
+        self.required_fields = [
+            "device_type",
+            "name",
+            "type" 
+        ]
+        self.find_key = find_key
+        self.findBy(self.find_key)
+        self.createOrUpdate()
 
 
 class NetBoxDeviceRoles(Netbox):
@@ -91,6 +154,22 @@ class NetBoxDeviceRoles(Netbox):
             "name",
             "slug",
             "vm_role"
+        ]
+        self.find_key = find_key
+        self.findBy(self.find_key)
+        self.createOrUpdate()
+
+
+class NetBoxDevices(Netbox):
+    def __init__(self, url, token, payload, find_key = 'name') -> None:
+        # Initialize the Netbox superclass with URL and token
+        super().__init__(url, token, payload)
+        self.object_type = self.nb.dcim.devices
+        self.required_fields = [ 
+            "name",
+            "role",
+            "device_type",
+            "site"
         ]
         self.find_key = find_key
         self.findBy(self.find_key)
