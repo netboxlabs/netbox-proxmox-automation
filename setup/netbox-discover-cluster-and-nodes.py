@@ -334,12 +334,6 @@ def netbox_create_device_type(netbox_url: str, netbox_api_token: str, manufactur
 
 
 def netbox_create_interface_for_device_type(nb_obj, device_type_id: int, interface_name: str, interface_type: str):
-    """
-    try:
-        return dict(NetBoxDeviceInterfaceTemplates(netbox_url, netbox_api_token, {'device_type': {'id': device_type_id}, 'name': interface_name, 'enabled': False, 'mgmt_only': False, 'type': {'value': interface_type}}).obj)['id']
-    except Exception as e:
-        raise ValueError(e)
-    """
     try:
         device_type_interface_payload = {
             'device_type': {
@@ -363,11 +357,63 @@ def netbox_create_interface_for_device_type(nb_obj, device_type_id: int, interfa
         raise ValueError(e, e.error)
 
 
-def netbox_create_device_for_proxmox_node(netbox_url: str, netbox_api_token: str, device_name: str, device_role: int, device_type: int, site: int):
+def netbox_create_device_for_proxmox_node(netbox_url: str, netbox_api_token: str, device_name: str, device_role: int, device_type: int, site: int, serial: str):
     try:
-        return dict(NetBoxDevices(netbox_url, netbox_api_token, {'name': device_name, 'role': device_role, 'device_type': device_type, 'site': site, 'status': 'active'}).obj)['id']
+        return dict(NetBoxDevices(netbox_url, netbox_api_token, {'name': device_name, 'role': device_role, 'device_type': device_type, 'site': site, 'serial': serial, 'status': 'active'}).obj)['id']
     except Exception as e:
         raise ValueError(e)
+
+
+def netbox_get_interfaces_for_proxmox_node_by_device_id(nb_obj, device_id: int):
+    try:
+        interfaces = list(nb_obj.nb.dcim.interfaces.filter(device_id=device_id))
+        return interfaces
+    except pynetbox.RequestError as e:
+        raise ValueError(e, e.error)
+
+
+def _netbox_assign_mac_address_for_proxmox_node_by_object_id(nb_obj, assigned_object_id: int, mac_address: str):
+    try:
+        mac_address_data = {
+            'mac_address': mac_address,
+            'assigned_object_type': 'dcim.interface',
+            'assigned_object_id': assigned_object_id
+        }
+
+        check_mac_address = nb_obj.nb.dcim.mac_addresses.get(assigned_object_id=assigned_object_id, mac_address=mac_address)
+
+        if not check_mac_address:
+            new_mac_address = nb_obj.nb.dcim.mac_addresses.create(**mac_address_data)
+
+            if not new_mac_address:
+                raise ValueError(f"Unable to create mac address {mac_address} for interface id: {assigned_object_id}")
+
+            return new_mac_address
+
+        return check_mac_address        
+    except pynetbox.RequestError as e:
+        raise ValueError(e, e.error)
+
+
+def netbox_update_interface_for_proxmox_node_by_device_id(nb_obj, device_id: int, interface_name: str, interface_data: dict):
+    try:
+        interface = nb_obj.nb.dcim.interfaces.get(device_id=device_id, name=interface_name)
+
+        if not interface:
+            raise ValueError(f"Interface {interface_name} not found on device id: {device_id}")
+
+        assigned_mac_address = _netbox_assign_mac_address_for_proxmox_node_by_object_id(nb_obj, interface.id, interface_data['mac'])
+
+        interface.enabled = interface_data['enabled']
+
+        if 'id' in assigned_mac_address:
+            interface.primary_mac_address = assigned_mac_address['id']
+        else:
+            interface.primary_mac_address = assigned_mac_address.id
+
+        interface.save()
+    except pynetbox.RequestError as e:
+        raise ValueError(e, e.error)
 
 
 def main():
@@ -392,7 +438,7 @@ def main():
     }
 
     args = get_arguments()
-    print("ARGS", args, args.config)
+    #print("ARGS", args, args.config)
 
     try:
         with open(args.config, 'r') as cfg_f:
@@ -400,7 +446,7 @@ def main():
     except yaml.YAMLError as exc:
         print(exc)
 
-    print("CFG DATA", app_config, app_config['proxmox_api_config'])
+    #print("CFG DATA", app_config, app_config['proxmox_api_config'])
 
     nb_url = f"{app_config['netbox_api_config']['api_proto']}://{app_config['netbox_api_config']['api_host']}:{str(app_config['netbox_api_config']['api_port'])}/"
     nb_obj = Netbox(nb_url, app_config['netbox_api_config']['api_token'], None)
@@ -471,6 +517,8 @@ def main():
             full_et_cmd_out = f"{app_config['proxmox']['node_commands']['ethtool_command']} {ni['logicalname']}"
             ethtool_info = get_proxmox_node_ethtool_info(proxmox_nodes_connection_info[pnci]['ip'], proxmox_nodes_connection_info[pnci], full_et_cmd_out)
 
+            temp_h['duplex'] = ethtool_info['duplex'].lower()
+
             # need last supported_link_modes for type mapping
             if ethtool_info['port'] in ethtool_to_netbox_speed_mappings['supported_ports']:
                 if_type = ethtool_to_netbox_speed_mappings['supported_ports'][ethtool_info['port']]
@@ -523,11 +571,26 @@ def main():
             if not netbox_interface_templates_id:
                 raise ValueError(f"Unable to create interface-type {network_interface['type']} (interface: {network_interface['name']}) for device type id {netbox_device_type_id}")
 
+        # NEED TO FIGURE OUT HOW TO GET MAPPING BETWEEN vmbrX AND THE UNDERLYING PHYSICAL INTERFACES
+        # THEN WE NEED TO ADD vmbrX TO NETBOX
+
         # Create Device in NetBox
-        netbox_device_id = netbox_create_device_for_proxmox_node(nb_url, app_config['netbox_api_config']['api_token'], pnci, netbox_device_role_id, netbox_device_type_id, netbox_site_id)
+        netbox_device_id = netbox_create_device_for_proxmox_node(nb_url, app_config['netbox_api_config']['api_token'], proxmox_node, netbox_device_role_id, netbox_device_type_id, netbox_site_id, discovered_proxmox_nodes_information[proxmox_node]['system']['serial'])
 
         if not netbox_device_id:
-            raise ValueError(f"Netbox missing device id for {pnci}, device type id {netbox_device_type_id}")
+            raise ValueError(f"Netbox missing device id for {proxmox_node}, device type id {netbox_device_type_id}")
+
+        device_interfaces = netbox_get_interfaces_for_proxmox_node_by_device_id(nb_obj, netbox_device_id)
+
+        for device_interface in device_interfaces:
+            #print(f"device: {proxmox_node}, interface: {device_interface} {device_interface.type} {device_interface.mac_address}")
+
+            network_interface_discovered_for_proxmox_node = list(filter(lambda d: d["name"] == device_interface.name, discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces']))
+
+            if len(network_interface_discovered_for_proxmox_node) != 1:
+                raise ValueError(f"Found more than one network interface at this slot for {proxmox_node}")
+
+            netbox_update_interface_for_proxmox_node_by_device_id(nb_obj, netbox_device_id, device_interface, network_interface_discovered_for_proxmox_node[0])
 
         # create cluster and type in NetBox
 
