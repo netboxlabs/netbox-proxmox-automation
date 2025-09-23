@@ -83,6 +83,39 @@ def get_proxmox_cluster_info(proxmox_api_config: dict):
     return None
     
 
+def get_proxmox_node_vmbr_network_interface_mapping(proxmox_api_config: dict, proxmox_node: str, network_interface: str):
+    proxmox_vmbrX_network_interface_mapping = {}
+
+    try:
+        proxmox = ProxmoxAPI(
+            proxmox_api_config['api_host'],
+            port=proxmox_api_config['api_port'],
+            user=proxmox_api_config['api_user'],
+            token_name=proxmox_api_config['api_token_id'],
+            token_value=proxmox_api_config['api_token_secret'],
+            verify_ssl=False
+        )
+
+        proxmox_node_network_settings = proxmox.nodes(proxmox_node).network.get()
+
+        proxmox_vmbrX_interface_mapping = list(filter(lambda d: 'bridge_ports' in d and d['bridge_ports'] == network_interface, proxmox_node_network_settings))
+
+        if proxmox_vmbrX_interface_mapping:
+            if not network_interface in proxmox_vmbrX_network_interface_mapping:
+                proxmox_vmbrX_network_interface_mapping[network_interface] = []
+
+            proxmox_vmbrX_network_interface_mapping[network_interface] = proxmox_vmbrX_interface_mapping[0]['iface']
+        
+        return proxmox_vmbrX_network_interface_mapping
+    except ResourceException as e:
+        print("E", e, dir(e), e.status_code, e.status_message, e.errors)
+        if e.errors:
+            if 'vmid' in e.errors:
+                print("F", e.errors['vmid'])
+
+    return {}
+
+
 def generate_proxmox_node_creds_configuration(proxmox_nodes: dict):
     temp_nodes_cn_info = {}
 
@@ -372,7 +405,7 @@ def netbox_get_interfaces_for_proxmox_node_by_device_id(nb_obj, device_id: int):
         raise ValueError(e, e.error)
 
 
-def _netbox_assign_mac_address_for_proxmox_node_by_object_id(nb_obj, assigned_object_id: int, mac_address: str):
+def __netbox_assign_mac_address_for_proxmox_node_by_object_id(nb_obj, assigned_object_id: int, mac_address: str):
     try:
         mac_address_data = {
             'mac_address': mac_address,
@@ -402,7 +435,7 @@ def netbox_update_interface_for_proxmox_node_by_device_id(nb_obj, device_id: int
         if not interface:
             raise ValueError(f"Interface {interface_name} not found on device id: {device_id}")
 
-        assigned_mac_address = _netbox_assign_mac_address_for_proxmox_node_by_object_id(nb_obj, interface.id, interface_data['mac'])
+        assigned_mac_address = __netbox_assign_mac_address_for_proxmox_node_by_object_id(nb_obj, interface.id, interface_data['mac'])
 
         interface.enabled = interface_data['enabled']
 
@@ -416,10 +449,59 @@ def netbox_update_interface_for_proxmox_node_by_device_id(nb_obj, device_id: int
         raise ValueError(e, e.error)
 
 
+def netbox_create_vmbrX_interface_mapping(nb_obj, device_id: int, device_type: str, physical_interface_id: int, vmbr_name: str):
+    created_vmbr = {}
+
+    print("IN", device_type, device_id, physical_interface_id, vmbr_name)
+    try:
+        interface = nb_obj.nb.dcim.interfaces.get(device_id=device_id, bridge=physical_interface_id, name=vmbr_name)
+
+        if interface:
+            return {vmbr_name: interface}
+
+        vmbrX_interface_data = {
+            'device': device_id,
+            'type': device_type,
+            'bridge': physical_interface_id,
+            'name': vmbr_name,
+            'enabled': True
+        }
+
+        new_bridge_interface = nb_obj.nb.dcim.interfaces.create(**vmbrX_interface_data)
+
+        if not new_bridge_interface:
+            raise ValueError(f"Unable to create bridge interface {vmbrX_interface_data} for interface id: {physical_interface_id}")
+        
+        created_vmbr[vmbr_name] = new_bridge_interface
+
+        return created_vmbr
+    except pynetbox.RequestError as e:
+        raise ValueError(e, e.error)
+
+
+def netbox_create_and_assign_ip_address(nb_obj, ip_addr: str, interface_id: int):
+    try:
+        #check_ip_addr = dict(nb_obj.nb.ipam.ip_addresses.get(address=ip_addr))
+        check_ip_addr = nb_obj.nb.ipam.ip_addresses.get(address=ip_addr)
+
+        if not check_ip_addr:
+            check_ip_addr = nb_obj.nb.ipam.ip_addresses.create(address=ip_addr)
+
+        #check_ip_addr.assigned_object = device_interface
+        check_ip_addr.assigned_object_id = interface_id
+        check_ip_addr.assigned_object_type = 'dcim.interface'
+        check_ip_addr.save()
+    except pynetbox.RequestError as e:
+        raise ValueError(e, e.error)
+
+    return True
+
+
 def main():
     proxmox_cluster_name = None
     proxmox_nodes = []
     proxmox_nodes_connection_info = {}
+    proxmox_vmbr_interfaces = {}
     discovered_proxmox_nodes_information = {}
 
     network_interface_enabled_state_mappings = {
@@ -527,7 +609,7 @@ def main():
                 temp_h['type'] = if_type_speed
 
             discovered_proxmox_nodes_information[pnci]['system']['network_interfaces'].append(temp_h)
-
+    
             # Perform serial (number) fixes for Protectli devices; for sure there will be others, but for now...
             # (Newer) Protectli devices use the mac address of the first network interface as their serial number
             if discovered_proxmox_nodes_information[pnci]['system']['manufacturer'].lower() == 'protectli':
@@ -536,7 +618,7 @@ def main():
 
     # sample output
     # {'pxmx-n2': {'system': {'network_interfaces': [{'name': 'enp1s0', 'mac': '64:62:66:23:bf:03', 'enabled': True, 'type': '1000BASE-T (1GE)'}, {'name': 'enp2s0', 'mac': '64:62:66:23:bf:04', 'enabled': True, 'type': '2.5GBASE-T (2.5GE)'}, {'name': 'enp3s0', 'mac': '64:62:66:23:bf:05', 'enabled': False, 'type': '2.5GBASE-T (2.5GE)'}, {'name': 'enp4s0', 'mac': '64:62:66:23:bf:06', 'enabled': False, 'type': '2.5GBASE-T (2.5GE)'}], 'manufacturer': 'Protectli', 'model': 'VP2430 (VP2430)', 'serial': 'Default string'}}, 'pxmx-n1': {'system': {'network_interfaces': [{'name': 'enp1s0', 'mac': '64:62:66:23:bf:13', 'enabled': True, 'type': '1000BASE-T (1GE)'}, {'name': 'enp2s0', 'mac': '64:62:66:23:bf:14', 'enabled': True, 'type': '2.5GBASE-T (2.5GE)'}, {'name': 'enp3s0', 'mac': '64:62:66:23:bf:15', 'enabled': False, 'type': '2.5GBASE-T (2.5GE)'}, {'name': 'enp4s0', 'mac': '64:62:66:23:bf:16', 'enabled': False, 'type': '2.5GBASE-T (2.5GE)'}], 'manufacturer': 'Protectli', 'model': 'VP2430 (VP2430)', 'serial': 'Default string'}}}
-    print(discovered_proxmox_nodes_information)
+    print("DISCOVERED PROXMOX NODES INFORMATION", discovered_proxmox_nodes_information)
 
     # Create Site in NetBox
     netbox_site_id = netbox_create_site(nb_url, app_config['netbox_api_config']['api_token'], netbox_site)
@@ -571,9 +653,6 @@ def main():
             if not netbox_interface_templates_id:
                 raise ValueError(f"Unable to create interface-type {network_interface['type']} (interface: {network_interface['name']}) for device type id {netbox_device_type_id}")
 
-        # NEED TO FIGURE OUT HOW TO GET MAPPING BETWEEN vmbrX AND THE UNDERLYING PHYSICAL INTERFACES
-        # THEN WE NEED TO ADD vmbrX TO NETBOX
-
         # Create Device in NetBox
         netbox_device_id = netbox_create_device_for_proxmox_node(nb_url, app_config['netbox_api_config']['api_token'], proxmox_node, netbox_device_role_id, netbox_device_type_id, netbox_site_id, discovered_proxmox_nodes_information[proxmox_node]['system']['serial'])
 
@@ -583,14 +662,42 @@ def main():
         device_interfaces = netbox_get_interfaces_for_proxmox_node_by_device_id(nb_obj, netbox_device_id)
 
         for device_interface in device_interfaces:
-            #print(f"device: {proxmox_node}, interface: {device_interface} {device_interface.type} {device_interface.mac_address}")
+            if device_interface.name.startswith('vmbr'):
+                continue
+
+            print(f"device: {proxmox_node}, interface: {device_interface} {device_interface.type} {device_interface.mac_address}")
 
             network_interface_discovered_for_proxmox_node = list(filter(lambda d: d["name"] == device_interface.name, discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces']))
 
             if len(network_interface_discovered_for_proxmox_node) != 1:
-                raise ValueError(f"Found more than one network interface at this slot for {proxmox_node}")
+                raise ValueError(f"Found more than one network interface at this slot for {proxmox_node}: {network_interface_discovered_for_proxmox_node}")
 
             netbox_update_interface_for_proxmox_node_by_device_id(nb_obj, netbox_device_id, device_interface, network_interface_discovered_for_proxmox_node[0])
+
+            # Create bridge interface name: vmbrX, bridge: device_interface.id
+            vmbr_info = get_proxmox_node_vmbr_network_interface_mapping(app_config['proxmox_api_config'], proxmox_node, device_interface.name)
+            print("VMBR INFO", vmbr_info)
+
+            # **** BUG IS RIGHT HERE ****
+            if device_interface.name in vmbr_info:
+                print("WOULD CREATE", nb_obj, netbox_interface_templates_id, vmbr_info[device_interface.name])
+                vmbrX_interface = netbox_create_vmbrX_interface_mapping(nb_obj, netbox_device_id, network_interface_discovered_for_proxmox_node[0]['type'], device_interface.id, vmbr_info[device_interface.name])
+                for vmbr_interface_name in vmbrX_interface:
+                    # BUG FIX: This will always create interfaces with the SAME NAME, ie only pick the LAST interface w same name
+                    # Maybe make key == netbox_device_id?
+                    proxmox_vmbr_interfaces[vmbr_interface_name] = vmbrX_interface[vmbr_interface_name].id
+
+                # Assign IP to network interface
+                print("VMBR INTERFACES", proxmox_vmbr_interfaces)
+                if device_interface.name in if_addr_info:
+                    print("YES WOULD ASSIGN DEVICE INTERFACE", device_interface.name, if_addr_info)
+                    netbox_create_and_assign_ip_address(nb_obj, if_addr_info[device_interface.name]['ipv4address'], device_interface.id)
+
+                # Assign IP to vmbr
+                for proxmox_vmbr_interface in proxmox_vmbr_interfaces:
+                    if proxmox_vmbr_interface in if_addr_info:                
+                        print("YES WOULD ASSIGN VMBR", proxmox_vmbr_interface, if_addr_info)
+                        netbox_create_and_assign_ip_address(nb_obj, if_addr_info[proxmox_vmbr_interface]['ipv4address'], proxmox_vmbr_interfaces[proxmox_vmbr_interface])
 
         # create cluster and type in NetBox
 
