@@ -12,6 +12,8 @@ class NetBoxProxmoxAPIHelper(ProxmoxAPICommon):
     def __init__(self, cfg_data):
         super(NetBoxProxmoxAPIHelper, self).__init__(cfg_data)
 
+        self.cfg_data = cfg_data
+
         self.proxmox_nodes = []
         self.proxmox_vm_templates = {}
         self.proxmox_lxc_templates = {}
