@@ -5,10 +5,13 @@ import requests
 import urllib
 import urllib.parse
 
-from proxmoxer import ProxmoxAPI
+from proxmoxer import ProxmoxAPI, ResourceException
+from . proxmox_api_common import ProxmoxAPICommon
 
-class NetBoxProxmoxAPIHelper:
+class NetBoxProxmoxAPIHelper(ProxmoxAPICommon):
     def __init__(self, cfg_data):
+        super(NetBoxProxmoxAPIHelper, self).__init__(cfg_data)
+
         self.proxmox_nodes = []
         self.proxmox_vm_templates = {}
         self.proxmox_lxc_templates = {}
@@ -17,30 +20,13 @@ class NetBoxProxmoxAPIHelper:
         self.proxmox_storage_volumes = []
         self.proxmox_lxc_storage_volumes = []
 
-        self.proxmox_api_config = {
-            'api_host': cfg_data['proxmox_api_config']['api_host'],
-            'api_port': cfg_data['proxmox_api_config']['api_port'],
-            'api_user': cfg_data['proxmox_api_config']['api_user'],
-            'api_token_id': cfg_data['proxmox_api_config']['api_token_id'],
-            'api_token_secret': cfg_data['proxmox_api_config']['api_token_secret'],
-            'verify_ssl': cfg_data['proxmox_api_config']['verify_ssl']
-        }
-
-        self.proxmox_api = ProxmoxAPI(
-            self.proxmox_api_config['api_host'],
-            port=self.proxmox_api_config['api_port'],
-            user=self.proxmox_api_config['api_user'],
-            token_name=self.proxmox_api_config['api_token_id'],
-            token_value=self.proxmox_api_config['api_token_secret'],
-            verify_ssl=self.proxmox_api_config['verify_ssl']
-        )
-
         self.__proxmox_collect_nodes()
         self.__proxmox_collect_vms()
 
 
     def __proxmox_collect_nodes(self):
         try:
+            # change from nodes.get to cluster.resources.get or somesuch.  this will add cluster support where we are single node now
             for proxmox_node in self.proxmox_api.nodes.get():
                 if proxmox_node['type'] == 'node':
                     self.proxmox_nodes.append(proxmox_node['node'])
