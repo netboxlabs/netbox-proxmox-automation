@@ -11,6 +11,7 @@ import pynetbox
 import proxmoxer
 import urllib3
 
+from helpers.netbox_proxmox_cluster import NetBoxProxmoxCluster
 from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
 from helpers.netbox_objects import Netbox, NetBoxSites, NetBoxManufacturers, NetBoxTags, NetBoxDeviceRoles, NetBoxDeviceTypes, NetBoxDevices, NetBoxDeviceInterfaceTemplates, NetboxClusterTypes, NetboxClusters, NetboxVirtualMachines, NetboxVirtualMachineInterface, NetboxIPAddresses
 
@@ -37,51 +38,6 @@ def get_arguments():
 def __netbox_make_slug(in_str):
     return re.sub(r'\W+', '-', in_str).lower()
 
-
-def get_proxmox_cluster_info(proxmox_api_config: dict):
-    proxmox_cluster_name = None
-    proxmox_nodes = {}
-
-    try:
-        proxmox = ProxmoxAPI(
-            proxmox_api_config['api_host'],
-            port=proxmox_api_config['api_port'],
-            user=proxmox_api_config['api_user'],
-            token_name=proxmox_api_config['api_token_id'],
-            token_value=proxmox_api_config['api_token_secret'],
-            verify_ssl=False
-        )
-
-        proxmox_cluster_status = proxmox.cluster.status.get()
-
-        # Extract all 'type' values for 'cluster' (should only be 1)
-        proxmox_cluster_info = list(filter(lambda d: d["type"] == 'cluster', proxmox_cluster_status))
-
-        if proxmox_cluster_info:
-            proxmox_cluster_name = proxmox_cluster_info[0]['name']
-
-        # Extract all values for type 'nodes'
-        proxmox_node_info = list(filter(lambda d: d["type"] == 'node', proxmox_cluster_status))
-
-        if proxmox_node_info:
-            for pm_node in proxmox_node_info:
-                if pm_node['type'] == 'node':
-                    if not pm_node['name'] in proxmox_nodes:
-                        proxmox_nodes[pm_node['name']] = {}
-                    
-                    proxmox_nodes[pm_node['name']]['ip'] = pm_node['ip']
-                    proxmox_nodes[pm_node['name']]['online'] = pm_node['online']
-
-        return (proxmox_cluster_name, proxmox_nodes)
-    except ResourceException as e:
-        #raise(e)
-        print("E", e, dir(e), e.status_code, e.status_message, e.errors)
-        if e.errors:
-            if 'vmid' in e.errors:
-                print("F", e.errors['vmid'])
-
-    return None
-    
 
 def get_proxmox_node_vmbr_network_interface_mapping(proxmox_api_config: dict, proxmox_node: str, network_interface: str):
     proxmox_vmbrX_network_interface_mapping = {}
@@ -114,61 +70,6 @@ def get_proxmox_node_vmbr_network_interface_mapping(proxmox_api_config: dict, pr
                 print("F", e.errors['vmid'])
 
     return {}
-
-
-def generate_proxmox_node_creds_configuration(proxmox_nodes: dict):
-    temp_nodes_cn_info = {}
-
-    # test nodes data
-    # PMCI 1 {'pxmx-n2': {'ip': '192.168.71.4', 'login': 'root', 'use_pass': False}, 'pxmx-n1': {'ip': '192.168.71.3', 'login': 'root', 'use_pass': False}}
-    for proxmox_node in proxmox_nodes:
-        if not proxmox_node in temp_nodes_cn_info:
-            temp_nodes_cn_info[proxmox_node] = {}
-
-        temp_nodes_cn_info[proxmox_node]['ip'] = proxmox_nodes[proxmox_node]['ip']
-
-        if not proxmox_nodes[proxmox_node]['online']:
-            print(f"Proxmox node {proxmox_node} is not online.  Skipping...")
-            continue
-
-        while True:
-            login_name = input(f"Enter login name for {proxmox_node}: ")
-            if login_name:
-                break
-
-        temp_nodes_cn_info[proxmox_node]['login'] = login_name
-
-        while True:
-            use_ssh_pass = input(f"Is password for {login_name} required for {proxmox_node}? ")
-            if use_ssh_pass and use_ssh_pass.lower() in ('y', 'yes', 'n', 'no'):
-                break
-
-        if use_ssh_pass.lower().startswith('y'):
-            while True:
-                ssh_pass = getpass.getpass(f"Enter password for {login_name} on {proxmox_node}: ")
-                if ssh_pass:
-                    break
-            temp_nodes_cn_info[proxmox_node]['use_pass'] = True
-            temp_nodes_cn_info[proxmox_node]['pass'] = ssh_pass
-        elif use_ssh_pass.lower().startswith('n'):
-            temp_nodes_cn_info[proxmox_node]['use_pass'] = False
-
-        if login_name != "root":
-            temp_nodes_cn_info[proxmox_node]['use_sudo'] = True
-
-            while True:
-                sudo_pass_required = input(f"Does sudo require a password? ")
-                if sudo_pass_required and sudo_pass_required.lower() in ('y', 'yes', 'n', 'no'):
-                    break
-
-            if sudo_pass_required.lower().startswith('y'):
-                while True:
-                    sudo_pass = getpass.getpass(f"Enter sudo password for {login_name} on {proxmox_node['name']}: ")
-                    if sudo_pass:
-                        break
-                temp_nodes_cn_info[proxmox_node]['sudo_pass'] = sudo_pass
-
-    return temp_nodes_cn_info
 
 
 def _get_proxmox_node_info_cmd(proxmox_node_name:str, proxmox_node_login_info: dict, lshw_command: str):
@@ -534,21 +435,22 @@ def main():
     nb_obj = Netbox(nb_url, app_config['netbox_api_config']['api_token'], None)
     #print(nb_obj, dir(nb_obj))
 
+    nb_pxmx_cluster = NetBoxProxmoxCluster(app_config, nb_obj)
+
     if not 'site' in app_config['netbox']:
         netbox_site = "Default NetBox Site"
     else:
         netbox_site = app_config['netbox']['site']
 
-    proxmox_cluster_name, proxmox_nodes = get_proxmox_cluster_info(app_config['proxmox_api_config'])
-    #print("PMCI", proxmox_cluster_name, proxmox_nodes)
-
-    if not proxmox_cluster_name:
-        proxmox_cluster_name = f"proxmox-cluster-name-placeholder-{str(int(time.time()))}"
-
-    #print(proxmox_cluster_name)
+    nb_pxmx_cluster.get_proxmox_cluster_info()
+    proxmox_cluster_name = nb_pxmx_cluster.proxmox_cluster_name
+    proxmox_nodes = nb_pxmx_cluster.proxmox_nodes
 
     # Collect Proxmox node login information
-    proxmox_nodes_connection_info = generate_proxmox_node_creds_configuration(proxmox_nodes)
+    nb_pxmx_cluster.generate_proxmox_node_creds_configuration()
+    proxmox_nodes_connection_info = nb_pxmx_cluster.proxmox_nodes_connection_info
+    print(proxmox_nodes_connection_info)
+    sys.exit(0)
 
     # discover nodes base system information
     for pnci in proxmox_nodes_connection_info:
