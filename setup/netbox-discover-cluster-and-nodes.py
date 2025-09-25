@@ -226,6 +226,38 @@ def netbox_create_and_assign_ip_address(nb_obj, ip_addr: str, interface_id: int)
     return True
 
 
+def netbox_create_cluster_type(netbox_url: str, netbox_api_token: str, cluster_type: str):
+    try:
+        return dict(NetboxClusterTypes(netbox_url, netbox_api_token, {'name': cluster_type, 'slug': __netbox_make_slug(cluster_type)}).obj)['id']
+    except Exception as e:
+        raise ValueError(e)
+
+
+def netbox_create_cluster(netbox_url: str, netbox_api_token: str, cluster_name: str, cluster_type: int):
+    try:
+        return dict(NetboxClusters(netbox_url, netbox_api_token, {'name': cluster_name, 'type': cluster_type, 'status': 'active'}).obj)['id']
+    except Exception as e:
+        raise ValueError(e)
+
+
+def netbox_associate_device_with_cluster(nb_obj, device_id: int, cluster_id: int):
+    try:
+        check_device = nb_obj.nb.dcim.devices.get(id=device_id)
+
+        if not check_device:
+            raise ValueError(f"Unable to find device id {device_id} in NetBox")
+
+        check_cluster = nb_obj.nb.virtualization.clusters.get(id=cluster_id)
+
+        if not check_cluster:
+            raise ValueError(f"Unable to find cluster id {cluster_id} in NetBox")
+
+        check_device.cluster = cluster_id
+        check_device.save()
+    except pynetbox.RequestError as e:
+        raise ValueError(e, e.error)
+
+
 def main():
     proxmox_nodes_connection_info = {}
     proxmox_vmbr_interfaces = {}
@@ -339,9 +371,20 @@ def main():
                     #print(f"Assigning {nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]['ipv4address']} to {device_interface.name} on {proxmox_node}")                        
                     netbox_create_and_assign_ip_address(nb_obj, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]['ipv4address'], device_interface.id)
 
-        # create cluster and type in NetBox
+        # create cluster type and cluster in NetBox
+        netbox_cluster_type_id = netbox_create_cluster_type(nb_url, app_config['netbox_api_config']['api_token'], 'Proxmox')
 
-        # create nodes in NetBox and associate with cluster
+        if not netbox_cluster_type_id:
+            raise ValueError(f"Unable to create Proxmox cluster type in NetBox for {proxmox_node}")
+        
+        netbox_cluster_id = netbox_create_cluster(nb_url, app_config['netbox_api_config']['api_token'], nb_pxmx_cluster.proxmox_cluster_name, netbox_cluster_type_id)
+
+        if not netbox_cluster_id:
+            raise ValueError(f"Unable to create Proxmox cluster {nb_pxmx_cluster.proxmox_cluster_name} in NetBox")
+        
+        # associate nodes in NetBox with cluster
+        #print(f"Want to associate {proxmox_node}, device id: {netbox_device_id} with {nb_pxmx_cluster.proxmox_cluster_name}")
+        netbox_associate_device_with_cluster(nb_obj, netbox_device_id, netbox_cluster_id)
 
 
 if __name__ == "__main__":
