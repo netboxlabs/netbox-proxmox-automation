@@ -198,6 +198,9 @@ class NetBoxProxmoxCluster(ProxmoxAPICommon):
                 if not 'system' in self.discovered_proxmox_nodes_information[proxmox_node]:
                     self.discovered_proxmox_nodes_information[proxmox_node]['system'] = {}
 
+                if 'product_name' in temp_system_info:
+                    temp_system_info['model'] = temp_system_info.pop('product_name')
+                    
                 self.discovered_proxmox_nodes_information[proxmox_node]['system'] = json.loads(json.dumps(temp_system_info))
             except json.JSONDecodeError as e:
                 raise ValueError(f"JSON conversion error: {e}")        
