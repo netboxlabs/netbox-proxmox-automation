@@ -1,7 +1,8 @@
+import os
 import pynetbox
+import time
 
 class Netbox:
-
     def _sanitize_value(self, key, value):
         # Mask sensitive fields
         sensitive_keys = {'password', 'token', 'secret'}
@@ -13,9 +14,12 @@ class Netbox:
             return [self._sanitize_value(key, v) for v in value]
         return value
 
+
     def _sanitize_payload(self):
         # Return a sanitized version of the payload
         return {key: self._sanitize_value(key, value) for key, value in self.payload.items()}
+    
+
     def __init__(self, url, token, payload) -> None:
         # NetBox API details
         self.netbox_url = url
@@ -24,16 +28,22 @@ class Netbox:
         self.object_type = None
         self.obj = None
         self.required_fields = []
-        self.init_api()
+
+        self.__init_api()
 
 
-    def init_api(self):
+    def __init_api(self):
         # Initialize pynetbox API connection
         self.nb = pynetbox.api(self.netbox_url, token=self.netbox_token)
+
+        if 'X_NETBOX_BRANCH' in os.environ:
+            print(f"BRANCH SESSION HEADER {os.environ['X_NETBOX_BRANCH']}", self.nb)
+            self.nb.http_session.headers["X-NetBox-Branch"] = os.environ['X_NETBOX_BRANCH']
 
 
     def findBy(self, key):
         self.obj = self.object_type.get(**{key: self.payload[key]})
+    
 
     @property
     def hasRequired(self):

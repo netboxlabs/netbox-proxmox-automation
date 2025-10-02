@@ -14,6 +14,7 @@ import urllib3
 from helpers.netbox_proxmox_cluster import NetBoxProxmoxCluster
 from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
 from helpers.netbox_objects import Netbox, NetBoxSites, NetBoxManufacturers, NetBoxTags, NetBoxDeviceRoles, NetBoxDeviceTypes, NetBoxDevices, NetBoxDeviceInterfaceTemplates, NetboxClusterTypes, NetboxClusters, NetboxVirtualMachines, NetboxVirtualMachineInterface, NetboxIPAddresses
+from helpers.netbox_branches import NetBoxBranches
 
 from proxmoxer import ProxmoxAPI, ResourceException
 
@@ -259,8 +260,6 @@ def netbox_associate_device_with_cluster(nb_obj, device_id: int, cluster_id: int
 
 
 def main():
-    proxmox_nodes_connection_info = {}
-    proxmox_vmbr_interfaces = {}
     discovered_proxmox_nodes_information = {}
 
     args = get_arguments()
@@ -278,14 +277,30 @@ def main():
     nb_obj = Netbox(nb_url, app_config['netbox_api_config']['api_token'], None)
     #print(nb_obj, dir(nb_obj))
 
+    if 'branch' in app_config['netbox']:
+        branch_name = app_config['netbox']['branch']
+
+        branch_timeout = 0
+        if 'branch_timeout' in app_config['netbox']:
+            branch_timeout = app_config['netbox']['branch_timeout']
+
+        branch_site = NetBoxBranches(nb_obj)
+        branch_site.create_branch(branch_name, branch_timeout)
+        print("BBB", branch_site.branches, dir(nb_obj))
+
+        if not 'X_NETBOX_BRANCH' in os.environ:
+            os.environ['X_NETBOX_BRANCH'] = branch_site.branches[branch_name]
+
+        #nb_obj.nb.http_session.headers["X-NetBox-Branch"] = branch_site.branches[branch_name]
+
     nb_pxmx_cluster = NetBoxProxmoxCluster(app_config, nb_obj)
 
     if not 'site' in app_config['netbox']:
-        netbox_site = "Default NetBox Site"
+        netbox_site = "netbox-proxmox-automation Default NetBox Site"
     else:
         netbox_site = app_config['netbox']['site']
 
-    nb_pxmx_cluster.get_proxmox_cluster_info()
+    #nb_pxmx_cluster.get_proxmox_cluster_info()
 
     # Collect Proxmox node login information
     nb_pxmx_cluster.generate_proxmox_node_creds_configuration()
@@ -300,7 +315,7 @@ def main():
 
     # Create Site in NetBox
     netbox_site_id = netbox_create_site(nb_url, app_config['netbox_api_config']['api_token'], netbox_site)
-
+ 
     if not netbox_site_id:
         raise ValueError(f"Unable to create site {netbox_site} in NetBox")
 

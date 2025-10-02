@@ -14,7 +14,6 @@ class NetBoxProxmoxAPIHelper(ProxmoxAPICommon):
 
         self.cfg_data = cfg_data
 
-        self.proxmox_nodes = []
         self.proxmox_vm_templates = {}
         self.proxmox_lxc_templates = {}
         self.proxmox_vms = {}
@@ -22,18 +21,7 @@ class NetBoxProxmoxAPIHelper(ProxmoxAPICommon):
         self.proxmox_storage_volumes = []
         self.proxmox_lxc_storage_volumes = []
 
-        self.__proxmox_collect_nodes()
         self.__proxmox_collect_vms()
-
-
-    def __proxmox_collect_nodes(self):
-        try:
-            # change from nodes.get to cluster.resources.get or somesuch.  this will add cluster support where we are single node now
-            for proxmox_node in self.proxmox_api.nodes.get():
-                if proxmox_node['type'] == 'node':
-                    self.proxmox_nodes.append(proxmox_node['node'])
-        except requests.exceptions.RequestException as e:
-            raise requests.exceptions.RequestException(e)
 
 
     def __proxmox_collect_vms(self):
@@ -41,6 +29,9 @@ class NetBoxProxmoxAPIHelper(ProxmoxAPICommon):
             proxmox_get_vms = self.proxmox_api.cluster.resources.get(type='vm')
 
             for proxmox_vm in proxmox_get_vms:
+                if not proxmox_vm['node'] in self.proxmox_nodes:
+                    raise ValueError(f"{proxmox_vm['node']} not found in collected Proxmox nodes")
+                
                 if proxmox_vm['template']:
                     self.proxmox_vm_templates[proxmox_vm['vmid']] = proxmox_vm['name']
                 else:
@@ -289,7 +280,9 @@ class NetBoxProxmoxAPIHelper(ProxmoxAPICommon):
 
                 proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name] = {}
                 proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name]['mac-address'] = mac_address
-                proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name]['ip-addresses'] = []
+
+                if not 'ip-addresses' in proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name]:
+                    proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name]['ip-addresses'] = []
 
                 proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name]['ip-addresses'].append(
                     {
