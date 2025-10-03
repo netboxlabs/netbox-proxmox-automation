@@ -27,6 +27,7 @@ class Netbox:
         self.payload = payload
         self.object_type = None
         self.obj = None
+        self.multi_obj = None
         self.required_fields = []
 
         self.__init_api()
@@ -44,6 +45,10 @@ class Netbox:
     def findBy(self, key):
         self.obj = self.object_type.get(**{key: self.payload[key]})
     
+
+    def findByFilter(self, key):
+        self.multi_obj = self.object_type.filter(**{key: self.payload[key]})
+
 
     @property
     def hasRequired(self):
@@ -140,11 +145,11 @@ class NetBoxDeviceTypes(Netbox):
         self.createOrUpdate()
 
 
-class NetBoxDeviceInterfaceTemplates(Netbox):
+class NetBoxDeviceTypesInterfaceTemplates(Netbox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
-        self.object_type = self.nb.dcim.device_types
+        self.object_type = self.nb.dcim.interface_templates
         self.required_fields = [
             "device_type",
             "name",
@@ -184,6 +189,19 @@ class NetBoxDevices(Netbox):
         self.find_key = find_key
         self.findBy(self.find_key)
         self.createOrUpdate()
+
+
+class NetBoxDevicesInterfaces(Netbox):
+    def __init__(self, url, token, payload, find_key = 'device_id') -> None:
+        # Initialize the Netbox superclass with URL and token
+        super().__init__(url, token, payload)
+        self.object_type = self.nb.dcim.interfaces
+        self.required_fields = [ 
+            "device_id"
+        ]
+        self.find_key = find_key
+        self.findByFilter(self.find_key)
+        #self.createOrUpdate()
 
 
 class NetBoxTags(Netbox):

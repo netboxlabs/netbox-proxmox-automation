@@ -13,7 +13,7 @@ import urllib3
 
 from helpers.netbox_proxmox_cluster import NetBoxProxmoxCluster
 from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
-from helpers.netbox_objects import Netbox, NetBoxSites, NetBoxManufacturers, NetBoxTags, NetBoxDeviceRoles, NetBoxDeviceTypes, NetBoxDevices, NetBoxDeviceInterfaceTemplates, NetboxClusterTypes, NetboxClusters, NetboxVirtualMachines, NetboxVirtualMachineInterface, NetboxIPAddresses
+from helpers.netbox_objects import Netbox, NetBoxSites, NetBoxManufacturers, NetBoxTags, NetBoxDeviceRoles, NetBoxDeviceTypes, NetBoxDeviceTypesInterfaceTemplates, NetBoxDevices, NetBoxDevicesInterfaces, NetboxClusterTypes, NetboxClusters, NetboxVirtualMachines, NetboxVirtualMachineInterface, NetboxIPAddresses
 from helpers.netbox_branches import NetBoxBranches
 
 from proxmoxer import ProxmoxAPI, ResourceException
@@ -71,73 +71,6 @@ def get_proxmox_node_vmbr_network_interface_mapping(proxmox_api_config: dict, pr
                 print("F", e.errors['vmid'])
 
     return {}
-
-
-def netbox_create_site(netbox_url: str, netbox_api_token: str, site_name: str):
-    try:
-        return dict(NetBoxSites(netbox_url, netbox_api_token, {'name': site_name, 'slug': __netbox_make_slug(site_name), 'status': 'active'}).obj)['id']
-    except Exception as e:
-        raise ValueError(e)
-
-
-def netbox_create_device_manufacturer(netbox_url: str, netbox_api_token: str, manufacturer_name: str):
-    try:
-        return dict(NetBoxManufacturers(netbox_url, netbox_api_token, {'name': manufacturer_name, 'slug': __netbox_make_slug(manufacturer_name)}).obj)['id']
-    except Exception as e:
-        raise ValueError(e)
-
-
-def netbox_create_device_role(netbox_url: str, netbox_api_token: str, device_role_name: str):
-    try:
-        return dict(NetBoxDeviceRoles(netbox_url, netbox_api_token, {'name': device_role_name, 'slug': __netbox_make_slug(device_role_name), 'vm_role': False}).obj)['id']
-    except Exception as e:
-        raise ValueError(e)
-
-
-def netbox_create_device_type(netbox_url: str, netbox_api_token: str, manufacturer_id: int, model: str):
-    try:
-        return dict(NetBoxDeviceTypes(netbox_url, netbox_api_token, {'manufacturer': manufacturer_id, 'model': model, 'slug': __netbox_make_slug(model), 'u_height': 1}).obj)['id']
-    except Exception as e:
-        raise ValueError(e)
-
-
-def netbox_create_interface_for_device_type(nb_obj, device_type_id: int, interface_name: str, interface_type: str):
-    try:
-        device_type_interface_payload = {
-            'device_type': {
-                    'id': device_type_id
-                },
-            'name': interface_name,
-            'enabled': False,
-            'mgmt_only': False,
-            'type': interface_type
-        }
-
-        created_device_type_interface = nb_obj.nb.dcim.interface_templates.get(device_type = device_type_id, name = interface_name)
-
-        if not created_device_type_interface:
-            created_device_type_interface = nb_obj.nb.dcim.interface_templates.create(device_type_interface_payload)
-
-        created_device_type_interface_id = dict(created_device_type_interface)['id']
-
-        return created_device_type_interface_id
-    except pynetbox.RequestError as e:
-        raise ValueError(e, e.error)
-
-
-def netbox_create_device_for_proxmox_node(netbox_url: str, netbox_api_token: str, device_name: str, device_role: int, device_type: int, site: int, serial: str):
-    try:
-        return dict(NetBoxDevices(netbox_url, netbox_api_token, {'name': device_name, 'role': device_role, 'device_type': device_type, 'site': site, 'serial': serial, 'status': 'active'}).obj)['id']
-    except Exception as e:
-        raise ValueError(e)
-
-
-def netbox_get_interfaces_for_proxmox_node_by_device_id(nb_obj, device_id: int):
-    try:
-        interfaces = list(nb_obj.nb.dcim.interfaces.filter(device_id=device_id))
-        return interfaces
-    except pynetbox.RequestError as e:
-        raise ValueError(e, e.error)
 
 
 def __netbox_assign_mac_address_for_proxmox_node_by_object_id(nb_obj, assigned_object_id: int, mac_address: str):
@@ -296,7 +229,7 @@ def main():
     nb_pxmx_cluster = NetBoxProxmoxCluster(app_config, nb_obj)
 
     if not 'site' in app_config['netbox']:
-        netbox_site = "netbox-proxmox-automation Default NetBox Site"
+        netbox_site = "netbox-proxmox-automation Default Site"
     else:
         netbox_site = app_config['netbox']['site']
 
@@ -313,30 +246,32 @@ def main():
 
     #print("DISCOVERED PROXMOX NODES INFORMATION", discovered_proxmox_nodes_information)
 
-    # Create Site in NetBox
-    netbox_site_id = netbox_create_site(nb_url, app_config['netbox_api_config']['api_token'], netbox_site)
+    try:
+        netbox_site_id = dict(NetBoxSites(nb_url, app_config['netbox_api_config']['api_token'], {'name': netbox_site, 'slug': __netbox_make_slug(netbox_site), 'status': 'active'}).obj)['id']
+    except pynetbox.RequestError as e:
+        raise ValueError(e, e.error)
  
-    if not netbox_site_id:
-        raise ValueError(f"Unable to create site {netbox_site} in NetBox")
-
     for proxmox_node in discovered_proxmox_nodes_information:
         # Create Manufacturer in NetBox
-        netbox_manufacturer_id = netbox_create_device_manufacturer(nb_url, app_config['netbox_api_config']['api_token'], discovered_proxmox_nodes_information[proxmox_node]['system']['manufacturer'])
-
-        if not netbox_manufacturer_id:
-            raise ValueError(f"NetBox missing manufacturer id for {discovered_proxmox_nodes_information[proxmox_node]['system']['manufacturer']}")
+        try:
+            manufacturer_name = discovered_proxmox_nodes_information[proxmox_node]['system']['manufacturer']
+            netbox_manufacturer_id = dict(NetBoxManufacturers(nb_url, app_config['netbox_api_config']['api_token'], {'name': manufacturer_name, 'slug': __netbox_make_slug(manufacturer_name)}).obj)['id']
+        except pynetbox.RequestError as e:
+            raise ValueError(e, e.error)
 
         # Create NetBox Device Role
-        netbox_device_role_id = netbox_create_device_role(nb_url, app_config['netbox_api_config']['api_token'], app_config['netbox']['device_role'])
-
-        if not netbox_device_role_id:
-            raise ValueError(f"NetBox missing device role for {app_config['netbox']['device_role']}")
+        try:
+            device_role_name = app_config['netbox']['device_role']
+            netbox_device_role_id = dict(NetBoxDeviceRoles(nb_url, app_config['netbox_api_config']['api_token'], {'name': device_role_name, 'slug': __netbox_make_slug(device_role_name), 'vm_role': False}).obj)['id']
+        except pynetbox.RequestError as e:
+            raise ValueError(e, e.error)
 
         # Create Device Type in NetBox
-        netbox_device_type_id = netbox_create_device_type(nb_url, app_config['netbox_api_config']['api_token'], netbox_manufacturer_id, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['model'])
-
-        if not netbox_device_type_id:
-            raise ValueError(f"Netbox missing device type for {nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['manufacturer']}, model {nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['model']}")
+        try:
+            device_model = nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['model']
+            netbox_device_type_id = dict(NetBoxDeviceTypes(nb_url, app_config['netbox_api_config']['api_token'], {'manufacturer': netbox_manufacturer_id, 'model': device_model, 'slug': __netbox_make_slug(device_model), 'u_height': 1}).obj)['id']
+        except pynetbox.RequestError as e:
+            raise ValueError(e, e.error)
 
         # Create Interfaces for Device Type in NetBox
         for network_interface in discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces']:
@@ -345,19 +280,26 @@ def main():
 
             #print(f"network interface: {network_interface}")
 
-            #netbox_interface_templates_id = netbox_create_interface_for_device_type(nb_url, app_config['netbox_api_config']['api_token'], netbox_device_type_id, network_interface['name'], network_interface['type'])
-            netbox_interface_templates_id = netbox_create_interface_for_device_type(nb_obj, netbox_device_type_id, network_interface, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][network_interface]['type'])
-
-            if not netbox_interface_templates_id:
-                raise ValueError(f"Unable to create interface-type {nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][network_interface]['type']} (interface: {network_interface}) for device type id {netbox_device_type_id}")            
+            try:
+                network_interface_type = nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][network_interface]['type']
+                NetBoxDeviceTypesInterfaceTemplates(nb_url, app_config['netbox_api_config']['api_token'], {'device_type': netbox_device_type_id, 'name': network_interface, 'type': network_interface_type, 'enabled': False})
+            except pynetbox.RequestError as e:
+                raise ValueError(e, e.error)
 
         # Create Device in NetBox
-        netbox_device_id = netbox_create_device_for_proxmox_node(nb_url, app_config['netbox_api_config']['api_token'], proxmox_node, netbox_device_role_id, netbox_device_type_id, netbox_site_id, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['serial'])
+        try:
+            device_serial = nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['serial']
+            netbox_device_id = dict(NetBoxDevices(nb_url, app_config['netbox_api_config']['api_token'], {'name': proxmox_node, 'role': netbox_device_role_id, 'device_type': netbox_device_type_id, 'site': netbox_site_id, 'serial': device_serial, 'status': 'active'}).obj)['id']
+        except pynetbox.RequestError as e:
+            raise ValueError(e, e.error)
 
         if not netbox_device_id:
             raise ValueError(f"Netbox missing device id for {proxmox_node}, device type id {netbox_device_type_id}")
 
-        device_interfaces = netbox_get_interfaces_for_proxmox_node_by_device_id(nb_obj, netbox_device_id)
+        try:
+            device_interfaces = list(NetBoxDevicesInterfaces(nb_url, app_config['netbox_api_config']['api_token'], {'device_id': netbox_device_id}).multi_obj)
+        except pynetbox.RequestError as e:
+            raise ValueError(e, e.error)
     
         for device_interface in device_interfaces:
             if device_interface.name.startswith('vmbr'):
