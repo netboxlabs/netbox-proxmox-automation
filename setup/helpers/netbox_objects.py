@@ -46,6 +46,10 @@ class Netbox:
         self.obj = self.object_type.get(**{key: self.payload[key]})
     
 
+    def findByMulti(self, dict_in):
+        self.obj = self.object_type.get(**dict_in)
+
+
     def findByFilter(self, key):
         self.multi_obj = self.object_type.filter(**{key: self.payload[key]})
 
@@ -201,7 +205,49 @@ class NetBoxDevicesInterfaces(Netbox):
         ]
         self.find_key = find_key
         self.findByFilter(self.find_key)
-        #self.createOrUpdate()
+
+
+class NetBoxDevicesInterfacesCreateMacAddress(Netbox):
+    def __init__(self, url, token, device_interface, payload) -> None:
+        # Initialize the Netbox superclass with URL and token
+        super().__init__(url, token, payload)
+        self.object_type = self.nb.dcim.interfaces
+        self.required_fields = [ 
+            "device_id",
+            "name"
+        ]
+        self.find_key_multi = {'device_id': payload['device_id'], 'name': device_interface}
+        self.findByMulti(self.find_key_multi)
+        print("BLAH", self.obj, self.obj.id, self.payload)
+
+        self.__netbox_update_interface_for_proxmox_node_by_device_id()
+
+
+    def __netbox_assign_mac_address_for_proxmox_node_by_object_id(self):
+        try:
+            mac_address_data = {
+                'mac_address': self.payload['interface_info']['mac'],
+                'assigned_object_type': 'dcim.interface',
+                'assigned_object_id': self.obj.id
+            }
+
+            self.obj = self.nb.dcim.mac_addresses.get(assigned_object_id=self.obj.id, mac_address=self.payload['interface_info']['mac'])
+
+            if not self.obj:
+                self.obj = self.nb.dcim.mac_addresses.create(**mac_address_data)
+        except pynetbox.RequestError as e:
+            raise ValueError(e, e.error)
+
+
+    def __netbox_update_interface_for_proxmox_node_by_device_id(self):
+        try:
+            self.__netbox_assign_mac_address_for_proxmox_node_by_object_id()
+
+            self.obj.enabled = self.payload['interface_info']['enabled']
+            self.obj.primary_mac_address = self.obj.id
+            self.obj.save()
+        except pynetbox.RequestError as e:
+            raise ValueError(e, e.error)
 
 
 class NetBoxTags(Netbox):

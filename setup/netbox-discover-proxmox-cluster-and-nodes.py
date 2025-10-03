@@ -13,7 +13,7 @@ import urllib3
 
 from helpers.netbox_proxmox_cluster import NetBoxProxmoxCluster
 from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
-from helpers.netbox_objects import Netbox, NetBoxSites, NetBoxManufacturers, NetBoxTags, NetBoxDeviceRoles, NetBoxDeviceTypes, NetBoxDeviceTypesInterfaceTemplates, NetBoxDevices, NetBoxDevicesInterfaces, NetboxClusterTypes, NetboxClusters, NetboxVirtualMachines, NetboxVirtualMachineInterface, NetboxIPAddresses
+from helpers.netbox_objects import Netbox, NetBoxSites, NetBoxManufacturers, NetBoxTags, NetBoxDeviceRoles, NetBoxDeviceTypes, NetBoxDeviceTypesInterfaceTemplates, NetBoxDevices, NetBoxDevicesInterfaces, NetBoxDevicesInterfacesCreateMacAddress, NetboxClusterTypes, NetboxClusters, NetboxVirtualMachines, NetboxVirtualMachineInterface, NetboxIPAddresses
 from helpers.netbox_branches import NetBoxBranches
 
 from proxmoxer import ProxmoxAPI, ResourceException
@@ -307,7 +307,12 @@ def main():
 
             print(f"device: {proxmox_node}, interface: {device_interface} {device_interface.type} {device_interface.mac_address}")
 
-            netbox_update_interface_for_proxmox_node_by_device_id(nb_obj, netbox_device_id, device_interface, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name])            
+            try:
+                #netbox_update_interface_for_proxmox_node_by_device_id(nb_obj, netbox_device_id, device_interface, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name])
+                interface_info = nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]
+                NetBoxDevicesInterfacesCreateMacAddress(nb_url, app_config['netbox_api_config']['api_token'], device_interface, {'device_id': netbox_device_id, 'interface_info': interface_info})            
+            except pynetbox.RequestError as e:
+                raise ValueError(e, e.error)
 
             # Create bridge interface name: vmbrX, bridge: device_interface.id
             vmbr_info = get_proxmox_node_vmbr_network_interface_mapping(app_config['proxmox_api_config'], proxmox_node, device_interface.name)
