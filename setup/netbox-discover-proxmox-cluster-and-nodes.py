@@ -12,8 +12,8 @@ import proxmoxer
 import urllib3
 
 from helpers.netbox_proxmox_cluster import NetBoxProxmoxCluster
-from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
-from helpers.netbox_objects import Netbox, NetBoxSites, NetBoxManufacturers, NetBoxTags, NetBoxDeviceRoles, NetBoxDeviceTypes, NetBoxDeviceTypesInterfaceTemplates, NetBoxDevices, NetBoxDevicesInterfaces, NetboxDeviceInterfaceMacAddressMapping, NetboxClusterTypes, NetboxClusters, NetboxVirtualMachines, NetboxVirtualMachineInterface, NetboxIPAddresses
+#from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
+from helpers.netbox_objects import NetBox, NetBoxSites, NetBoxManufacturers, NetBoxTags, NetBoxDeviceRoles, NetBoxDeviceTypes, NetBoxDeviceTypesInterfaceTemplates, NetBoxDevices, NetBoxDevicesInterfaces, NetBoxDeviceInterfaceMacAddressMapping, NetBoxDeviceCreateBridgeInterface, NetBoxClusterTypes, NetBoxClusters, NetBoxVirtualMachines, NetBoxVirtualMachineInterface, NetBoxIPAddresses
 from helpers.netbox_branches import NetBoxBranches
 
 from proxmoxer import ProxmoxAPI, ResourceException
@@ -118,14 +118,14 @@ def netbox_create_and_assign_ip_address(nb_obj, ip_addr: str, interface_id: int)
 
 def netbox_create_cluster_type(netbox_url: str, netbox_api_token: str, cluster_type: str):
     try:
-        return dict(NetboxClusterTypes(netbox_url, netbox_api_token, {'name': cluster_type, 'slug': __netbox_make_slug(cluster_type)}).obj)['id']
+        return dict(NetBoxClusterTypes(netbox_url, netbox_api_token, {'name': cluster_type, 'slug': __netbox_make_slug(cluster_type)}).obj)['id']
     except Exception as e:
         raise ValueError(e)
 
 
 def netbox_create_cluster(netbox_url: str, netbox_api_token: str, cluster_name: str, cluster_type: int):
     try:
-        return dict(NetboxClusters(netbox_url, netbox_api_token, {'name': cluster_name, 'type': cluster_type, 'status': 'active'}).obj)['id']
+        return dict(NetBoxClusters(netbox_url, netbox_api_token, {'name': cluster_name, 'type': cluster_type, 'status': 'active'}).obj)['id']
     except Exception as e:
         raise ValueError(e)
 
@@ -163,7 +163,7 @@ def main():
     #print("CFG DATA", app_config, app_config['proxmox_api_config'])
 
     nb_url = f"{app_config['netbox_api_config']['api_proto']}://{app_config['netbox_api_config']['api_host']}:{str(app_config['netbox_api_config']['api_port'])}/"
-    nb_obj = Netbox(nb_url, app_config['netbox_api_config']['api_token'], None)
+    nb_obj = NetBox(nb_url, app_config['netbox_api_config']['api_token'], None)
     #print(nb_obj, dir(nb_obj))
 
     if 'branch' in app_config['netbox']:
@@ -250,7 +250,7 @@ def main():
             raise ValueError(e, e.error)
 
         if not netbox_device_id:
-            raise ValueError(f"Netbox missing device id for {proxmox_node}, device type id {netbox_device_type_id}")
+            raise ValueError(f"NetBox missing device id for {proxmox_node}, device type id {netbox_device_type_id}")
 
         try:
             device_interfaces = list(NetBoxDevicesInterfaces(nb_url, app_config['netbox_api_config']['api_token'], {'device_id': netbox_device_id}).multi_obj)
@@ -264,7 +264,7 @@ def main():
             print(f"device: {proxmox_node}, interface: {device_interface} {device_interface.type} {device_interface.mac_address}")
 
             try:
-                NetboxDeviceInterfaceMacAddressMapping(nb_url, app_config['netbox_api_config']['api_token'], netbox_device_id, device_interface, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name])            
+                NetBoxDeviceInterfaceMacAddressMapping(nb_url, app_config['netbox_api_config']['api_token'], netbox_device_id, device_interface, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name])            
             except pynetbox.RequestError as e:
                 raise ValueError(e, e.error)
 
@@ -273,15 +273,31 @@ def main():
 
             if vmbr_info:
                 if device_interface.name in vmbr_info:
-                    vmbrX_interface = netbox_create_vmbrX_interface_mapping(nb_obj, netbox_device_id, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]['type'], device_interface.id, vmbr_info[device_interface.name])
-                    vmbrX_interface_details = dict(vmbrX_interface)
+                    #vmbrX_interface = netbox_create_vmbrX_interface_mapping(nb_obj, netbox_device_id, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]['type'], device_interface.id, vmbr_info[device_interface.name])
 
-                    if not 'id' in vmbrX_interface_details:
-                        raise ValueError(f"'id' missing for interface {vmbr_info[device_interface.name]} on {proxmox_node}")
+                    try:
+                        vmbrX_interface_data = {
+                            'device': netbox_device_id,
+                            'type': nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]['type'],
+                            'bridge': device_interface.id,
+                            'name': vmbr_info[device_interface.name],
+                            'enabled': True
+                        }
 
-                    if 'ipv4address' in nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][vmbrX_interface_details['display']]:
-                        #print(f"Assigning {nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][vmbrX_interface_details['display']]['ipv4address']} to {vmbrX_interface_details['display']} on {proxmox_node}")                        
-                        netbox_create_and_assign_ip_address(nb_obj, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][vmbrX_interface_details['display']]['ipv4address'], vmbrX_interface_details['id'])
+                        nb_bridge_interface = NetBoxDeviceCreateBridgeInterface(nb_url, app_config['netbox_api_config']['api_token'], vmbrX_interface_data)
+                        #print("NB BRIDGE INTERFACE", nb_bridge_interface, dir(nb_bridge_interface), dir(nb_bridge_interface.obj), nb_bridge_interface.obj.display)
+                        #print("VMBRX_DATA", vmbrX_interface_data)
+
+                        if 'ipv4address' in nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][nb_bridge_interface.obj.display]:
+                            #print(f"Assigning {nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][vmbrX_interface_details['display']]['ipv4address']} to {vmbrX_interface_details['display']} on {proxmox_node}")                        
+                            netbox_create_and_assign_ip_address(nb_obj, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][nb_bridge_interface.obj.display]['ipv4address'], nb_bridge_interface.obj.id)
+                    except pynetbox.RequestError as e:
+                        raise ValueError(e, e.error)
+
+                    #vmbrX_interface_details = dict(vmbrX_interface)
+
+                    #if not 'id' in vmbrX_interface_details:
+                    #    raise ValueError(f"'id' missing for interface {vmbr_info[device_interface.name]} on {proxmox_node}")
             else:
                 if 'ipv4address' in nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]:
                     #print(f"Assigning {nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]['ipv4address']} to {device_interface.name} on {proxmox_node}")                        

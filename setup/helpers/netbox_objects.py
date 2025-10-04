@@ -2,7 +2,7 @@ import os
 import pynetbox
 import time
 
-class Netbox:
+class NetBox:
     def _sanitize_value(self, key, value):
         # Mask sensitive fields
         sensitive_keys = {'password', 'token', 'secret'}
@@ -98,13 +98,16 @@ class Netbox:
                 self.object_type.create(self.payload)
                 if 'name' in self.payload:
                     print(f"Object (has required) '{self.payload['name']}' created successfully.")
-                    self.findBy('name')
+                    if hasattr(self, 'find_key_mult'):
+                        self.findByMulti(self.find_key_mult)
+                    else:
+                        self.findBy('name')
                 elif 'model' in self.payload:
                     print(f"Object (has required) '{self.payload['model']}' created successfully.")
                     self.findBy('model')
 
 
-class NetBoxSites(Netbox):
+class NetBoxSites(NetBox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -119,7 +122,7 @@ class NetBoxSites(Netbox):
         self.createOrUpdate()
 
 
-class NetBoxManufacturers(Netbox):
+class NetBoxManufacturers(NetBox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -133,7 +136,7 @@ class NetBoxManufacturers(Netbox):
         self.createOrUpdate()
 
 
-class NetBoxDeviceTypes(Netbox):
+class NetBoxDeviceTypes(NetBox):
     def __init__(self, url, token, payload, find_key = 'model') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -149,7 +152,7 @@ class NetBoxDeviceTypes(Netbox):
         self.createOrUpdate()
 
 
-class NetBoxDeviceTypesInterfaceTemplates(Netbox):
+class NetBoxDeviceTypesInterfaceTemplates(NetBox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -164,7 +167,7 @@ class NetBoxDeviceTypesInterfaceTemplates(Netbox):
         self.createOrUpdate()
 
 
-class NetBoxDeviceRoles(Netbox):
+class NetBoxDeviceRoles(NetBox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -179,7 +182,7 @@ class NetBoxDeviceRoles(Netbox):
         self.createOrUpdate()
 
 
-class NetBoxDevices(Netbox):
+class NetBoxDevices(NetBox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -195,7 +198,7 @@ class NetBoxDevices(Netbox):
         self.createOrUpdate()
 
 
-class NetBoxDevicesInterfaces(Netbox):
+class NetBoxDevicesInterfaces(NetBox):
     def __init__(self, url, token, payload, find_key = 'device_id') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -207,7 +210,7 @@ class NetBoxDevicesInterfaces(Netbox):
         self.findByFilter(self.find_key)
 
 
-class NetboxDeviceInterfaceMacAddressMapping(Netbox):
+class NetBoxDeviceInterfaceMacAddressMapping(NetBox):
     def __init__(self, url, token, device_id: int, interface_name: str, payload) -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -259,7 +262,23 @@ class NetboxDeviceInterfaceMacAddressMapping(Netbox):
             raise ValueError(e, e.error)
 
 
-class NetBoxTags(Netbox):
+class NetBoxDeviceCreateBridgeInterface(NetBox):
+    def __init__(self, url, token, payload) -> None:
+        # Initialize the Netbox superclass with URL and token
+        super().__init__(url, token, payload)
+        self.object_type = self.nb.dcim.interfaces
+        self.required_fields = [ 
+            "device",
+            "bridge",
+            "name"
+        ]
+        self.find_key_mult = {'device_id': self.payload['device'], 'bridge': self.payload['bridge'], 'name': self.payload['name']}
+        print("SM", self.find_key_mult)
+        self.findByMulti(self.find_key_mult)
+        self.createOrUpdate()
+
+
+class NetBoxTags(NetBox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -273,7 +292,7 @@ class NetBoxTags(Netbox):
         self.createOrUpdate()
 
 
-class NetboxCustomFields(Netbox):
+class NetBoxCustomFields(NetBox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -291,7 +310,7 @@ class NetboxCustomFields(Netbox):
         self.createOrUpdate()
 
 
-class NetboxCustomFieldChoiceSets(Netbox):
+class NetBoxCustomFieldChoiceSets(NetBox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -306,7 +325,7 @@ class NetboxCustomFieldChoiceSets(Netbox):
         self.createOrUpdate()
 
 
-class NetboxClusterTypes(Netbox):
+class NetBoxClusterTypes(NetBox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -320,7 +339,7 @@ class NetboxClusterTypes(Netbox):
         self.createOrUpdate()
 
 
-class NetboxClusters(Netbox):
+class NetBoxClusters(NetBox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -335,7 +354,7 @@ class NetboxClusters(Netbox):
         self.createOrUpdate()
 
 
-class NetboxVirtualMachines(Netbox):
+class NetBoxVirtualMachines(NetBox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -350,7 +369,7 @@ class NetboxVirtualMachines(Netbox):
         self.createOrUpdate()
 
 
-class NetboxVirtualMachineInterface(Netbox):
+class NetBoxVirtualMachineInterface(NetBox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -370,7 +389,7 @@ class NetboxVirtualMachineInterface(Netbox):
         nb_vm_int = self.object_type.create(payload)
         
 
-class NetboxIPAddresses(Netbox):
+class NetBoxIPAddresses(NetBox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -384,7 +403,7 @@ class NetboxIPAddresses(Netbox):
         self.createOrUpdate()
 
 
-class NetboxWebhooks(Netbox):
+class NetBoxWebhooks(NetBox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
@@ -402,7 +421,7 @@ class NetboxWebhooks(Netbox):
         self.createOrUpdate()
 
 
-class NetboxEventRules(Netbox):
+class NetBoxEventRules(NetBox):
     def __init__(self, url, token, payload, find_key = 'name') -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
