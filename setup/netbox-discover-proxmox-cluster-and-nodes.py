@@ -13,7 +13,7 @@ import urllib3
 
 from helpers.netbox_proxmox_cluster import NetBoxProxmoxCluster
 from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
-from helpers.netbox_objects import Netbox, NetBoxSites, NetBoxManufacturers, NetBoxTags, NetBoxDeviceRoles, NetBoxDeviceTypes, NetBoxDeviceTypesInterfaceTemplates, NetBoxDevices, NetBoxDevicesInterfaces, NetBoxDevicesInterfacesCreateMacAddress, NetboxClusterTypes, NetboxClusters, NetboxVirtualMachines, NetboxVirtualMachineInterface, NetboxIPAddresses
+from helpers.netbox_objects import Netbox, NetBoxSites, NetBoxManufacturers, NetBoxTags, NetBoxDeviceRoles, NetBoxDeviceTypes, NetBoxDeviceTypesInterfaceTemplates, NetBoxDevices, NetBoxDevicesInterfaces, NetboxDeviceInterfaceMacAddressMapping, NetboxClusterTypes, NetboxClusters, NetboxVirtualMachines, NetboxVirtualMachineInterface, NetboxIPAddresses
 from helpers.netbox_branches import NetBoxBranches
 
 from proxmoxer import ProxmoxAPI, ResourceException
@@ -71,50 +71,6 @@ def get_proxmox_node_vmbr_network_interface_mapping(proxmox_api_config: dict, pr
                 print("F", e.errors['vmid'])
 
     return {}
-
-
-def __netbox_assign_mac_address_for_proxmox_node_by_object_id(nb_obj, assigned_object_id: int, mac_address: str):
-    try:
-        mac_address_data = {
-            'mac_address': mac_address,
-            'assigned_object_type': 'dcim.interface',
-            'assigned_object_id': assigned_object_id
-        }
-
-        check_mac_address = nb_obj.nb.dcim.mac_addresses.get(assigned_object_id=assigned_object_id, mac_address=mac_address)
-
-        if not check_mac_address:
-            new_mac_address = nb_obj.nb.dcim.mac_addresses.create(**mac_address_data)
-
-            if not new_mac_address:
-                raise ValueError(f"Unable to create mac address {mac_address} for interface id: {assigned_object_id}")
-
-            return new_mac_address
-
-        return check_mac_address        
-    except pynetbox.RequestError as e:
-        raise ValueError(e, e.error)
-
-
-def netbox_update_interface_for_proxmox_node_by_device_id(nb_obj, device_id: int, interface_name: str, interface_data: dict):
-    try:
-        interface = nb_obj.nb.dcim.interfaces.get(device_id=device_id, name=interface_name)
-
-        if not interface:
-            raise ValueError(f"Interface {interface_name} not found on device id: {device_id}")
-
-        assigned_mac_address = __netbox_assign_mac_address_for_proxmox_node_by_object_id(nb_obj, interface.id, interface_data['mac'])
-
-        interface.enabled = interface_data['enabled']
-
-        if 'id' in assigned_mac_address:
-            interface.primary_mac_address = assigned_mac_address['id']
-        else:
-            interface.primary_mac_address = assigned_mac_address.id
-
-        interface.save()
-    except pynetbox.RequestError as e:
-        raise ValueError(e, e.error)
 
 
 def netbox_create_vmbrX_interface_mapping(nb_obj, device_id: int, device_type: str, physical_interface_id: int, vmbr_name: str):
@@ -308,9 +264,7 @@ def main():
             print(f"device: {proxmox_node}, interface: {device_interface} {device_interface.type} {device_interface.mac_address}")
 
             try:
-                #netbox_update_interface_for_proxmox_node_by_device_id(nb_obj, netbox_device_id, device_interface, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name])
-                interface_info = nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]
-                NetBoxDevicesInterfacesCreateMacAddress(nb_url, app_config['netbox_api_config']['api_token'], device_interface, {'device_id': netbox_device_id, 'interface_info': interface_info})            
+                NetboxDeviceInterfaceMacAddressMapping(nb_url, app_config['netbox_api_config']['api_token'], netbox_device_id, device_interface, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name])            
             except pynetbox.RequestError as e:
                 raise ValueError(e, e.error)
 

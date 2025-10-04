@@ -207,45 +207,54 @@ class NetBoxDevicesInterfaces(Netbox):
         self.findByFilter(self.find_key)
 
 
-class NetBoxDevicesInterfacesCreateMacAddress(Netbox):
-    def __init__(self, url, token, device_interface, payload) -> None:
+class NetboxDeviceInterfaceMacAddressMapping(Netbox):
+    def __init__(self, url, token, device_id: int, interface_name: str, payload) -> None:
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
-        self.object_type = self.nb.dcim.interfaces
-        self.required_fields = [ 
-            "device_id",
-            "name"
-        ]
-        self.find_key_multi = {'device_id': payload['device_id'], 'name': device_interface}
-        self.findByMulti(self.find_key_multi)
-        print("BLAH", self.obj, self.obj.id, self.payload)
 
-        self.__netbox_update_interface_for_proxmox_node_by_device_id()
+        self.__netbox_update_interface_for_proxmox_node_by_device_id(device_id, interface_name, self.payload)
 
 
-    def __netbox_assign_mac_address_for_proxmox_node_by_object_id(self):
+    def __netbox_assign_mac_address_for_proxmox_node_by_object_id(self, assigned_object_id: int, mac_address: str):
         try:
             mac_address_data = {
-                'mac_address': self.payload['interface_info']['mac'],
+                'mac_address': mac_address,
                 'assigned_object_type': 'dcim.interface',
-                'assigned_object_id': self.obj.id
+                'assigned_object_id': assigned_object_id
             }
 
-            self.obj = self.nb.dcim.mac_addresses.get(assigned_object_id=self.obj.id, mac_address=self.payload['interface_info']['mac'])
+            check_mac_address = self.nb.dcim.mac_addresses.get(assigned_object_id=assigned_object_id, mac_address=mac_address)
 
-            if not self.obj:
-                self.obj = self.nb.dcim.mac_addresses.create(**mac_address_data)
+            if not check_mac_address:
+                new_mac_address = self.nb.dcim.mac_addresses.create(**mac_address_data)
+
+                if not new_mac_address:
+                    raise ValueError(f"Unable to create mac address {mac_address} for interface id: {assigned_object_id}")
+
+                return new_mac_address
+
+            return check_mac_address        
         except pynetbox.RequestError as e:
             raise ValueError(e, e.error)
 
 
-    def __netbox_update_interface_for_proxmox_node_by_device_id(self):
+    def __netbox_update_interface_for_proxmox_node_by_device_id(self, device_id: int, interface_name: str, interface_data: dict):
         try:
-            self.__netbox_assign_mac_address_for_proxmox_node_by_object_id()
+            interface = self.nb.dcim.interfaces.get(device_id=device_id, name=interface_name)
 
-            self.obj.enabled = self.payload['interface_info']['enabled']
-            self.obj.primary_mac_address = self.obj.id
-            self.obj.save()
+            if not interface:
+                raise ValueError(f"Interface {interface_name} not found on device id: {device_id}")
+
+            assigned_mac_address = self.__netbox_assign_mac_address_for_proxmox_node_by_object_id(interface.id, interface_data['mac'])
+
+            interface.enabled = interface_data['enabled']
+
+            if 'id' in assigned_mac_address:
+                interface.primary_mac_address = assigned_mac_address['id']
+            else:
+                interface.primary_mac_address = assigned_mac_address.id
+
+            interface.save()
         except pynetbox.RequestError as e:
             raise ValueError(e, e.error)
 
