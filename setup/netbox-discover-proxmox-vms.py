@@ -8,7 +8,7 @@ import pynetbox
 import proxmoxer
 
 from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
-from helpers.netbox_objects import Netbox, NetBoxTags, NetBoxDeviceRoles, NetboxClusterTypes, NetboxClusters, NetboxVirtualMachines, NetboxVirtualMachineInterface, NetboxIPAddresses
+from helpers.netbox_objects import NetBox, NetBoxTags, NetBoxDeviceRoles, NetBoxClusterTypes, NetBoxClusters, NetBoxVirtualMachines, NetBoxVirtualMachineInterface, NetBoxIPAddresses
 
 nb_obj = None
 
@@ -20,7 +20,7 @@ proxmox_to_netbox_vm_status_mappings = {
 
 def get_arguments():
     # Initialize the parser
-    parser = argparse.ArgumentParser(description="Import Netbox and Proxmox Configurations")
+    parser = argparse.ArgumentParser(description="Import NetBox and Proxmox Configurations")
 
     # Add arguments for URL and Token
     sub_parser = parser.add_subparsers(dest='virt_type',
@@ -77,7 +77,7 @@ def netbox_create_vm(nb_url = None, nb_api_token = None, proxmox_cluster_name = 
     try:
         create_vm_config = {
             'name': vm_name,
-            'cluster': dict(NetboxClusters(nb_url, nb_api_token, {'name': proxmox_cluster_name}).obj)['id'],
+            'cluster': dict(NetBoxClusters(nb_url, nb_api_token, {'name': proxmox_cluster_name}).obj)['id'],
             'vcpus': str(vm_configuration['vcpus']),
             'memory': vm_configuration['memory'],
             'role': vm_role_id,
@@ -110,7 +110,7 @@ def netbox_create_vm(nb_url = None, nb_api_token = None, proxmox_cluster_name = 
             # Don't take the default template (jammy, currently) for dicovered VM and LXC
             create_vm_config['custom_fields']['proxmox_vm_templates'] = ''
 
-        nb_created_vm = NetboxVirtualMachines(nb_url, nb_api_token, create_vm_config)
+        nb_created_vm = NetBoxVirtualMachines(nb_url, nb_api_token, create_vm_config)
         nb_created_vm_id = dict(nb_created_vm.obj)['id']
 
         if 'network_interfaces' in vm_configuration:
@@ -141,7 +141,7 @@ def __netbox_create_vm_network_interface(nb_url = None, nb_api_token = None, net
             'mac_address': vm_network_interface_mac_address
         }
 
-        #nb_create_vm_interface = NetboxVirtualMachineInterface(nb_url, nb_api_token, nb_vm_create_interface_payload)
+        #nb_create_vm_interface = NetBoxVirtualMachineInterface(nb_url, nb_api_token, nb_vm_create_interface_payload)
         #nb_create_vm_interface_id = dict(nb_create_vm_interface.obj)['id']
 
         nb_create_vm_interface = nb_obj.nb.virtualization.interfaces.get(virtual_machine_id = netbox_vm_id, name = vm_network_interface_name, mac_address = vm_network_interface_mac_address)
@@ -167,7 +167,7 @@ def __netbox_vm_network_interface_assign_ip_address(nb_url = None, nb_api_token 
             'assigned_object_id': str(netbox_vm_network_interface_id)
         }
 
-        nb_assign_ip_address = NetboxIPAddresses(nb_url, nb_api_token, nb_assign_ip_address_payload, 'address')
+        nb_assign_ip_address = NetBoxIPAddresses(nb_url, nb_api_token, nb_assign_ip_address_payload, 'address')
 
         return nb_assign_ip_address
     except pynetbox.RequestError as e:
@@ -233,7 +233,7 @@ def main():
             raise ValueError(ioe)
 
     nb_url = f"{app_config['netbox_api_config']['api_proto']}://{app_config['netbox_api_config']['api_host']}:{str(app_config['netbox_api_config']['api_port'])}/"
-    nb_obj = Netbox(nb_url, app_config['netbox_api_config']['api_token'], None)
+    nb_obj = NetBox(nb_url, app_config['netbox_api_config']['api_token'], None)
 
     # Collect all NetBox VMs, and for Proxmox VMs: VMIDs
     all_nb_vms = netbox_get_vms(nb_obj)

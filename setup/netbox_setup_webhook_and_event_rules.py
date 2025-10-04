@@ -6,7 +6,7 @@ import yaml
 import base64
 
 # adapted from sol1 implementation
-from helpers.netbox_objects import NetboxWebhooks, NetboxEventRules
+from helpers.netbox_objects import NetBoxWebhooks, NetBoxEventRules
 
 # awxkit wrapper
 from helpers.ansible_automation_awx_manager import AnsibleAutomationAWXManager
@@ -14,7 +14,7 @@ from helpers.ansible_automation_awx_manager import AnsibleAutomationAWXManager
 
 def get_arguments():
     # Initialize the parser
-    parser = argparse.ArgumentParser(description="Import Netbox and Proxmox Configurations")
+    parser = argparse.ArgumentParser(description="Import NetBox and Proxmox Configurations")
 
     # Add arguments for URL and Token
     parser.add_argument("--config", required=True, help="YAML file containing the configuration")
@@ -34,12 +34,12 @@ def create_authorization_header(username = None, password = None):
 
 
 def netbox_create_webhook(netbox_url, netbox_api_token, payload):
-    created_webhook = NetboxWebhooks(netbox_url, netbox_api_token, payload)
+    created_webhook = NetBoxWebhooks(netbox_url, netbox_api_token, payload)
     return dict(created_webhook.obj)['id'], dict(created_webhook.obj)['name']
 
 
 def netbox_create_event_rule(netbox_url, netbox_api_token, payload):
-    created_event_rule = NetboxEventRules(netbox_url, netbox_api_token, payload)
+    created_event_rule = NetBoxEventRules(netbox_url, netbox_api_token, payload)
     return dict(created_event_rule.obj)['id'], dict(created_event_rule.obj)['name']
 
 
