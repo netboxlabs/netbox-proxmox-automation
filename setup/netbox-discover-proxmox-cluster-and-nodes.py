@@ -69,24 +69,6 @@ def get_proxmox_node_vmbr_network_interface_mapping(proxmox_api_config: dict, pr
     return {}
 
 
-def netbox_create_and_assign_ip_address(nb_obj, ip_addr: str, interface_id: int):
-    try:
-        #check_ip_addr = dict(nb_obj.nb.ipam.ip_addresses.get(address=ip_addr))
-        check_ip_addr = nb_obj.nb.ipam.ip_addresses.get(address=ip_addr)
-
-        if not check_ip_addr:
-            check_ip_addr = nb_obj.nb.ipam.ip_addresses.create(address=ip_addr)
-
-        #check_ip_addr.assigned_object = device_interface
-        check_ip_addr.assigned_object_id = interface_id
-        check_ip_addr.assigned_object_type = 'dcim.interface'
-        check_ip_addr.save()
-    except pynetbox.RequestError as e:
-        raise ValueError(e, e.error)
-
-    return True
-
-
 def netbox_create_cluster_type(netbox_url: str, netbox_api_token: str, cluster_type: str):
     try:
         return dict(NetBoxClusterTypes(netbox_url, netbox_api_token, {'name': cluster_type, 'slug': __netbox_make_slug(cluster_type)}).obj)['id']
@@ -270,7 +252,14 @@ def main():
 
                     if 'ipv4address' in nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][nb_bridge_interface.obj.display]:
                         #print(f"Assigning {nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][vmbrX_interface_details['display']]['ipv4address']} to {vmbrX_interface_details['display']} on {proxmox_node}")                        
-                        netbox_create_and_assign_ip_address(nb_obj, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][nb_bridge_interface.obj.display]['ipv4address'], nb_bridge_interface.obj.id)
+                        nb_assign_ip_address_payload = {
+                            'address': nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][nb_bridge_interface.obj.display]['ipv4address'],
+                            'status': 'active',
+                            'assigned_object_type': 'dcim.interface',
+                            'assigned_object_id': str(nb_bridge_interface.obj.id)
+                        }
+
+                        nb_assign_ip_address = NetBoxIPAddresses(nb_url, app_config['netbox_api_config']['api_token'], nb_assign_ip_address_payload, 'address')
 
                     #vmbrX_interface_details = dict(vmbrX_interface)
 
@@ -279,7 +268,14 @@ def main():
             else:
                 if 'ipv4address' in nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]:
                     #print(f"Assigning {nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]['ipv4address']} to {device_interface.name} on {proxmox_node}")                        
-                    netbox_create_and_assign_ip_address(nb_obj, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]['ipv4address'], device_interface.id)
+                    nb_assign_ip_address_payload = {
+                        'address': nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]['ipv4address'],
+                        'status': 'active',
+                        'assigned_object_type': 'dcim.interface',
+                        'assigned_object_id': str(device_interface.id)
+                    }
+
+                    nb_assign_ip_address = NetBoxIPAddresses(nb_url, app_config['netbox_api_config']['api_token'], nb_assign_ip_address_payload, 'address')
 
         # create cluster type and cluster in NetBox
         netbox_cluster_type_id = netbox_create_cluster_type(nb_url, app_config['netbox_api_config']['api_token'], 'Proxmox')
