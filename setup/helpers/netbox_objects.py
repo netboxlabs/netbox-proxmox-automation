@@ -1,6 +1,12 @@
 import os
+import re
 import pynetbox
 import time
+
+
+def __netbox_make_slug(in_str: str):
+    return re.sub(r'\W+', '-', in_str).lower()
+
 
 class NetBox:
     def _sanitize_value(self, key, value):
@@ -127,6 +133,20 @@ class NetBoxManufacturers(NetBox):
         # Initialize the Netbox superclass with URL and token
         super().__init__(url, token, payload)
         self.object_type = self.nb.dcim.manufacturers
+        self.required_fields = [ 
+            "name",
+            "slug"
+        ]
+        self.find_key = find_key
+        self.findBy(self.find_key)
+        self.createOrUpdate()
+
+
+class NetBoxPlatforms(NetBox):
+    def __init__(self, url, token, payload, find_key = 'name') -> None:
+        # Initialize the Netbox superclass with URL and token
+        super().__init__(url, token, payload)
+        self.object_type = self.nb.dcim.platforms
         self.required_fields = [ 
             "name",
             "slug"
@@ -273,7 +293,6 @@ class NetBoxDeviceCreateBridgeInterface(NetBox):
             "name"
         ]
         self.find_key_mult = {'device_id': self.payload['device'], 'bridge': self.payload['bridge'], 'name': self.payload['name']}
-        print("SM", self.find_key_mult)
         self.findByMulti(self.find_key_mult)
         self.createOrUpdate()
 

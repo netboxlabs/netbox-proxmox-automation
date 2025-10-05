@@ -8,7 +8,7 @@ import pynetbox
 import proxmoxer
 
 from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
-from helpers.netbox_objects import NetBox, NetBoxTags, NetBoxDeviceRoles, NetBoxClusterTypes, NetBoxClusters, NetBoxVirtualMachines, NetBoxVirtualMachineInterface, NetBoxIPAddresses
+from helpers.netbox_objects import __netbox_make_slug, NetBox, NetBoxTags, NetBoxDeviceRoles, NetBoxClusterTypes, NetBoxClusters, NetBoxVirtualMachines, NetBoxVirtualMachineInterface, NetBoxIPAddresses
 
 nb_obj = None
 
@@ -39,10 +39,6 @@ def get_arguments():
 
     # Return the parsed arguments
     return args
-
-
-def __netbox_make_slug(in_str):
-    return re.sub(r'\W+', '-', in_str).lower()
 
 
 def netbox_get_vms(nb_obj = None):

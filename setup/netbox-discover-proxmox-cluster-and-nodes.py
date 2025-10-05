@@ -13,7 +13,7 @@ import urllib3
 
 from helpers.netbox_proxmox_cluster import NetBoxProxmoxCluster
 #from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
-from helpers.netbox_objects import NetBox, NetBoxSites, NetBoxManufacturers, NetBoxTags, NetBoxDeviceRoles, NetBoxDeviceTypes, NetBoxDeviceTypesInterfaceTemplates, NetBoxDevices, NetBoxDevicesInterfaces, NetBoxDeviceInterfaceMacAddressMapping, NetBoxDeviceCreateBridgeInterface, NetBoxClusterTypes, NetBoxClusters, NetBoxVirtualMachines, NetBoxVirtualMachineInterface, NetBoxIPAddresses
+from helpers.netbox_objects import __netbox_make_slug, NetBox, NetBoxSites, NetBoxManufacturers, NetBoxPlatforms, NetBoxTags, NetBoxDeviceRoles, NetBoxDeviceTypes, NetBoxDeviceTypesInterfaceTemplates, NetBoxDevices, NetBoxDevicesInterfaces, NetBoxDeviceInterfaceMacAddressMapping, NetBoxDeviceCreateBridgeInterface, NetBoxClusterTypes, NetBoxClusters, NetBoxVirtualMachines, NetBoxVirtualMachineInterface, NetBoxIPAddresses
 from helpers.netbox_branches import NetBoxBranches
 
 from proxmoxer import ProxmoxAPI, ResourceException
@@ -34,10 +34,6 @@ def get_arguments():
 
     # Return the parsed arguments
     return args
-
-
-def __netbox_make_slug(in_str):
-    return re.sub(r'\W+', '-', in_str).lower()
 
 
 def get_proxmox_node_vmbr_network_interface_mapping(proxmox_api_config: dict, proxmox_node: str, network_interface: str):
@@ -71,31 +67,6 @@ def get_proxmox_node_vmbr_network_interface_mapping(proxmox_api_config: dict, pr
                 print("F", e.errors['vmid'])
 
     return {}
-
-
-def netbox_create_vmbrX_interface_mapping(nb_obj, device_id: int, device_type: str, physical_interface_id: int, vmbr_name: str):
-    try:
-        interface = nb_obj.nb.dcim.interfaces.get(device_id=device_id, bridge=physical_interface_id, name=vmbr_name)
-
-        if interface:
-            return interface
-
-        vmbrX_interface_data = {
-            'device': device_id,
-            'type': device_type,
-            'bridge': physical_interface_id,
-            'name': vmbr_name,
-            'enabled': True
-        }
-
-        new_bridge_interface = nb_obj.nb.dcim.interfaces.create(**vmbrX_interface_data)
-
-        if not new_bridge_interface:
-            raise ValueError(f"Unable to create bridge interface {vmbrX_interface_data} for interface id: {physical_interface_id}")
-        
-        return new_bridge_interface    
-    except pynetbox.RequestError as e:
-        raise ValueError(e, e.error)
 
 
 def netbox_create_and_assign_ip_address(nb_obj, ip_addr: str, interface_id: int):
@@ -201,6 +172,7 @@ def main():
     discovered_proxmox_nodes_information = nb_pxmx_cluster.discovered_proxmox_nodes_information
 
     #print("DISCOVERED PROXMOX NODES INFORMATION", discovered_proxmox_nodes_information)
+    #print(nb_pxmx_cluster.proxmox_nodes['pxmx-n1'])
 
     try:
         netbox_site_id = dict(NetBoxSites(nb_url, app_config['netbox_api_config']['api_token'], {'name': netbox_site, 'slug': __netbox_make_slug(netbox_site), 'status': 'active'}).obj)['id']
@@ -214,6 +186,16 @@ def main():
             netbox_manufacturer_id = dict(NetBoxManufacturers(nb_url, app_config['netbox_api_config']['api_token'], {'name': manufacturer_name, 'slug': __netbox_make_slug(manufacturer_name)}).obj)['id']
         except pynetbox.RequestError as e:
             raise ValueError(e, e.error)
+
+        # Create Platform in NetBox
+        if not 'version' in nb_pxmx_cluster.proxmox_nodes[proxmox_node]:
+            raise ValueError(f"Missing Proxmox version information for {proxmox_node}")
+        
+        try:
+            proxmox_version = nb_pxmx_cluster.proxmox_nodes[proxmox_node]['version']
+            netbox_platform_id = dict(NetBoxPlatforms(nb_url, app_config['netbox_api_config']['api_token'], {'name': proxmox_version, 'slug': __netbox_make_slug(proxmox_version)}).obj)['id']
+        except pynetbox.RequestError as e:
+            raise ValueError(e, e.error)        
 
         # Create NetBox Device Role
         try:
@@ -245,7 +227,7 @@ def main():
         # Create Device in NetBox
         try:
             device_serial = nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['serial']
-            netbox_device_id = dict(NetBoxDevices(nb_url, app_config['netbox_api_config']['api_token'], {'name': proxmox_node, 'role': netbox_device_role_id, 'device_type': netbox_device_type_id, 'site': netbox_site_id, 'serial': device_serial, 'status': 'active'}).obj)['id']
+            netbox_device_id = dict(NetBoxDevices(nb_url, app_config['netbox_api_config']['api_token'], {'name': proxmox_node, 'role': netbox_device_role_id, 'device_type': netbox_device_type_id, 'site': netbox_site_id, 'platform': netbox_platform_id, 'serial': device_serial, 'status': 'active'}).obj)['id']
         except pynetbox.RequestError as e:
             raise ValueError(e, e.error)
 
@@ -273,8 +255,6 @@ def main():
 
             if vmbr_info:
                 if device_interface.name in vmbr_info:
-                    #vmbrX_interface = netbox_create_vmbrX_interface_mapping(nb_obj, netbox_device_id, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]['type'], device_interface.id, vmbr_info[device_interface.name])
-
                     try:
                         vmbrX_interface_data = {
                             'device': netbox_device_id,
@@ -285,14 +265,12 @@ def main():
                         }
 
                         nb_bridge_interface = NetBoxDeviceCreateBridgeInterface(nb_url, app_config['netbox_api_config']['api_token'], vmbrX_interface_data)
-                        #print("NB BRIDGE INTERFACE", nb_bridge_interface, dir(nb_bridge_interface), dir(nb_bridge_interface.obj), nb_bridge_interface.obj.display)
-                        #print("VMBRX_DATA", vmbrX_interface_data)
-
-                        if 'ipv4address' in nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][nb_bridge_interface.obj.display]:
-                            #print(f"Assigning {nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][vmbrX_interface_details['display']]['ipv4address']} to {vmbrX_interface_details['display']} on {proxmox_node}")                        
-                            netbox_create_and_assign_ip_address(nb_obj, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][nb_bridge_interface.obj.display]['ipv4address'], nb_bridge_interface.obj.id)
                     except pynetbox.RequestError as e:
                         raise ValueError(e, e.error)
+
+                    if 'ipv4address' in nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][nb_bridge_interface.obj.display]:
+                        #print(f"Assigning {nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][vmbrX_interface_details['display']]['ipv4address']} to {vmbrX_interface_details['display']} on {proxmox_node}")                        
+                        netbox_create_and_assign_ip_address(nb_obj, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][nb_bridge_interface.obj.display]['ipv4address'], nb_bridge_interface.obj.id)
 
                     #vmbrX_interface_details = dict(vmbrX_interface)
 

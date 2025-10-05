@@ -7,7 +7,7 @@ import json
 import pynetbox
 
 # adapted from sol1 implementation
-from helpers.netbox_objects import NetBoxCustomFields, NetBoxCustomFieldChoiceSets, NetBoxClusterTypes, NetBoxClusters
+from helpers.netbox_objects import __netbox_make_slug, NetBoxCustomFields, NetBoxCustomFieldChoiceSets, NetBoxClusterTypes, NetBoxClusters
 
 from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
 
@@ -24,10 +24,6 @@ def get_arguments():
 
     # Return the parsed arguments
     return args
-
-
-def __netbox_make_slug(in_str):
-    return re.sub(r'\W+', '-', in_str).lower()
 
 
 def create_custom_field_choice_sets_proxmox_vm_templates(proxmox_api_obj):

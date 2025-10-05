@@ -68,6 +68,8 @@ class ProxmoxAPICommon:
                 self.proxmox_nodes[pm_node['name']]['ip'] = pm_node['ip']
                 self.proxmox_nodes[pm_node['name']]['online'] = pm_node['online']
 
+                self.proxmox_nodes[pm_node['name']]['version'] = f"Proxmox-{self.__get_proxmox_version_from_node(pm_node['name'])}"
+
             if not self.proxmox_cluster_name:
                 if 'cluster_name' in self.cfg_data['proxmox']:
                     self.proxmox_cluster_name = self.cfg_data['proxmox']['cluster_name']
@@ -79,4 +81,16 @@ class ProxmoxAPICommon:
                 if 'vmid' in e.errors:
                     print("F", e.errors['vmid'])
             raise ValueError("E", e, dir(e), e.status_code, e.status_message, e.errors)
+        
+
+    def __get_proxmox_version_from_node(self, proxmox_node: str):
+        try:
+            pm_version_info = self.proxmox_api.nodes(proxmox_node).version.get()
+            return f"{pm_version_info['version']}-{pm_version_info['repoid']}"
+        except ResourceException as e:
+            #raise(e)
+            print("E", e, dir(e), e.status_code, e.status_message, e.errors)
+            if e.errors:
+                if 'vmid' in e.errors:
+                    print("F", e.errors['vmid'])
     
