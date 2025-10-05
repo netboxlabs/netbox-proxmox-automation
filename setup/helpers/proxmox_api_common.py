@@ -60,7 +60,7 @@ class ProxmoxAPICommon:
                 if pm_node['type'] != 'node':
                     continue
 
-                print("PM NODE", pm_node)
+                #print("PM NODE", pm_node)
 
                 if not pm_node['name'] in self.proxmox_nodes:
                     self.proxmox_nodes[pm_node['name']] = {}

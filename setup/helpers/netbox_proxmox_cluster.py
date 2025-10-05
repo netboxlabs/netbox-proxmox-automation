@@ -12,11 +12,10 @@ from proxmoxer import ProxmoxAPI, ResourceException
 from . proxmox_api_common import ProxmoxAPICommon
 
 class NetBoxProxmoxCluster(ProxmoxAPICommon):
-    def __init__(self, cfg_data: dict, netbox_api_obj: object):
+    def __init__(self, cfg_data: dict):
         super(NetBoxProxmoxCluster, self).__init__(cfg_data)
 
         self.cfg_data = cfg_data
-        self.netbox_api = netbox_api_obj
         self.discovered_proxmox_nodes_information = {}
 
 

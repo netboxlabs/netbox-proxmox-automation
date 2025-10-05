@@ -14,13 +14,10 @@ import urllib3
 from helpers.netbox_proxmox_cluster import NetBoxProxmoxCluster
 #from helpers.netbox_proxmox_api import NetBoxProxmoxAPIHelper
 from helpers.netbox_objects import __netbox_make_slug, NetBox, NetBoxSites, NetBoxManufacturers, NetBoxPlatforms, NetBoxTags, NetBoxDeviceRoles, NetBoxDeviceTypes, NetBoxDeviceTypesInterfaceTemplates, NetBoxDevices, NetBoxDevicesInterfaces, NetBoxDeviceInterfaceMacAddressMapping, NetBoxDeviceCreateBridgeInterface, NetBoxClusterTypes, NetBoxClusters, NetBoxClusterGroups, NetBoxVirtualMachines, NetBoxVirtualMachineInterface, NetBoxIPAddresses
-from helpers.netbox_branches import NetBoxBranches
 
 from proxmoxer import ProxmoxAPI, ResourceException
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-nb_obj = None
 
 
 def get_arguments():
@@ -85,26 +82,17 @@ def main():
     #print("CFG DATA", app_config, app_config['proxmox_api_config'])
 
     nb_url = f"{app_config['netbox_api_config']['api_proto']}://{app_config['netbox_api_config']['api_host']}:{str(app_config['netbox_api_config']['api_port'])}/"
-    nb_obj = NetBox(nb_url, app_config['netbox_api_config']['api_token'], None)
-    #print(nb_obj, dir(nb_obj))
 
     if 'branch' in app_config['netbox']:
         branch_name = app_config['netbox']['branch']
+        os.environ['NETBOX_BRANCH'] = branch_name
 
         branch_timeout = 0
         if 'branch_timeout' in app_config['netbox']:
             branch_timeout = app_config['netbox']['branch_timeout']
+        os.environ['NETBOX_BRANCH_TIMEOUT'] = str(branch_timeout)
 
-        branch_site = NetBoxBranches(nb_obj)
-        branch_site.create_branch(branch_name, branch_timeout)
-        print("BBB", branch_site.branches, dir(nb_obj))
-
-        if not 'X_NETBOX_BRANCH' in os.environ:
-            os.environ['X_NETBOX_BRANCH'] = branch_site.branches[branch_name]
-
-        #nb_obj.nb.http_session.headers["X-NetBox-Branch"] = branch_site.branches[branch_name]
-
-    nb_pxmx_cluster = NetBoxProxmoxCluster(app_config, nb_obj)
+    nb_pxmx_cluster = NetBoxProxmoxCluster(app_config)
 
     if not 'site' in app_config['netbox']:
         netbox_site = "netbox-proxmox-automation Default Site"
@@ -254,12 +242,11 @@ def main():
                             'assigned_object_id': str(nb_bridge_interface.obj.id)
                         }
 
-                        nb_assign_ip_address = NetBoxIPAddresses(nb_url, app_config['netbox_api_config']['api_token'], nb_assign_ip_address_payload, 'address')
+                        try:
+                            ipv4_address = NetBoxIPAddresses(nb_url, app_config['netbox_api_config']['api_token'], nb_assign_ip_address_payload, 'address')
+                        except pynetbox.RequestError as e:
+                            raise ValueError(e, e.error)
 
-                    #vmbrX_interface_details = dict(vmbrX_interface)
-
-                    #if not 'id' in vmbrX_interface_details:
-                    #    raise ValueError(f"'id' missing for interface {vmbr_info[device_interface.name]} on {proxmox_node}")
             else:
                 if 'ipv4address' in nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]:
                     #print(f"Assigning {nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name]['ipv4address']} to {device_interface.name} on {proxmox_node}")                        
@@ -270,7 +257,17 @@ def main():
                         'assigned_object_id': str(device_interface.id)
                     }
 
-                    nb_assign_ip_address = NetBoxIPAddresses(nb_url, app_config['netbox_api_config']['api_token'], nb_assign_ip_address_payload, 'address')
+                    try:
+                        ipv4_address = NetBoxIPAddresses(nb_url, app_config['netbox_api_config']['api_token'], nb_assign_ip_address_payload, 'address')
+                    except pynetbox.RequestError as e:
+                        raise ValueError(e, e.error)
+
+    # If there are no changes, then delete the branch
+    if getattr(ipv4_address, 'nbb'):
+        if not ipv4_address.nbb.branch_changes():
+            print(f"No changes.  Deleting branch {ipv4_address.nbb.branch_name}")
+            del ipv4_address.nb.http_session.headers['X-NetBox-Branch']
+            ipv4_address.nbb.delete_branch()
 
 
 if __name__ == "__main__":

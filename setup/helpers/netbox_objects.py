@@ -3,6 +3,8 @@ import re
 import pynetbox
 import time
 
+from . netbox_branches import NetBoxBranches
+
 
 def __netbox_make_slug(in_str: str):
     return re.sub(r'\W+', '-', in_str).lower()
@@ -43,9 +45,12 @@ class NetBox:
         # Initialize pynetbox API connection
         self.nb = pynetbox.api(self.netbox_url, token=self.netbox_token)
 
-        if 'X_NETBOX_BRANCH' in os.environ:
-            print(f"BRANCH SESSION HEADER {os.environ['X_NETBOX_BRANCH']}", self.nb)
-            self.nb.http_session.headers["X-NetBox-Branch"] = os.environ['X_NETBOX_BRANCH']
+        if 'NETBOX_BRANCH' in os.environ:
+            if not 'NETBOX_BRANCH_TIMEOUT' in os.environ:
+                os.environ['NETBOX_BRANCH_TIMEOUT'] = '0'
+
+            self.nbb = NetBoxBranches(self.nb, os.environ['NETBOX_BRANCH'], int(os.environ['NETBOX_BRANCH_TIMEOUT']))
+            self.nbb.activate_branch()        
 
 
     def findBy(self, key):
