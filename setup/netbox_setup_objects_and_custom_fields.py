@@ -254,7 +254,9 @@ if __name__ == "__main__":
     custom_field_template_id = create_custom_field(netbox_url, netbox_api_token, 'proxmox_vm_templates', 'Proxmox VM Templates', netbox_field_choice_sets_templates_id, str(min(p.proxmox_vm_templates.keys())))
 
     # VM proxmox node id
-    custom_field_proxmox_node_id = create_custom_field(netbox_url, netbox_api_token, 'proxmox_node', 'Proxmox node', netbox_field_choice_sets_proxmox_nodes_id, p.proxmox_nodes[0])
+    # NODES {'pxmx-n1': {'ip': '192.168.71.3', 'online': 1, 'version': 'Proxmox-8.4.1-2a5fa54a8503f96d'}, 'pxmx-n2': {'ip': '192.168.71.4', 'online': 1, 'version': 'Proxmox-8.4.1-2a5fa54a8503f96d'}}
+    # BPOT!!!!
+    #custom_field_proxmox_node_id = create_custom_field(netbox_url, netbox_api_token, 'proxmox_node', 'Proxmox node', netbox_field_choice_sets_proxmox_nodes_id, p.proxmox_nodes[0])
 
     # proxmox_vmid
     custom_field_proxmox_vm_id = create_custom_field(netbox_url, netbox_api_token, 'proxmox_vmid', 'Proxmox Virtual machine ID (vmid)')

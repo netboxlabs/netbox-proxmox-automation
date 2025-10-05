@@ -104,7 +104,7 @@ class NetBoxProxmoxAPIHelper(ProxmoxAPICommon):
         #print("ALL PROXMOX VMS", "NODES", self.proxmox_nodes, "VMS", self.proxmox_vms, "LXC", self.proxmox_lxc)
         for proxmox_vm in self.proxmox_vms:
             proxmox_vm_config = self.proxmox_api.nodes(self.proxmox_vms[proxmox_vm]['node']).qemu(self.proxmox_vms[proxmox_vm]['vmid']).config.get()
-            #print(" -- CONFIG", proxmox_vm_config)
+            print(" -- CONFIG", proxmox_vm_config)
 
             if not proxmox_vm in proxmox_vm_configurations:
                 proxmox_vm_configurations[proxmox_vm] = {}
@@ -119,12 +119,13 @@ class NetBoxProxmoxAPIHelper(ProxmoxAPICommon):
                 if 'sshkeys' in proxmox_vm_config:
                     proxmox_vm_configurations[proxmox_vm]['public_ssh_key'] = urllib.parse.unquote(proxmox_vm_config['sshkeys'])
 
-                proxmox_vm_configurations[proxmox_vm]['bootdisk'] = proxmox_vm_config['bootdisk']
+                if 'bootdisk' in proxmox_vm_config:
+                    proxmox_vm_configurations[proxmox_vm]['bootdisk'] = proxmox_vm_config['bootdisk']
 
-                base_disk_name = re.sub(r'\d+$', '', proxmox_vm_config['bootdisk'])
-                proxmox_vm_disks = [key for key in proxmox_vm_config if re.search(r'^%s\d+' % base_disk_name, key)]
+                    base_disk_name = re.sub(r'\d+$', '', proxmox_vm_config['bootdisk'])
+                    proxmox_vm_disks = [key for key in proxmox_vm_config if re.search(r'^%s\d+' % base_disk_name, key)]
 
-                proxmox_vm_configurations[proxmox_vm]['storage'] = proxmox_vm_config[proxmox_vm_config['bootdisk']].split(':')[0]
+                    proxmox_vm_configurations[proxmox_vm]['storage'] = proxmox_vm_config[proxmox_vm_config['bootdisk']].split(':')[0]
 
                 if not 'disks' in proxmox_vm_configurations[proxmox_vm]:
                     proxmox_vm_configurations[proxmox_vm]['disks'] = []
