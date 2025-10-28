@@ -1,0 +1,57 @@
+- name: "Proxmox: migrate VM/LXC to named cluster node"
+  connection: local
+  hosts: all
+  gather_facts: False
+
+  vars:
+    collected_proxmox_vm: {}
+    collected_proxmox_lxc: {}
+
+  tasks:
+  - name: Include Proxmox VM discovery
+    include_tasks: "ansible-tasks/collect-proxmox-vm.yml"
+
+  - name: Include Proxmox LXC discovery
+    include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
+
+  - name: Migrate specified VM
+    community.proxmox.proxmox_kvm:
+      api_user: "{{ proxmox_env_info.api_user }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
+      api_host: "{{ proxmox_env_info.api_host }}"
+      #name: "{{ vm_config['name'] }}"
+      vmid: "{{ vm_config['vmid'] }}"
+      node: "{{ vm_config['target_node'] }}"
+      migrate: true
+      state: present
+    when: vm_config['name'] in collected_proxmox_vm and collected_proxmox_vm[vm_config['name']] | int == vm_config['vmid'] | int
+    register: migrate_vm_job
+    async: 180
+    poll: 0
+
+  - name: Wait for VM migrate process to finish
+    async_status:
+      jid: "{{ migrate_vm_job.ansible_job_id }}"
+    when: vm_config['name'] in collected_proxmox_vm
+    register: _sjobs_alias_vc_0
+    until: _sjobs_alias_vc_0.finished
+    retries: 100
+    delay: 10
+
+  - name: Discover Proxmox migrated VM on node
+    community.proxmox.proxmox_vm_info:
+      api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
+      api_user: "{{ proxmox_env_info.api_user | default(omit) }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
+      node: "{{ proxmox_env_info.node }}"
+      #name: "{{ vm_config['name'] }}"
+      vmid: "{{ vm_config['vmid'] }}"
+      config: "current"
+    register: proxmox_migrated_vm
+
+  - name: Show migrated VM info
+    debug:
+      msg: "migrated vm info: {{ proxmox_migrated_vm }}"
+
