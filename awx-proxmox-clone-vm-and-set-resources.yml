@@ -31,7 +31,7 @@
       msg: "ID of template (integer) {{ vm_config['template'] | int }}"
 
   - name: Create VM from a full clone of template
-    community.general.proxmox_kvm:
+    community.proxmox.proxmox_kvm:
       node: "{{ proxmox_env_info.node }}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
@@ -62,7 +62,7 @@
     when: not vm_config['name'] in collected_proxmox_vm
 
   - name: Update Proxmox VMs resource settings
-    community.general.proxmox_kvm:
+    community.proxmox.proxmox_kvm:
       node: "{{ proxmox_env_info.node }}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
@@ -86,7 +86,7 @@
     delay: 10
 
   - name: "Discover information for newly-created Proxmox VM"
-    community.general.proxmox_vm_info:
+    community.proxmox.proxmox_vm_info:
       api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
       api_user: "{{ proxmox_env_info.api_user | default(omit) }}"
       api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"

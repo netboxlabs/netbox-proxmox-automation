@@ -15,7 +15,7 @@
     include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
   - name: Stop specified VM
-    community.general.proxmox_kvm:
+    community.proxmox.proxmox_kvm:
       #node: "{{ proxmox_env_info.node }}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
@@ -40,7 +40,7 @@
     delay: 10
 
   - name: "Proxmox: Remove specified VM"
-    community.general.proxmox_kvm:
+    community.proxmox.proxmox_kvm:
       node: "{{ proxmox_env_info.node }}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
