@@ -267,10 +267,8 @@ class AnsibleAutomationAWXManager(AnsibleAutomationAWX):
         try:
             aa_playbooks = []
 
-            import os 
-            os.chdir('../playbooks')
-
             for playbook_item in self.get_object_by_id('projects', self.project_id).get_related('playbooks'):
+                print("PBI", playbook_item)
                 if playbook_item.endswith('.yml') or playbook_item.endswith('.yaml'):
                     if not re.search(r'/', playbook_item):
                         aa_playbooks.append(playbook_item)
