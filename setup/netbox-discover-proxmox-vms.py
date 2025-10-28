@@ -232,8 +232,6 @@ def main():
     nb_url = f"{app_config['netbox_api_config']['api_proto']}://{app_config['netbox_api_config']['api_host']}:{str(app_config['netbox_api_config']['api_port'])}/"
     nb_obj = NetBox(nb_url, app_config['netbox_api_config']['api_token'], None)
 
-    # HMM, maybe collect Proxmox VMs first then add to NetBox?  Oh yeah.  We definitely need to do that!
-
     # Collect all NetBox VMs, and for Proxmox VMs: VMIDs
     all_nb_vms = netbox_get_vms(nb_obj)
 
