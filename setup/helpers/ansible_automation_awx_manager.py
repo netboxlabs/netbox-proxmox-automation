@@ -208,7 +208,7 @@ class AnsibleAutomationAWXManager(AnsibleAutomationAWX):
             self.created_job_templates = []
 
         try:
-            job_template_name = re.sub(r'^awx\-', '', playbook_name.split('.')[0])
+            job_template_name = re.sub(r'^playbooks/awx\-', '', playbook_name.split('.')[0])
 
             job_template_payload = {
                 'name': job_template_name,
@@ -268,12 +268,13 @@ class AnsibleAutomationAWXManager(AnsibleAutomationAWX):
             aa_playbooks = []
 
             for playbook_item in self.get_object_by_id('projects', self.project_id).get_related('playbooks'):
-                print("PBI", playbook_item)
-                if playbook_item.endswith('.yml') or playbook_item.endswith('.yaml'):
-                    if not re.search(r'/', playbook_item):
-                        aa_playbooks.append(playbook_item)
+                if not playbook_item.startswith('playbooks/'):
+                    continue
 
-            print("AAP", aa_playbooks)
+                if playbook_item.endswith('.yml') or playbook_item.endswith('.yaml'):
+#                    if not re.search(r'/', playbook_item):
+                    aa_playbooks.append(playbook_item)
+
             return aa_playbooks
         except Exception as e:
             raise ValueError(f"Exception occurred when retrieving playbooks for project {self.project['name']}: {e}")

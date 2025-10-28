@@ -67,6 +67,9 @@ def main():
 
 
     # Set common variables
+    if not 'node' in app_config['proxmox_api_config']:
+        app_config['proxmox_api_config']['node'] = 'default-proxmox-node'
+        
     org_name = default_organization
     if 'organization' in app_config['ansible_automation']['settings']:
         org_name = app_config['ansible_automation']['settings']['organization']
@@ -130,7 +133,7 @@ def main():
         aam.create_project(project_name, scm_type, scm_url, scm_branch)
 
         project_playbooks = aam.get_playbooks()
-        project_playbooks = [x for x in project_playbooks if x.startswith('awx-')]
+        project_playbooks = [x for x in project_playbooks if x.startswith('playbooks/awx-')]
         #print("project playbooks", project_playbooks)
 
         if not project_playbooks:
