@@ -503,6 +503,37 @@ def main():
                 ]
             }
         },
+        'proxmox-migrate-vm': {
+            'enabled': True,
+            'action_type': 'webhook',
+            'action_object_type': 'extras.webhook',
+            'action_object_id': -1,
+            'object_types': [
+                "virtualization.virtualmachine",
+                "extras.customfield"
+            ],
+            'event_types': [
+                "object_updated"
+            ],
+            'conditions': {
+                "and": [
+                    {
+                        "attr": "status.value",
+                        "op": "in",
+                        "value": ["active", "offline"]
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_vm_type",
+                        "value": "vm"
+                    },
+                    {
+                        "attr": "custom_fields.proxmox_node",
+                        "negate": True,
+                        "value": None
+                    }
+                ]
+            }
+        },
 
 #            'update-dns': {
 #                'enabled': True,
@@ -557,7 +588,8 @@ def main():
             'proxmox-start-lxc': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"hostname\": \"{{ data['name'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\"\r\n    }\r\n  }\r\n}",
             'proxmox-stop-lxc': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"hostname\": \"{{ data['name'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\"\r\n    }\r\n  }\r\n}",
             'proxmox-set-netif': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"hostname\": \"{{ data['name'] }}\",\r\n      \"ip\": \"{{ data['primary_ip4']['address'] }}\"\r\n    }\r\n  }\r\n}",
-            'proxmox-resize-lxc-disk': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['virtual_machine']['name'] }}\",\r\n      \"resize_disk\": \"{{ data['name'] }}\",\r\n      \"resize_disk_size\": \"{{ data['size'] }}\",\r\n      \"storage_volume\": \"{{ data['custom_fields']['proxmox_storage_volume'] }}\"\r\n    }\r\n  }\r\n}"
+            'proxmox-resize-lxc-disk': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['virtual_machine']['name'] }}\",\r\n      \"resize_disk\": \"{{ data['name'] }}\",\r\n      \"resize_disk_size\": \"{{ data['size'] }}\",\r\n      \"storage_volume\": \"{{ data['custom_fields']['proxmox_storage_volume'] }}\"\r\n    }\r\n  }\r\n}",
+            'proxmox-migrate-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\",\r\n      \"target_node\": \"{{ data['custom_fields']['proxmox_node'] }}\"\r\n    }\r\n  }\r\n}"
             #'update-dns': "{\r\n  \"extra_vars\": {\r\n    \"dns_stuff\": {\r\n      \"dns_zone_id\": \"{{ data['zone']['id'] }}\",\r\n      \"dns_zone_name\": \"{{ data['zone']['name'] }}\",\r\n      \"dns_integrations\": \"{{ data['custom_fields']['dns_integrations'] }}\"\r\n    }\r\n  }\r\n}"
         }
         
