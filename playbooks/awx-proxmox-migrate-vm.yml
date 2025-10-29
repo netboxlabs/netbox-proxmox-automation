@@ -14,10 +14,6 @@
   - name: Include Proxmox LXC discovery
     include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
-  - name: Show us vm_config
-    debug:
-      msg: "VMCONFIG: {{ vm_config }}"
-
   - name: Migrate specified VM
     community.proxmox.proxmox_kvm:
       api_user: "{{ proxmox_env_info.api_user }}"
@@ -31,7 +27,7 @@
       state: present
     when: vm_config['name'] in collected_proxmox_vm and collected_proxmox_vm[vm_config['name']] | int == vm_config['vmid'] | int
     register: migrate_vm_job
-    async: 180
+    async: 600
     poll: 0
 
   - name: Wait for VM migrate process to finish
