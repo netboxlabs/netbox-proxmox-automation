@@ -56,12 +56,15 @@ class AnsibleAutomationAWXManager(AnsibleAutomationAWX):
             raise ValueError(f"Exception occurred when creating host {host_name}: {e}")
 
 
-    def create_execution_environment(self, ee_name = None, ee_image_name = None):
+    def create_execution_environment(self, ee_name = None, ee_image_name = None, ee_image_tag = None, ee_image_pull = None):
         try:
+            ee_full_image_name = f"{ee_image_name}:{ee_image_tag}"
+
             ee_payload = {
                 'name': ee_name,
-                'image': ee_image_name,
-                'organization': self.org_id
+                'image': ee_full_image_name,
+                'organization': self.org_id,
+                'pull': ee_image_pull
             }
 
             if hasattr(self, 'ee_reg_cred_id'):
