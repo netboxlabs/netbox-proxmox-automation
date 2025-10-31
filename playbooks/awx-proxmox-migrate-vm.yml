@@ -14,18 +14,12 @@
   - name: Include Proxmox LXC discovery
     include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
-  - name: Show vm_config settings
-    debug:
-      msg: "VM CONFIG {{ vm_config }}"
-
-  - meta: end_play
-  
   - name: Migrate specified VM
     community.proxmox.proxmox_kvm:
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
-      api_host: "{{ proxmox_env_info.api_host }}"
+      api_host: "{{ vm_config['source_node'] }}"
       name: "{{ vm_config['name'] }}"
       vmid: "{{ vm_config['vmid'] }}"
       node: "{{ vm_config['target_node'] }}"
@@ -47,7 +41,7 @@
 
   - name: Discover Proxmox migrated VM on node
     community.proxmox.proxmox_vm_info:
-      api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
+      api_host: "{{ vm_config['target_node'] | default(omit) }}"
       api_user: "{{ proxmox_env_info.api_user | default(omit) }}"
       api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
