@@ -14,6 +14,10 @@
   - name: Include Proxmox LXC discovery
     include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
+  - name: Check VM node pinned state before migration
+    meta: end_play
+    when: vm_config['source_node'] == vm_config['target_node']
+
   - name: Migrate specified VM
     community.proxmox.proxmox_kvm:
       api_user: "{{ proxmox_env_info.api_user }}"
