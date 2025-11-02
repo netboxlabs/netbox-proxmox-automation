@@ -6,60 +6,30 @@
       api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
     register: proxmox_cluster_join
 
-  - name: Show us proxmox cluster information
-    debug:
-      msg: "Proxmox cluster nodes info {{ proxmox_cluster_join.cluster_join.nodelist }}"
-
-  - name: Show us information about each node
-    debug:
-      msg: "item: {{ item }}, name: {{ item.name }}, pve_addr: {{ item.pve_addr }}"
-    loop: "{{ proxmox_cluster_join.cluster_join.nodelist }}"
-  
   - name: Collect name/IP information about each node
     set_fact:
       proxmox_node_info: "{{ proxmox_node_info | combine({item.name: item.pve_addr}) }}"
     loop: "{{ proxmox_cluster_join.cluster_join.nodelist }}"
 
-  - name: Show us proxmox_node_info
-    debug:
-      msg: "pni {{ proxmox_node_info }}"
-
   - name: Discover all existing virtual machines on node(s)
     community.proxmox.proxmox_vm_info:
-      #api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
       api_host: "{{ item.value | default(omit) }}"
       api_user: "{{ proxmox_env_info.api_user | default(omit) }}"
       api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
-      #node: "{{ proxmox_env_info.node }}"
-      #node: "{{ vm_config['target_node'] }}"
       node: "{{ item.key }}"
       type: qemu
     with_dict: "{{ proxmox_node_info }}"
     register: proxmox_discovered_vm
-
-  - name: show proxmox_discovered_vm
-    debug:
-      msg: "show discovered: {{ proxmox_discovered_vm }} ||| {{ proxmox_discovered_vm.results }}"
 
   - name: Collect all discovered Proxmox VMs
     set_fact:
       collected_proxmox_vms: "{{ collected_proxmox_vms + item.proxmox_vms }}"
     loop: "{{ proxmox_discovered_vm.results }}"
 
-  - name: Show all collected vms
-    debug:
-      msg: "ALL COLLECTED: {{ collected_proxmox_vms }}"
-
-  - name: Iterate collected vms
-    debug:
-      msg: "item: {{ item }}, name: {{ item.name }}, vmid: {{ item.vmid }}"
-    loop: "{{ collected_proxmox_vms }}"
-    when: item.template is defined and not item.template
-
-  - name: Discover / Collect Proxmox VMs
+  - name: Collect Proxmox VMs
     set_fact:
       collected_proxmox_vm: "{{ collected_proxmox_vm | combine({item.name: item.vmid}) }}"
-    loop: "{{ proxmox_discovered_vm.proxmox_vms }}"
-    when: not item.template and item.type == 'qemu'
+    loop: "{{ collected_proxmox_vms }}"
+    when: not item.template
 
