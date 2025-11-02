@@ -34,6 +34,7 @@
       #node: "{{ proxmox_env_info.node }}"
       #node: "{{ vm_config['target_node'] }}"
       node: "{{ item.key }}"
+      type: qemu
     with_dict: "{{ proxmox_node_info }}"
     register: proxmox_discovered_vm
 
