@@ -109,7 +109,7 @@
       data:
         name: "{{ new_proxmox_vm.proxmox_vms[0].name }}"
         custom_fields:
-          proxmox_vmid: "{{ new_proxmox_vm.proxmox_vms[0].vmid }}"
+          proxmox_vmid: "{{ new_proxmox_vm.proxmox_vms[0].vmid | string }}"
       state: present
     when: new_proxmox_vm is defined and new_proxmox_vm.proxmox_vms is defined and new_proxmox_vm.proxmox_vms | length > 0 and vm_config['vmid'] is defined and vm_config['vmid'] == "None"
 
