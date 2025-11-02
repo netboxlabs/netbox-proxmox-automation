@@ -29,6 +29,7 @@
       node: "{{ vm_config['target_node'] }}"
       migrate: true
       state: present
+      timeout: 300 # 5 minutes, should be configurable
     when: vm_config['name'] in collected_proxmox_vm and collected_proxmox_vm[vm_config['name']] | int == vm_config['vmid'] | int
     register: migrate_vm_job
     async: 600
@@ -40,8 +41,8 @@
     when: vm_config['name'] in collected_proxmox_vm
     register: _sjobs_alias_vc_0
     until: _sjobs_alias_vc_0.finished
-    retries: 100
-    delay: 10
+    retries: 1000
+    delay: 2
 
   - name: Discover Proxmox migrated VM on node
     community.proxmox.proxmox_vm_info:
