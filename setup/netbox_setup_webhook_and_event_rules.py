@@ -275,6 +275,11 @@ def main():
                         "value": "offline"
                     },
                     {
+                        "attr": "{{ snapshots['prechange']['status'] }}",
+                        "negate": True,
+                        "value": "offline"
+                    },
+                    {
                         "attr": "custom_fields.proxmox_vm_type",
                         "value": "vm"
                     }
@@ -296,6 +301,11 @@ def main():
                 "and": [
                     {
                         "attr": "status.value",
+                        "value": "active"
+                    },
+                    {
+                        "attr": "{{ snapshots['prechange']['status'] }}",
+                        "negate": True,
                         "value": "active"
                     },
                     {
@@ -473,6 +483,11 @@ def main():
                         "value": "offline"
                     },
                     {
+                        "attr": "{{ snapshots['prechange']['status'] }}",
+                        "negate": True,
+                        "value": "offline"
+                    },
+                    {
                         "attr": "custom_fields.proxmox_vm_type",
                         "value": "lxc"
                     }
@@ -494,6 +509,11 @@ def main():
                 "and": [
                     {
                         "attr": "status.value",
+                        "value": "active"
+                    },
+                    {
+                        "attr": "{{ snapshots['prechange']['status'] }}",
+                        "negate": True,
                         "value": "active"
                     },
                     {
@@ -530,6 +550,13 @@ def main():
                         "attr": "custom_fields.proxmox_node",
                         "negate": True,
                         "value": None
+                    },
+                    {
+                            "attr": "custom_fields.proxmox_node",
+                            "value": "prechange.custom_fields.proxmox_node",
+                            "op": "eq",
+                            #'model_value': True,
+                            "negate": True
                     }
                 ]
             }
@@ -589,7 +616,7 @@ def main():
             'proxmox-stop-lxc': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"hostname\": \"{{ data['name'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\"\r\n    }\r\n  }\r\n}",
             'proxmox-set-netif': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"hostname\": \"{{ data['name'] }}\",\r\n      \"ip\": \"{{ data['primary_ip4']['address'] }}\"\r\n    }\r\n  }\r\n}",
             'proxmox-resize-lxc-disk': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['virtual_machine']['name'] }}\",\r\n      \"resize_disk\": \"{{ data['name'] }}\",\r\n      \"resize_disk_size\": \"{{ data['size'] }}\",\r\n      \"storage_volume\": \"{{ data['custom_fields']['proxmox_storage_volume'] }}\"\r\n    }\r\n  }\r\n}",
-            'proxmox-migrate-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\",\r\n      \"target_node\": \"{{ data['custom_fields']['proxmox_node'] }}\"\r\n    }\r\n  }\r\n}"
+            'proxmox-migrate-vm': "{\r\n  \"extra_vars\": {\r\n    \"vm_config\": {\r\n      \"name\": \"{{ data['name'] }}\",\r\n      \"vmid\": \"{{ data['custom_fields']['proxmox_vmid'] }}\",\r\n      \"source_node\": \"{{ snapshots['prechange']['custom_fields']['proxmox_node'] }}\",\r\n      \"target_node\": \"{{ data['custom_fields']['proxmox_node'] }}\"\r\n    }\r\n  }\r\n}"
             #'update-dns': "{\r\n  \"extra_vars\": {\r\n    \"dns_stuff\": {\r\n      \"dns_zone_id\": \"{{ data['zone']['id'] }}\",\r\n      \"dns_zone_name\": \"{{ data['zone']['name'] }}\",\r\n      \"dns_integrations\": \"{{ data['custom_fields']['dns_integrations'] }}\"\r\n    }\r\n  }\r\n}"
         }
         
