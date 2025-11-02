@@ -6,6 +6,8 @@
   vars:
     collected_proxmox_vm: {}
     collected_proxmox_lxc: {}
+    proxmox_node_info: {}
+    collected_proxmox_vms: []
 
   tasks:
   - name: Include Proxmox VM discovery
