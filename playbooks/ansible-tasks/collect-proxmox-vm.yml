@@ -1,11 +1,18 @@
-  - name: Show source and target nodes
-    debug:
-      msg: "Source node {{ vm_config['source_node'] }}, target node {{ vm_config['target_node'] }}"
+  - name: List existing Proxmox VE cluster join information
+    community.proxmox.proxmox_cluster_join_info:
+      api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
+      api_user: "{{ proxmox_env_info.api_user | default(omit) }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
+    register: proxmox_cluster_join
 
+  - name: Show us proxmox cluster information
+    debug:
+      msg: "Proxmox cluster info {{ proxmox_cluster_join }}"
+  
   - name: Discover all existing virtual machines on node
     community.general.proxmox_vm_info:
-      #api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
-      api_host: "{{ vm_config['target_node'] | default(omit) }}"
+      api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
       api_user: "{{ proxmox_env_info.api_user | default(omit) }}"
       api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
