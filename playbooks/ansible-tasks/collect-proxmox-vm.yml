@@ -39,8 +39,8 @@
 
   - name: show proxmox_discovered_vm
     debug:
-      msg: "show discovered: {{ proxmox_discovered_vm }}"
-      
+      msg: "show discovered: {{ proxmox_discovered_vm.results }}"
+
   - name: Discover / Collect Proxmox VMs
     set_fact:
       collected_proxmox_vm: "{{ collected_proxmox_vm | combine({item.name: item.vmid}) }}"
