@@ -33,13 +33,13 @@
       api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
       #node: "{{ proxmox_env_info.node }}"
       #node: "{{ vm_config['target_node'] }}"
-      node: "{{ item.key }}"
+      #node: "{{ item.key }}"
     with_dict: "{{ proxmox_node_info }}"
     register: proxmox_discovered_vm
 
   - name: show proxmox_discovered_vm
     debug:
-      msg: "show discovered: {{ proxmox_discovered_vm.results }}"
+      msg: "show discovered: {{ proxmox_discovered_vm }}"
 
   - name: Discover / Collect Proxmox VMs
     set_fact:
