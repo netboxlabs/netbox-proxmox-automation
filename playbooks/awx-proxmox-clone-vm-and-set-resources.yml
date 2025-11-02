@@ -70,7 +70,8 @@
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
-      api_host: "{{ proxmox_env_info.api_host }}"
+      #api_host: "{{ proxmox_env_info.api_host }}"
+      api_host: "{{ vm_config['node'] }}"
       name: "{{ vm_config['name'] }}"
       cores: "{{ vm_config['vcpus'] | int }}"
       vcpus: "{{ vm_config['vcpus'] | int }}"
@@ -90,7 +91,8 @@
 
   - name: "Discover information for newly-created Proxmox VM"
     community.proxmox.proxmox_vm_info:
-      api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
+      #api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
+      api_host: "{{ vm_config['node'] }}"
       api_user: "{{ proxmox_env_info.api_user | default(omit) }}"
       api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
