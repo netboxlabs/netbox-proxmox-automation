@@ -15,6 +15,15 @@
       msg: "item: {{ item }}, name: {{ item.name }}, pve_addr: {{ item.pve_addr }}"
     loop: "{{ proxmox_cluster_join.cluster_join.nodelist }}"
   
+  - name: Collect name/IP information about each node
+    set_fact:
+      proxmox_node_info: "{{ proxmox_node_info | combine({item.name: item.pve_addr}) }}"
+    loop: "{{ proxmox_cluster_join.cluster_join.nodelist }}"
+
+  - name: Show us proxmox_node_info
+    debug:
+      msg: "pni {{ proxmox_node_info }}"
+      
   - name: Discover all existing virtual machines on node
     community.proxmox.proxmox_vm_info:
       api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
