@@ -39,7 +39,7 @@
 
   - name: show proxmox_discovered_vm
     debug:
-      msg: "show discovered: {{ proxmox_discovered_vm }}"
+      msg: "show discovered: {{ proxmox_discovered_vm }} ||| {{ proxmox_discovered_vm.results }}"
 
   - name: Discover / Collect Proxmox VMs
     set_fact:
