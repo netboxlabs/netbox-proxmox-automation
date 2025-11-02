@@ -33,7 +33,7 @@
       api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
       #node: "{{ proxmox_env_info.node }}"
       #node: "{{ vm_config['target_node'] }}"
-      #node: "{{ item.key }}"
+      node: "{{ item.key }}"
     with_dict: "{{ proxmox_node_info }}"
     register: proxmox_discovered_vm
 
