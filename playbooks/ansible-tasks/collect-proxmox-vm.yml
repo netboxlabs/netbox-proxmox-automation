@@ -55,7 +55,8 @@
     debug:
       msg: "item: {{ item }}, name: {{ item.name }}, vmid: {{ item.vmid }}"
     loop: "{{ collected_proxmox_vms }}"
-          
+    when: not item.template is defined and not item.template
+
   - name: Discover / Collect Proxmox VMs
     set_fact:
       collected_proxmox_vm: "{{ collected_proxmox_vm | combine({item.name: item.vmid}) }}"
