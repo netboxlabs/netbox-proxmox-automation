@@ -27,7 +27,6 @@
   - name: Wait for VM migrate process to finish
     async_status:
       jid: "{{ migrate_vm_job.ansible_job_id }}"
-    when: vm_config['name'] in collected_proxmox_vm
     register: _sjobs_alias_vc_0
     until: _sjobs_alias_vc_0.finished
     retries: 1000
