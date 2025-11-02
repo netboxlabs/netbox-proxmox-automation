@@ -8,7 +8,7 @@
 
   - name: Show us proxmox cluster information
     debug:
-      msg: "Proxmox cluster nodes info {{ proxmox_cluster_join.nodelist }}"
+      msg: "Proxmox cluster nodes info {{ proxmox_cluster_join['nodelist'] }}"
   
   - name: Discover all existing virtual machines on node
     community.proxmox.proxmox_vm_info:
