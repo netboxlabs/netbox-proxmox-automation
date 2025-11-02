@@ -34,7 +34,7 @@
 
   - name: Create VM from a full clone of template
     community.proxmox.proxmox_kvm:
-      node: "{{ proxmox_env_info.proxmox_node }}"
+      node: "{{ proxmox_env_info.node }}"
       target: "{{ vm_config['node']}}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
