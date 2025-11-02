@@ -9,6 +9,11 @@
   - name: Show us proxmox cluster information
     debug:
       msg: "Proxmox cluster nodes info {{ proxmox_cluster_join.cluster_join.nodelist }}"
+
+  - name: Show us information about each node
+    debug:
+      msg: "item: {{ item }}, name: {{ item.name }}, pve_addr: {{ item.pve_addr }}"
+    loop: "{{ proxmox_cluster_join.cluster_join.nodelist }}"
   
   - name: Discover all existing virtual machines on node
     community.proxmox.proxmox_vm_info:
