@@ -19,7 +19,7 @@
       node: "{{ vm_config['target_node'] }}"
       migrate: true
       state: present
-      timeout: 300 # 5 minutes, should be configurable
+      timeout: 600 # 10 minutes, should be configurable
     register: migrate_vm_job
     async: 600
     poll: 0

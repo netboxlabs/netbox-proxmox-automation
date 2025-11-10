@@ -19,6 +19,7 @@
   - name: Stop specified LXC
     community.proxmox.proxmox:
       #node: "{{ proxmox_env_info.node }}"
+      node: "{{ vm_config['node'] }}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
@@ -43,7 +44,8 @@
 
   - name: "Proxmox: Remove specified LXC"
     community.proxmox.proxmox:
-      node: "{{ proxmox_env_info.node }}"
+      #node: "{{ proxmox_env_info.node }}"
+      node: "{{ vm_config['node'] }}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"

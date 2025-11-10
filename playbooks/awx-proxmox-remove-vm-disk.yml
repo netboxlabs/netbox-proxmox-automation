@@ -23,6 +23,7 @@
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
       api_host: "{{ proxmox_env_info.api_host }}"
       name: "{{ vm_config['name'] }}"
+      node: "{{ vm_config['node'] }}"
       disk: "{{ vm_config['remove_disk'] }}"
       state: absent
     when: vm_config['name'] in collected_proxmox_vm

@@ -22,6 +22,7 @@
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
       api_host: "{{ proxmox_env_info.api_host }}"
+      node: "{{ vm_config['node'] }}"
       name: "{{ vm_config['name'] }}"
       disk: "{{ vm_config['add_disk'] }}"
       size: "{{ (vm_config['add_disk_size']|int / 1024) | round | int }}"
