@@ -17,11 +17,11 @@ For LXC automation, `netbox-proxmox-automation` uses LXC (container images) on P
 
 NetBox models VMs in an intuitive way.  You can define roles for VMs, such as for Proxmox, and from there you can define both VM state (Staged, Active, Offline, etc) and other resources like vcpus, memory, network configuration, VM disks, and more (through customizations in NetBox).
 
-This automation is based on the premise(s) that:
+This automation *requires* that:
 
   1. You are using Python (version 3)
-  2. You are using NetBox 4.1.0 or newer (NetBox 3.7.x should also work)
-  3. You have a running Proxmox instance or cluster
+  2. You are using NetBox 4.3.7 or newer
+  3. You are running Proxmox 8.4.x single node or cluster (Proxmox 9.x is *not* tested)
   4. You have a running [AWX](https://github.com/ansible/awx) instance or are running [your own web application](https://github.com/netboxlabs/netbox-proxmox-automation/tree/main/netbox-event-driven-automation-flask-app) to handle webhooks and event rules
   5. You have converted a cloud-init image to a Proxmox VM template
   6. Your Promox VM template(s) has/have qemu-guest-agent installed, and that qemu-guest-agent has been enabled via cloud-init
@@ -31,7 +31,7 @@ This automation is based on the premise(s) that:
 
 ## What this implementation *is not*
 
-`netbox-proxmox-automation` is not currently a NetBox plugin, but this may change.
+`netbox-proxmox-automation` is not a NetBox plugin, and future aspirations of this implementation will employ [custom objects](https://github.com/netboxlabs/netbox-custom-objects).
 
 [ProxBox](https://github.com/netdevopsbr/netbox-proxbox) is a neat implementation of pulling information from Proxmox into NetBox.  ProxBox has its place, most certainly, but what it does is *not* the aim of `netbox-proxmox-automation`.
 

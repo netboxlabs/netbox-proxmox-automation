@@ -6,12 +6,12 @@ from datetime import datetime
 
 # adapted from: https://majornetwork.net/2019/10/webhook-listener-for-netbox/
 
-from helpers.netbox_proxmox import NetBoxProxmoxHelper, NetBoxProxmoxHelperVM, NetBoxProxmoxHelperLXC
+from helpers.netbox_proxmox import NetBoxProxmoxHelper, NetBoxProxmoxHelperVM, NetBoxProxmoxHelperLXC, NetBoxProxmoxHelperMigrate
 
 from flask import Flask, Response, request, jsonify
 from flask_restx import Api, Resource, fields
 
-VERSION = '1.2.0'
+VERSION = '2025.11.01'
 
 app_config_file = 'app_config.yml'
 
@@ -128,8 +128,14 @@ class WebhookListener(Resource):
                         results = tc.proxmox_delete_vm(webhook_json_data)
                 elif webhook_json_data['event'] == 'updated':
                     if webhook_json_data['data']['status']['value'] == 'offline':
+
+                        # if source node != target node -> migrate
+
                         results = tc.proxmox_stop_vm(webhook_json_data)
                     elif webhook_json_data['data']['status']['value'] == 'active':
+
+                        # if source node != target node -> migrate
+
                         results = tc.proxmox_start_vm(webhook_json_data)
                     else:
                         results = (500, {'result': f"Unknown value {webhook_json_data['data']['status']['value']}"})

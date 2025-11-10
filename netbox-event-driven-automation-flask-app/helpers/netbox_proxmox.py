@@ -1,6 +1,7 @@
-import re
 import pynetbox
+import re
 import requests
+import time
 import urllib
 
 from proxmoxer import ProxmoxAPI, ResourceException
@@ -589,5 +590,152 @@ class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
             return 200, {'result': f"LXC (vmid: {json_in['data']['custom_fields']['proxmox_vmid']}) has been deleted"}
         except ResourceException as e:
             return 500, {'result': e.content}
+
+
+class NetBoxProxmoxHelperMigrate(NetBoxProxmoxHelper):
+    def __init__(self):
+        self.proxmox_cluster_name = 'default-proxmox-cluster-name'
+        self.proxmox_nodes = {}
+        self.proxmox_vms = {}
+        self.proxmox_lxc = {}
+
+        self.__get_cluster_name_and_nodes()
+        self.__get_proxmox_vms()
+        self.__get_proxmox_lxcs()
+
+
+    def __get_cluster_name_and_nodes(self):
+        try:
+            cluster_status = self.proxmox_api.cluster.status.get()
+
+            for resource in cluster_status:
+                if not 'type' in resource:
+                    raise ValueError(f"Missing 'type' in Proxmox cluster resource {resource}")
+                
+                if resource['type'] == 'cluster':
+                    self.proxmox_cluster_name = resource['name']
+                elif resource['type'] == 'node':
+                    if not resource['name'] in self.proxmox_nodes:
+                        self.proxmox_nodes[resource['name']] = {}
+
+                    self.proxmox_nodes[resource['name']]['ip'] = resource['ip']
+                    self.proxmox_nodes[resource['name']]['online'] = resource['online']
+        except ResourceException as e:
+            raise RuntimeError(f"Proxmox API error: {e}") from e
+        except requests.exceptions.ConnectionError:
+            raise RuntimeError("Failed to connect to Proxmox API")
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code
+            raise RuntimeError(f"HTTP {status}: {e.response.text}") from e
+        
+
+    def __get_proxmox_vms(self):
+        try:
+            for proxmox_node in self.proxmox_nodes:
+                all_vm_settings = self.proxmox_api.nodes(proxmox_node).get('qemu')
+                for vm_setting in all_vm_settings:
+                    if 'template' in vm_setting and vm_setting['template'] == 1:
+                        continue
+
+                    if not vm_setting['name'] in self.proxmox_vms:
+                        self.proxmox_vms[vm_setting['name']] = {}
+
+                    self.proxmox_vms[vm_setting['name']]['vmid'] = vm_setting['vmid']
+                    self.proxmox_vms[vm_setting['name']]['node'] = proxmox_node
+        except ResourceException as e:
+            raise RuntimeError(f"Proxmox API error: {e}") from e
+        except requests.exceptions.ConnectionError:
+            raise RuntimeError("Failed to connect to Proxmox API")
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code
+            raise RuntimeError(f"HTTP {status}: {e.response.text}") from e
+
+
+    def __get_proxmox_lxcs(self):
+        try:
+            for proxmox_node in self.proxmox_nodes:
+                all_lxc_settings = self.proxmox_api.nodes(proxmox_node).get('lxc')
+                for lxc_setting in all_lxc_settings:
+                    if 'template' in lxc_setting and lxc_setting['template'] == 1:
+                        continue
+
+                    if not lxc_setting['name'] in self.proxmox_lxc:
+                        self.proxmox_lxc[lxc_setting['name']] = {}
+
+                    self.proxmox_lxc[lxc_setting['name']]['vmid'] = lxc_setting['vmid']
+                    self.proxmox_lxc[lxc_setting['name']]['node'] = proxmox_node
+        except ResourceException as e:
+            raise RuntimeError(f"Proxmox API error: {e}") from e
+        except requests.exceptions.ConnectionError:
+            raise RuntimeError("Failed to connect to Proxmox API")
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code
+            raise RuntimeError(f"HTTP {status}: {e.response.text}") from e
+
+
+    def __wait_for_migration_task(self, proxmox_node: str, proxmox_task_id: int):
+        try:
+            start_time = int(time.time())
+
+            while True:
+                current_time = int(time.time())
+                elapsed_seconds = current_time - start_time
+
+                if elapsed_seconds >= 600: # 10 minutes
+                    raise ValueError(f"Unable to complete task {proxmox_task_id} in defined time")
+                
+                task_status = self.proxmox_api.nodes(proxmox_node).tasks(proxmox_task_id).status.get()
+
+                if task_status['status'] == 'stopped':
+                    if 'exitstatus' in task_status and task_status['exitstatus'] == 'OK':
+                        break
+                    else:
+                        return 500, {'result': f"Task {proxmox_task_id} is stopped but exit status does not appear to be successful: {task_status['exit_status']}"}
+        except ResourceException as e:
+            return 500, {'content': f"Proxmox API error: {e}"}
+        except requests.exceptions.ConnectionError as e:
+            return 500, {'content': f"Failed to connect to Proxmox API: {e}"}
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code
+            return 500, {'content': f"HTTP {status}: {e.response.text}"}
+
+
+    def migrate_vm(self, proxmox_vmid: int, proxmox_node: str, proxmox_target_node: str):
+        migrate_vm_data = {
+            'target': proxmox_target_node,
+            'online': 1
+        }
+
+        try:
+            migrate_vm_task_id = self.proxmox_api.nodes(proxmox_node).qemu(proxmox_vmid).migrate.post(**migrate_vm_data)
+            self.__wait_for_migration_task(proxmox_node, migrate_vm_task_id)
+
+            return 200, {'result': f"VM (vmid: {proxmox_vmid}) has been migrated to node {proxmox_target_node}"}
+        except ResourceException as e:
+            return 500, {'result': f"Proxmox API error: {e}"}
+        except requests.exceptions.ConnectionError:
+            return 500, {'result': f"Failed to connect to Proxmox API: {e}"}
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code
+            return 500, {'result': f"HTTP {status}: {e.response.text}"}
+
+
+    def migrate_lxc(self, proxmox_vmid: int, proxmox_node: str, proxmox_target_node: str):
+        migrate_lxc_data = {
+            'target': proxmox_target_node,
+            'online': 1
+        }
+
+        try:
+            migrate_lxc_task_id = self.proxmox_api.nodes(proxmox_node).lxc(proxmox_vmid).migrate.post(**migrate_lxc_data)
+            self.__wait_for_migration_task(proxmox_node, migrate_lxc_task_id)
+            return 200, {'result': f"LXC (vmid: {proxmox_vmid}) has been migrated to node {proxmox_target_node}"}
+        except ResourceException as e:
+            return 500, {'result': f"Proxmox API error: {e}"}
+        except requests.exceptions.ConnectionError:
+            return 500, {'result': f"Failed to connect to Proxmox API: {e}"}
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code
+            return 500, {'result': f"HTTP {status}: {e.response.text}"}
 
 
