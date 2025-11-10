@@ -67,6 +67,7 @@ nav:
   - Configure AWX or Tower/AAP: configure-awx-aap.md
   - NetBox Event Rules and Webhooks (Flask): netbox-event-rules-and-webhooks-flask.md
   - NetBox Event Rules and Webhooks (AWX/Tower/AAP): netbox-event-rules-and-webhooks-awx-aap.md
+  - NetBox and Proxmox Node Migration: proxmox-and-node-migration.md
 extra:
   social:
     - icon: fontawesome/solid/globe

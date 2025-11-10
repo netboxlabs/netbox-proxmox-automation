@@ -40,6 +40,7 @@ If you see errors like this...
  Try uninstalling `mkdocs` from your package manager, (e.g. `brew uninstall mkdocs`) and just using the version installed by `pip`. It seems that `mkdocs` doesn't like it when you've installed it using different methods.
 
 # What's New in 2025.11.01
+  - Switches to calendar (as opposed to semantic) versioning
   - Adds Proxmox cluster and node(s) discovery through a new convenience script
   - Adds Proxmox VM migration to alternate Proxmox node(s) through events
   - Adds [NetBox Branching](https://netboxlabs.com/docs/extensions/branching/) support for Proxmox node and VM discovery

@@ -28,6 +28,7 @@ After collecting this information, `netbox-discover-proxmox-cluster-and-nodes.py
   - Device Types
   - Devices
   - IP Addresses (for Devices with interface mappings)
+  - Virtual Machine Cluster (with Device mappings)
 
 Once the Proxmox node(s) has/have been added to NetBox, you can start discovering VMs and LXCs in Proxmox.
 
