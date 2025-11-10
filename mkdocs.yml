@@ -1,0 +1,79 @@
+site_name: NetBox Labs Documentation
+theme:
+  name: material
+  #custom_dir: overrides
+  favicon: images/netbox-favicon.png
+  logo: images/netbox-light-favicon.png
+  features:
+    - navigation.tracking
+    - navigation.instant
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.indexes
+    - navigation.sections
+    - navigation.prune
+    - search.suggest
+    # - toc.integrate
+    - content.code.copy
+    - content.code.select
+  palette:
+    - scheme: nbl-light
+      toggle:
+        icon: material/lightbulb 
+        name: Switch to dark mode
+    - scheme: nbl-dark
+      toggle:
+        icon: material/lightbulb-outline
+        name: Switch to light mode
+extra_css:
+  - stylesheets/extra.css
+markdown_extensions:
+  - abbr
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - toc:
+      toc_depth: 3
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+plugins:
+  - search
+nav:
+  - Home: index.md
+  - Usage: usage.md
+  - Proxmox VM Templates: proxmox-vm-templates.md
+  - Proxmox LXC Templates: proxmox-lxc-templates.md
+  - NetBox IPAM: netbox-ipam.md
+  - NetBox API Key and Permissions: netbox-key-and-permissions.md
+  - NetBox Customization: netbox-customization.md
+  - Discover Proxmox Clusters and Nodes: proxmox-discover-clusters-and-nodes.md
+  - Discover Proxmox VMs and LXCs: proxmox-discover-vm-and-lxc.md
+  - Proxmox API User and Key: proxmox-api-user-and-key.md
+  - Configure Flask Application: configure-flask-application.md
+  - Configure AWX or Tower/AAP: configure-awx-aap.md
+  - NetBox Event Rules and Webhooks (Flask): netbox-event-rules-and-webhooks-flask.md
+  - NetBox Event Rules and Webhooks (AWX/Tower/AAP): netbox-event-rules-and-webhooks-awx-aap.md
+extra:
+  social:
+    - icon: fontawesome/solid/globe
+      link: https://netboxlabs.com
+    - icon: octicons/mail-24
+      link: "mailto:support@netboxlabs.com"
+  analytics:
+    provider: google
+    property: G-Q107GMDTJM
+copyright: Copyright &copy; 2024-2025 NetBox Labs
