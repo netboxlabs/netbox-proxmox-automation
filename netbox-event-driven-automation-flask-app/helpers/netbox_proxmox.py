@@ -6,6 +6,7 @@ import time
 import urllib
 
 from proxmoxer import ProxmoxAPI, ResourceException
+import logging
 
 class NetBoxProxmoxHelper:
     def __init__(self, cfg_data, proxmox_node, debug=False):
@@ -696,12 +697,15 @@ class NetBoxProxmoxHelperMigrate(NetBoxProxmoxHelper):
                     else:
                         return 500, {'result': f"Task {proxmox_task_id} is stopped but exit status does not appear to be successful: {task_status['exit_status']}"}
         except ResourceException as e:
-            return 500, {'content': f"Proxmox API error: {e}"}
+            logging.error(f"Proxmox API ResourceException: {e}")
+            return 500, {'content': "Proxmox API error occurred."}
         except requests.exceptions.ConnectionError as e:
-            return 500, {'content': f"Failed to connect to Proxmox API: {e}"}
+            logging.error(f"Proxmox API ConnectionError: {e}")
+            return 500, {'content': "Failed to connect to Proxmox API."}
         except requests.exceptions.HTTPError as e:
             status = e.response.status_code
-            return 500, {'content': f"HTTP {status}: {e.response.text}"}
+            logging.error(f"Proxmox API HTTPError {status}: {e.response.text}")
+            return 500, {'content': f"Proxmox API HTTP error occurred (code {status})."}
 
 
     def migrate_vm(self, proxmox_vmid: int, proxmox_node: str, proxmox_target_node: str):
@@ -714,12 +718,15 @@ class NetBoxProxmoxHelperMigrate(NetBoxProxmoxHelper):
             migrate_vm_task_id = self.proxmox_api.nodes(proxmox_node).qemu(proxmox_vmid).migrate.post(**migrate_vm_data)
             return self.__wait_for_migration_task(proxmox_node, migrate_vm_task_id)
         except ResourceException as e:
-            return 500, {'result': f"Proxmox API error: {e}"}
-        except requests.exceptions.ConnectionError:
-            return 500, {'result': f"Failed to connect to Proxmox API: {e}"}
+            logging.error(f"Proxmox API ResourceException: {e}")
+            return 500, {'result': "Proxmox API error occurred."}
+        except requests.exceptions.ConnectionError as e:
+            logging.error(f"Proxmox API ConnectionError: {e}")
+            return 500, {'result': "Failed to connect to Proxmox API."}
         except requests.exceptions.HTTPError as e:
             status = e.response.status_code
-            return 500, {'result': f"HTTP {status}: {e.response.text}"}
+            logging.error(f"Proxmox API HTTPError {status}: {e.response.text}")
+            return 500, {'result': f"Proxmox API HTTP error occurred (code {status})."}
 
 
     def migrate_lxc(self, proxmox_vmid: int, proxmox_node: str, proxmox_target_node: str):
@@ -733,11 +740,14 @@ class NetBoxProxmoxHelperMigrate(NetBoxProxmoxHelper):
             self.__wait_for_migration_task(proxmox_node, migrate_lxc_task_id)
             return 200, {'result': f"LXC (vmid: {proxmox_vmid}) has been migrated to node {proxmox_target_node}"}
         except ResourceException as e:
-            return 500, {'result': f"Proxmox API error: {e}"}
-        except requests.exceptions.ConnectionError:
-            return 500, {'result': f"Failed to connect to Proxmox API: {e}"}
+            logging.error(f"Proxmox API ResourceException: {e}")
+            return 500, {'result': "Proxmox API error occurred."}
+        except requests.exceptions.ConnectionError as e:
+            logging.error(f"Proxmox API ConnectionError: {e}")
+            return 500, {'result': "Failed to connect to Proxmox API."}
         except requests.exceptions.HTTPError as e:
             status = e.response.status_code
-            return 500, {'result': f"HTTP {status}: {e.response.text}"}
+            logging.error(f"Proxmox API HTTPError {status}: {e.response.text}")
+            return 500, {'result': f"Proxmox API HTTP error occurred (code {status})."}
 
 
