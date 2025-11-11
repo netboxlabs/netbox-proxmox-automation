@@ -5,11 +5,15 @@ import requests
 import urllib
 import urllib.parse
 
-from proxmoxer import ProxmoxAPI
+from proxmoxer import ProxmoxAPI, ResourceException
+from . proxmox_api_common import ProxmoxAPICommon
 
-class NetBoxProxmoxAPIHelper:
+class NetBoxProxmoxAPIHelper(ProxmoxAPICommon):
     def __init__(self, cfg_data):
-        self.proxmox_nodes = []
+        super(NetBoxProxmoxAPIHelper, self).__init__(cfg_data)
+
+        self.cfg_data = cfg_data
+
         self.proxmox_vm_templates = {}
         self.proxmox_lxc_templates = {}
         self.proxmox_vms = {}
@@ -17,35 +21,7 @@ class NetBoxProxmoxAPIHelper:
         self.proxmox_storage_volumes = []
         self.proxmox_lxc_storage_volumes = []
 
-        self.proxmox_api_config = {
-            'api_host': cfg_data['proxmox_api_config']['api_host'],
-            'api_port': cfg_data['proxmox_api_config']['api_port'],
-            'api_user': cfg_data['proxmox_api_config']['api_user'],
-            'api_token_id': cfg_data['proxmox_api_config']['api_token_id'],
-            'api_token_secret': cfg_data['proxmox_api_config']['api_token_secret'],
-            'verify_ssl': cfg_data['proxmox_api_config']['verify_ssl']
-        }
-
-        self.proxmox_api = ProxmoxAPI(
-            self.proxmox_api_config['api_host'],
-            port=self.proxmox_api_config['api_port'],
-            user=self.proxmox_api_config['api_user'],
-            token_name=self.proxmox_api_config['api_token_id'],
-            token_value=self.proxmox_api_config['api_token_secret'],
-            verify_ssl=self.proxmox_api_config['verify_ssl']
-        )
-
-        self.__proxmox_collect_nodes()
         self.__proxmox_collect_vms()
-
-
-    def __proxmox_collect_nodes(self):
-        try:
-            for proxmox_node in self.proxmox_api.nodes.get():
-                if proxmox_node['type'] == 'node':
-                    self.proxmox_nodes.append(proxmox_node['node'])
-        except requests.exceptions.RequestException as e:
-            raise requests.exceptions.RequestException(e)
 
 
     def __proxmox_collect_vms(self):
@@ -53,6 +29,9 @@ class NetBoxProxmoxAPIHelper:
             proxmox_get_vms = self.proxmox_api.cluster.resources.get(type='vm')
 
             for proxmox_vm in proxmox_get_vms:
+                if not proxmox_vm['node'] in self.proxmox_nodes:
+                    raise ValueError(f"{proxmox_vm['node']} not found in collected Proxmox nodes")
+                
                 if proxmox_vm['template']:
                     self.proxmox_vm_templates[proxmox_vm['vmid']] = proxmox_vm['name']
                 else:
@@ -125,7 +104,7 @@ class NetBoxProxmoxAPIHelper:
         #print("ALL PROXMOX VMS", "NODES", self.proxmox_nodes, "VMS", self.proxmox_vms, "LXC", self.proxmox_lxc)
         for proxmox_vm in self.proxmox_vms:
             proxmox_vm_config = self.proxmox_api.nodes(self.proxmox_vms[proxmox_vm]['node']).qemu(self.proxmox_vms[proxmox_vm]['vmid']).config.get()
-            #print(" -- CONFIG", proxmox_vm_config)
+            print(" -- CONFIG", proxmox_vm_config)
 
             if not proxmox_vm in proxmox_vm_configurations:
                 proxmox_vm_configurations[proxmox_vm] = {}
@@ -140,12 +119,13 @@ class NetBoxProxmoxAPIHelper:
                 if 'sshkeys' in proxmox_vm_config:
                     proxmox_vm_configurations[proxmox_vm]['public_ssh_key'] = urllib.parse.unquote(proxmox_vm_config['sshkeys'])
 
-                proxmox_vm_configurations[proxmox_vm]['bootdisk'] = proxmox_vm_config['bootdisk']
+                if 'bootdisk' in proxmox_vm_config:
+                    proxmox_vm_configurations[proxmox_vm]['bootdisk'] = proxmox_vm_config['bootdisk']
 
-                base_disk_name = re.sub(r'\d+$', '', proxmox_vm_config['bootdisk'])
-                proxmox_vm_disks = [key for key in proxmox_vm_config if re.search(r'^%s\d+' % base_disk_name, key)]
+                    base_disk_name = re.sub(r'\d+$', '', proxmox_vm_config['bootdisk'])
+                    proxmox_vm_disks = [key for key in proxmox_vm_config if re.search(r'^%s\d+' % base_disk_name, key)]
 
-                proxmox_vm_configurations[proxmox_vm]['storage'] = proxmox_vm_config[proxmox_vm_config['bootdisk']].split(':')[0]
+                    proxmox_vm_configurations[proxmox_vm]['storage'] = proxmox_vm_config[proxmox_vm_config['bootdisk']].split(':')[0]
 
                 if not 'disks' in proxmox_vm_configurations[proxmox_vm]:
                     proxmox_vm_configurations[proxmox_vm]['disks'] = []
@@ -301,7 +281,9 @@ class NetBoxProxmoxAPIHelper:
 
                 proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name] = {}
                 proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name]['mac-address'] = mac_address
-                proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name]['ip-addresses'] = []
+
+                if not 'ip-addresses' in proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name]:
+                    proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name]['ip-addresses'] = []
 
                 proxmox_lxc_configurations[proxmox_lxc]['network_interfaces'][interface_name]['ip-addresses'].append(
                     {

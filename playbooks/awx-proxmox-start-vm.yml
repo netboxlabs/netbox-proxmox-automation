@@ -1,4 +1,4 @@
-- name: "Proxmox: start LXC"
+- name: "Proxmox: start VM"
   connection: local
   hosts: all
   gather_facts: False
@@ -6,6 +6,8 @@
   vars:
     collected_proxmox_vm: {}
     collected_proxmox_lxc: {}
+    proxmox_node_info: {}
+    collected_proxmox_vms: []
 
   tasks:
   - name: Include Proxmox VM discovery
@@ -14,21 +16,10 @@
   - name: Include Proxmox LXC discovery
     include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
-  - name: Show collected VM
-    debug:
-      msg: "Collected VM: {{ collected_proxmox_lxc }}"
-
-  - name: Show collected LXC
-    debug:
-      msg: "Collected LXC: {{ collected_proxmox_lxc }}"
-  
-  - name: Show start key
-    debug:
-      msg: "start key {{ vm_config['vmid'] }} ||| {{ collected_proxmox_lxc[vm_config['hostname']] }} ||| {{ vm_config['vmid'] | int == collected_proxmox_lxc[vm_config['hostname']] | int }}"
-
-  - name: Start specified LXC
-    community.general.proxmox:
+  - name: Start specified VM
+    community.proxmox.proxmox_kvm:
       #node: "{{ proxmox_env_info.node }}"
+      node: "{{ vm_config['node'] }}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
@@ -36,22 +27,22 @@
       #name: "{{ vm_config['name'] }}"
       vmid: "{{ vm_config['vmid'] }}"
       state: started
-    when: (vm_config['hostname'] in collected_proxmox_lxc) and (collected_proxmox_lxc[vm_config['hostname']] | int == vm_config['vmid'] | int)
+    when: vm_config['name'] in collected_proxmox_vm and collected_proxmox_vm[vm_config['name']] | int == vm_config['vmid'] | int
     register: start_vm_job
     async: 180
     poll: 0
 
-  - name: Wait for LXC start process to finish
+  - name: Wait for VM start process to finish
     async_status:
       jid: "{{ start_vm_job.ansible_job_id }}"
-    when: vm_config['hostname'] in collected_proxmox_lxc
+    when: vm_config['name'] in collected_proxmox_vm
     register: _sjobs_alias_vc_0
     until: _sjobs_alias_vc_0.finished
     retries: 100
     delay: 10
 
-  - name: Discover Proxmox started LXC on node
-    community.general.proxmox_vm_info:
+  - name: Discover Proxmox started VM on node
+    community.proxmox.proxmox_vm_info:
       api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
       api_user: "{{ proxmox_env_info.api_user | default(omit) }}"
       api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
@@ -62,7 +53,7 @@
       config: "current"
     register: proxmox_started_vm
 
-  - name: Show started LXC info
+  - name: Show started VM info
     debug:
       msg: "started vm info: {{ proxmox_started_vm }}"
 

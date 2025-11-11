@@ -1,4 +1,4 @@
-- name: "Proxmox: set ipconfig0"
+- name: "Proxmox: resize rootfs"
   connection: local
   hosts: all
   gather_facts: False
@@ -6,6 +6,8 @@
   vars:
     collected_proxmox_vm: {}
     collected_proxmox_lxc: {}
+    proxmox_node_info: {}
+    collected_proxmox_vms: []
 
   tasks:
   - name: Include Proxmox VM discovery
@@ -14,31 +16,31 @@
   - name: Include Proxmox LXC discovery
     include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
-  - name: "Update VM settings (ipconfig0, ssh key)"
-    community.general.proxmox_kvm:
-      node: "{{ proxmox_env_info.node }}"
+  - name: "Grow LXC disk"
+    community.proxmox.proxmox:
+      #node: "{{ proxmox_env_info.node }}"
+      node: "{{ vm_config['node'] }}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
       api_host: "{{ proxmox_env_info.api_host }}"
-      #name: "{{ vm_config['name'] }}"
-      vmid: "{{ collected_proxmox_vm[vm_config['name']] }}"
-      sshkeys: "{{ vm_config['ssh_key'] }}"
-      ipconfig:
-        #ipconfig0: "ip={{ item.ip }},gw={{ item.ip.split('.')[:3] | join('.') }}.{{ item.gw if item.gw is defined else gw_last_quad }}"
-        ipconfig0: "ip={{ vm_config['ip'] }},gw={{ vm_config['ip'].split('.')[:3] | join('.') }}.1"
+      #hostname: "{{ vm_config['hostname'] }}"
+      vmid: "{{ collected_proxmox_lxc[vm_config['name']] | int }}"
+      disk: "{{ vm_config['storage_volume'] }}:{{ (vm_config['resize_disk_size']|int / 1024) | round | int }}"
+      state: present
       update: true
-    when: vm_config['name'] in collected_proxmox_vm
-    register: update_vm_settings_job
+    when: vm_config['name'] in collected_proxmox_lxc
+    register: grow_lxc_disk_status
     async: 180
     poll: 0
 
   - name: Wait for VM settings updates processes to finish
     async_status:
-      jid: "{{ update_vm_settings_job.ansible_job_id }}"
-    when: vm_config['name'] in collected_proxmox_vm
+      jid: "{{ grow_lxc_disk_status.ansible_job_id }}"
+    when: vm_config['name'] in collected_proxmox_lxc
     register: _ujobs_alias_vc_0
     until: _ujobs_alias_vc_0.finished
     retries: 60
     delay: 10
+
 

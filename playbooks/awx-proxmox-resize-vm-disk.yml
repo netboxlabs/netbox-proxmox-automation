@@ -1,4 +1,4 @@
-- name: "Proxmox: stop VM"
+- name: "Proxmox: resize scsi0"
   connection: local
   hosts: all
   gather_facts: False
@@ -6,6 +6,8 @@
   vars:
     collected_proxmox_vm: {}
     collected_proxmox_lxc: {}
+    proxmox_node_info: {}
+    collected_proxmox_vms: []
 
   tasks:
   - name: Include Proxmox VM discovery
@@ -14,28 +16,28 @@
   - name: Include Proxmox LXC discovery
     include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
-  - name: Stop specified VM
-    community.general.proxmox_kvm:
-      #node: "{{ proxmox_env_info.node }}"
+  - name: Grow VM disk
+    community.proxmox.proxmox_disk:
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
       api_host: "{{ proxmox_env_info.api_host }}"
-      #name: "{{ vm_config['name'] }}"
-      vmid: "{{ vm_config['vmid'] }}"
-      state: stopped
-      force: true
-    when: vm_config['name'] in collected_proxmox_vm and collected_proxmox_vm[vm_config['name']] | int == vm_config['vmid'] | int
-    register: stop_vm_job
+      node: "{{ vm_config['node'] }}"
+      name: "{{ vm_config['name'] }}"
+      disk: "{{ vm_config['resize_disk'] }}"
+      size: "{{ (vm_config['resize_disk_size']|int / 1024) | round | int }}G"
+      state: resized
+    when: vm_config['name'] in collected_proxmox_vm
+    register: vm_update_disk_size
     async: 180
     poll: 0
 
-  - name: Wait for VM stop process to finish
+  - name: Wait for VM disk updates processes to finish
     async_status:
-      jid: "{{ stop_vm_job.ansible_job_id }}"
+      jid: "{{ vm_update_disk_size.ansible_job_id }}"
     when: vm_config['name'] in collected_proxmox_vm
-    register: _sjobs_alias_vc_0
-    until: _sjobs_alias_vc_0.finished
-    retries: 100
+    register: _ujobs_alias_vc_0
+    until: _ujobs_alias_vc_0.finished
+    retries: 60
     delay: 10
 

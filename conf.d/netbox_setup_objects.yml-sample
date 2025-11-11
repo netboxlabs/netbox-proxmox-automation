@@ -1,5 +1,5 @@
 proxmox_api_config:
-  node: pve # or your Proxmox node name
+  node: pve # or *a* Proxmox node name (even if clustered)
   api_host: proxmox-ip-or-hostname
   api_port: 8006
   api_user: proxmox_api_user
@@ -13,11 +13,20 @@ netbox_api_config:
   api_token: netbox_api_secret_token
   verify_ssl: false # or true, up to you
 proxmox:
-  cluster_name: proxmox-ve
+  cluster_name: name-of-proxmox-cluster #(no longer required as it will be discovered)
+  node_commands:
+    dmidecode_command: /usr/sbin/dmidecode # required: where dmidecode lives on your system
+    lshw_command: /usr/bin/lshw            # required: where lshw lives on your system
+    ethtool_command: /usr/sbin/ethtool     # required: where ethtool lives on your system
+    ipaddr_command: /usr/sbin/ip -br a     # required: where ip command lives on your system
 netbox:
-  cluster_role: Proxmox
-  vm_role: "Proxmox VM"
-  lxc_role: "Proxmox LXC"
+  branch: name-of-branch-where-you-want-to-import-data # optional
+  branch_timeout: integer-to-represent-seconds-for-branch-operation # optional
+  site: Home Lab # optional
+  cluster_role: Proxmox # required
+  device_role: "Proxmox node" # required
+  vm_role: "Proxmox VM" # required
+  lxc_role: "Proxmox LXC" # required
 automation_type: choices are ansible_automation or flask_application
 ansible_automation:
   host: name or ip of AWX/Tower/AAP host

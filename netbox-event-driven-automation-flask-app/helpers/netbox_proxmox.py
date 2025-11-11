@@ -1,6 +1,8 @@
-import re
+import os
 import pynetbox
+import re
 import requests
+import time
 import urllib
 
 from proxmoxer import ProxmoxAPI, ResourceException
@@ -172,7 +174,7 @@ class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
         try:
             for required_netbox_object in ['proxmox_vm_templates', 'proxmox_vm_storage']:
                 if not required_netbox_object in json_in['data']['custom_fields']:
-                    raise ValueError(f"Missing {required_netbox_object} in VM configuration")
+                    return 500, {'result': f"Missing {required_netbox_object} in VM configuration"}
 
             netbox_collected_vms = {}
 
@@ -212,7 +214,8 @@ class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
                     newid=new_vm_id,
                     full=1,
                     name=json_in['data']['name'],
-                    storage=json_in['data']['custom_fields']['proxmox_vm_storage']
+                    storage=json_in['data']['custom_fields']['proxmox_vm_storage'],
+                    target=json_in['data']['custom_fields']['proxmox_node']
                 )
 
                 self.proxmox_job_get_status(clone_data)
@@ -270,7 +273,7 @@ class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
         try:
             self.json_data_check_proxmox_vmid_exists(json_in)
 
-            start_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).status.start.post()
+            start_data = self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).status.start.post()
 
             self.proxmox_job_get_status(start_data)
 
@@ -283,7 +286,7 @@ class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
         try: 
             self.json_data_check_proxmox_vmid_exists(json_in)
 
-            stop_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).status.stop.post()
+            stop_data = self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).status.stop.post()
 
             self.proxmox_job_get_status(stop_data)
 
@@ -298,7 +301,7 @@ class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
 
             self.proxmox_stop_vm(json_in)
 
-            delete_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).delete()
+            delete_data = self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).delete()
 
             self.proxmox_job_get_status(delete_data)
 
@@ -314,7 +317,7 @@ class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
             primary_ip = json_in['data']['primary_ip']['address']
             gateway = self.generate_gateway_from_ip_address(primary_ip)
 
-            create_ipconfig0 = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).config.post(
+            create_ipconfig0 = self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).config.post(
                 ipconfig0=f"ip={primary_ip},gw={gateway}"
             )
 
@@ -331,7 +334,7 @@ class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
 
             proxmox_public_ssh_key = urllib.parse.quote(json_in['data']['custom_fields']['proxmox_public_ssh_key'].rstrip(), safe='')
 
-            create_ssh_public_key = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).config.post(
+            create_ssh_public_key = self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).config.post(
                 sshkeys=f"{proxmox_public_ssh_key}"
             )
 
@@ -356,7 +359,7 @@ class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
                     f"{json_in['data']['name']}": f"{json_in['data']['custom_fields']['proxmox_disk_storage_volume']}:{int(json_in['data']['size'])/1000},backup=0,ssd=0"
                 }
 
-                add_disk_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(proxmox_vmid).config.post(
+                add_disk_data = self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).qemu(proxmox_vmid).config.post(
                     **config_data
                 )
 
@@ -373,7 +376,7 @@ class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
         try:
             proxmox_vmid = self.netbox_get_proxmox_vmid(json_in['data']['virtual_machine']['id'])
 
-            disk_resize_info = self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(proxmox_vmid).resize.put(
+            disk_resize_info = self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).qemu(proxmox_vmid).resize.put(
                 disk=json_in['data']['name'],
                 size=f"{int(json_in['data']['size'])/1000}G"
             )
@@ -392,7 +395,7 @@ class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
 
             proxmox_vmid = self.netbox_get_proxmox_vmid(json_in['data']['virtual_machine']['id'])
 
-            self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(proxmox_vmid).unlink.put(idlist=json_in['data']['name'], force=1)
+            self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).qemu(proxmox_vmid).unlink.put(idlist=json_in['data']['name'], force=1)
 
             return 200, {'result': f"Disk {json_in['data']['name']} for VM {json_in['data']['virtual_machine']['id']} deleted successfully"}
         except ResourceException as e:
@@ -400,9 +403,9 @@ class NetBoxProxmoxHelperVM(NetBoxProxmoxHelper):
 
 
 class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
-    def __proxmox_update_lxc_vcpus_and_memory(self, vmid=1, vcpus=1, memory=512):
+    def __proxmox_update_lxc_vcpus_and_memory(self, proxmox_node=None, vmid=1, vcpus=1, memory=512):
         try:
-            update_lxc_vcpus = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(vmid).config.put(
+            update_lxc_vcpus = self.proxmox_api.nodes(proxmox_node).lxc(vmid).config.put(
                 cores=int(float(vcpus)),
                 memory=int(memory)
             )
@@ -423,7 +426,7 @@ class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
                     print("JSON IN", json_in['data'])
 
                 if 'data' in json_in and 'custom_fields' in json_in['data'] and 'proxmox_vmid' in json_in['data']['custom_fields'] and json_in['data']['custom_fields']['proxmox_vmid']:
-                    self.proxmox_api.nodes(self.proxmox_api_config['node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).config.get()
+                    self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).qemu(json_in['data']['custom_fields']['proxmox_vmid']).config.get()
                 else:
                     new_vm_id = self.proxmox_api.cluster.get('nextid')
             except ResourceException as e:
@@ -459,7 +462,7 @@ class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
             if self.debug:
                 print("LXC CREATE DATA", lxc_create_data, new_vm_id)
 
-            create_lxc_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc.create(**lxc_create_data)
+            create_lxc_data = self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).lxc.create(**lxc_create_data)
 
             self.proxmox_job_get_status(create_lxc_data)
 
@@ -481,7 +484,7 @@ class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
                 'rootfs': 'local-lvm:vm-104-disk-0,size=4G'}
                 """
                 
-                lxc_config_info = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(new_vm_id).config.get()
+                lxc_config_info = self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).lxc(new_vm_id).config.get()
 
                 if self.debug:
                     print("LXC CONFIG INFO", lxc_config_info)
@@ -505,7 +508,7 @@ class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
         
         # update VM vcpus and/or memory if defined
         if json_in['data']['custom_fields']['proxmox_vmid'] and json_in['snapshots']['postchange']['vcpus'] and json_in['snapshots']['postchange']['memory']:
-            return self.__proxmox_update_lxc_vcpus_and_memory(json_in['data']['custom_fields']['proxmox_vmid'], json_in['snapshots']['postchange']['vcpus'], json_in['snapshots']['postchange']['memory'])
+            return self.__proxmox_update_lxc_vcpus_and_memory(json_in['data']['custom_fields']['proxmox_node'], json_in['data']['custom_fields']['proxmox_vmid'], json_in['snapshots']['postchange']['vcpus'], json_in['snapshots']['postchange']['memory'])
         
         return 500, {'result': f"Unable to set vcpus ({json_in['data']['vcpus']}) and/or memory ({json_in['data']['memory']}) for LXC (vmid: {json_in['data']['custom_fields']['proxmox_vmid']})"}
 
@@ -517,7 +520,7 @@ class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
             primary_ip = json_in['data']['primary_ip']['address']
             gateway = self.generate_gateway_from_ip_address(primary_ip)
 
-            self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(json_in['data']['custom_fields']['proxmox_vmid']).config.put(
+            self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).lxc(json_in['data']['custom_fields']['proxmox_vmid']).config.put(
                     net0=f"name=net0,bridge=vmbr0,ip={primary_ip},gw={gateway},firewall=1"
             )
 
@@ -541,7 +544,7 @@ class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
                 'size': disk_size
             }
 
-            disk_resize_info = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(proxmox_vmid).resize.put(**lxc_disk_size_info)
+            disk_resize_info = self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).lxc(proxmox_vmid).resize.put(**lxc_disk_size_info)
 
             self.proxmox_job_get_status(disk_resize_info)
 
@@ -554,7 +557,7 @@ class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
         try:
             self.json_data_check_proxmox_vmid_exists(json_in)
 
-            start_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(json_in['data']['custom_fields']['proxmox_vmid']).status.start.post()
+            start_data = self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).lxc(json_in['data']['custom_fields']['proxmox_vmid']).status.start.post()
 
             self.proxmox_job_get_status(start_data)
 
@@ -567,7 +570,7 @@ class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
         try: 
             self.json_data_check_proxmox_vmid_exists(json_in)
 
-            stop_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc(json_in['data']['custom_fields']['proxmox_vmid']).status.stop.post()
+            stop_data = self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).lxc(json_in['data']['custom_fields']['proxmox_vmid']).status.stop.post()
 
             self.proxmox_job_get_status(stop_data)
 
@@ -582,12 +585,159 @@ class NetBoxProxmoxHelperLXC(NetBoxProxmoxHelper):
 
             self.proxmox_stop_lxc(json_in)
 
-            delete_data = self.proxmox_api.nodes(self.proxmox_api_config['node']).lxc.delete(json_in['data']['custom_fields']['proxmox_vmid'])
+            delete_data = self.proxmox_api.nodes(json_in['data']['custom_fields']['proxmox_node']).lxc.delete(json_in['data']['custom_fields']['proxmox_vmid'])
 
             self.proxmox_job_get_status(delete_data)
 
             return 200, {'result': f"LXC (vmid: {json_in['data']['custom_fields']['proxmox_vmid']}) has been deleted"}
         except ResourceException as e:
             return 500, {'result': e.content}
+
+
+class NetBoxProxmoxHelperMigrate(NetBoxProxmoxHelper):
+    def __init__(self, cfg_data, proxmox_node, debug=False):
+        super().__init__(cfg_data, proxmox_node, debug)
+
+        self.proxmox_cluster_name = 'default-proxmox-cluster-name'
+        self.proxmox_nodes = {}
+        self.proxmox_vms = {}
+        self.proxmox_lxc = {}
+
+        self.__get_cluster_name_and_nodes()
+        self.__get_proxmox_vms()
+        self.__get_proxmox_lxcs()
+
+
+    def __get_cluster_name_and_nodes(self):
+        try:
+            cluster_status = self.proxmox_api.cluster.status.get()
+
+            for resource in cluster_status:
+                if not 'type' in resource:
+                    raise ValueError(f"Missing 'type' in Proxmox cluster resource {resource}")
+                
+                if resource['type'] == 'cluster':
+                    self.proxmox_cluster_name = resource['name']
+                elif resource['type'] == 'node':
+                    if not resource['name'] in self.proxmox_nodes:
+                        self.proxmox_nodes[resource['name']] = {}
+
+                    self.proxmox_nodes[resource['name']]['ip'] = resource['ip']
+                    self.proxmox_nodes[resource['name']]['online'] = resource['online']
+        except ResourceException as e:
+            raise RuntimeError(f"Proxmox API error: {e}") from e
+        except requests.exceptions.ConnectionError:
+            raise RuntimeError("Failed to connect to Proxmox API")
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code
+            raise RuntimeError(f"HTTP {status}: {e.response.text}") from e
+        
+
+    def __get_proxmox_vms(self):
+        try:
+            for proxmox_node in self.proxmox_nodes:
+                all_vm_settings = self.proxmox_api.nodes(proxmox_node).get('qemu')
+                for vm_setting in all_vm_settings:
+                    if 'template' in vm_setting and vm_setting['template'] == 1:
+                        continue
+
+                    if not vm_setting['name'] in self.proxmox_vms:
+                        self.proxmox_vms[vm_setting['name']] = {}
+
+                    self.proxmox_vms[vm_setting['name']]['vmid'] = vm_setting['vmid']
+                    self.proxmox_vms[vm_setting['name']]['node'] = proxmox_node
+        except ResourceException as e:
+            raise RuntimeError(f"Proxmox API error: {e}") from e
+        except requests.exceptions.ConnectionError:
+            raise RuntimeError("Failed to connect to Proxmox API")
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code
+            raise RuntimeError(f"HTTP {status}: {e.response.text}") from e
+
+
+    def __get_proxmox_lxcs(self):
+        try:
+            for proxmox_node in self.proxmox_nodes:
+                all_lxc_settings = self.proxmox_api.nodes(proxmox_node).get('lxc')
+                for lxc_setting in all_lxc_settings:
+                    if 'template' in lxc_setting and lxc_setting['template'] == 1:
+                        continue
+
+                    if not lxc_setting['name'] in self.proxmox_lxc:
+                        self.proxmox_lxc[lxc_setting['name']] = {}
+
+                    self.proxmox_lxc[lxc_setting['name']]['vmid'] = lxc_setting['vmid']
+                    self.proxmox_lxc[lxc_setting['name']]['node'] = proxmox_node
+        except ResourceException as e:
+            raise RuntimeError(f"Proxmox API error: {e}") from e
+        except requests.exceptions.ConnectionError:
+            raise RuntimeError("Failed to connect to Proxmox API")
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code
+            raise RuntimeError(f"HTTP {status}: {e.response.text}") from e
+
+
+    def __wait_for_migration_task(self, proxmox_node: str, proxmox_task_id: int):
+        try:
+            start_time = int(time.time())
+
+            while True:
+                current_time = int(time.time())
+                elapsed_seconds = current_time - start_time
+
+                if elapsed_seconds >= 600: # 10 minutes
+                    return 500, {'content': f"Unable to complete task {proxmox_task_id} in defined time"}
+                
+                task_status = self.proxmox_api.nodes(proxmox_node).tasks(proxmox_task_id).status.get()
+
+                if task_status['status'] == 'stopped':
+                    if 'exitstatus' in task_status and task_status['exitstatus'] == 'OK':
+                        return 200, {'result': "Proxmox node migration successful"}
+                    else:
+                        return 500, {'result': f"Task {proxmox_task_id} is stopped but exit status does not appear to be successful: {task_status['exit_status']}"}
+        except ResourceException as e:
+            return 500, {'content': f"Proxmox API error: {e}"}
+        except requests.exceptions.ConnectionError as e:
+            return 500, {'content': f"Failed to connect to Proxmox API: {e}"}
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code
+            return 500, {'content': f"HTTP {status}: {e.response.text}"}
+
+
+    def migrate_vm(self, proxmox_vmid: int, proxmox_node: str, proxmox_target_node: str):
+        migrate_vm_data = {
+            'target': proxmox_target_node,
+            'online': 1
+        }
+
+        try:
+            migrate_vm_task_id = self.proxmox_api.nodes(proxmox_node).qemu(proxmox_vmid).migrate.post(**migrate_vm_data)
+            return self.__wait_for_migration_task(proxmox_node, migrate_vm_task_id)
+        except ResourceException as e:
+            return 500, {'result': f"Proxmox API error: {e}"}
+        except requests.exceptions.ConnectionError:
+            return 500, {'result': f"Failed to connect to Proxmox API: {e}"}
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code
+            return 500, {'result': f"HTTP {status}: {e.response.text}"}
+
+
+    def migrate_lxc(self, proxmox_vmid: int, proxmox_node: str, proxmox_target_node: str):
+        migrate_lxc_data = {
+            'target': proxmox_target_node,
+            'online': 1
+        }
+
+        try:
+            migrate_lxc_task_id = self.proxmox_api.nodes(proxmox_node).lxc(proxmox_vmid).migrate.post(**migrate_lxc_data)
+            self.__wait_for_migration_task(proxmox_node, migrate_lxc_task_id)
+            return 200, {'result': f"LXC (vmid: {proxmox_vmid}) has been migrated to node {proxmox_target_node}"}
+        except ResourceException as e:
+            return 500, {'result': f"Proxmox API error: {e}"}
+        except requests.exceptions.ConnectionError:
+            return 500, {'result': f"Failed to connect to Proxmox API: {e}"}
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code
+            return 500, {'result': f"HTTP {status}: {e.response.text}"}
 
 

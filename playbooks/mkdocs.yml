@@ -60,14 +60,12 @@ nav:
   - NetBox IPAM: netbox-ipam.md
   - NetBox API Key and Permissions: netbox-key-and-permissions.md
   - NetBox Customization: netbox-customization.md
-  - Discover Proxmox Clusters and Nodes: proxmox-discover-clusters-and-nodes.md
   - Discover Proxmox VMs and LXCs: proxmox-discover-vm-and-lxc.md
   - Proxmox API User and Key: proxmox-api-user-and-key.md
   - Configure Flask Application: configure-flask-application.md
   - Configure AWX or Tower/AAP: configure-awx-aap.md
   - NetBox Event Rules and Webhooks (Flask): netbox-event-rules-and-webhooks-flask.md
   - NetBox Event Rules and Webhooks (AWX/Tower/AAP): netbox-event-rules-and-webhooks-awx-aap.md
-  - NetBox and Proxmox Node Migration: proxmox-and-node-migration.md
 extra:
   social:
     - icon: fontawesome/solid/globe

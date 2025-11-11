@@ -1,0 +1,43 @@
+- name: "Proxmox: stop LXC"
+  connection: local
+  hosts: all
+  gather_facts: False
+
+  vars:
+    collected_proxmox_vm: {}
+    collected_proxmox_lxc: {}
+    proxmox_node_info: {}
+    collected_proxmox_vms: []
+
+  tasks:
+  - name: Include Proxmox VM discovery
+    include_tasks: "ansible-tasks/collect-proxmox-vm.yml"
+
+  - name: Include Proxmox LXC discovery
+    include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
+
+  - name: Stop specified LXC
+    community.proxmox.proxmox:
+      #node: "{{ proxmox_env_info.node }}"
+      node: "{{ vm_config['node'] }}"
+      api_user: "{{ proxmox_env_info.api_user }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
+      api_host: "{{ proxmox_env_info.api_host }}"
+      #name: "{{ vm_config['name'] }}"
+      vmid: "{{ vm_config['vmid'] }}"
+      state: stopped
+      force: true
+    when: (vm_config['hostname'] in collected_proxmox_lxc) and (collected_proxmox_lxc[vm_config['hostname']] | int == vm_config['vmid'] | int)
+    register: stop_vm_job
+    async: 180
+    poll: 0
+
+  - name: Wait for LXC stop process to finish
+    async_status:
+      jid: "{{ stop_vm_job.ansible_job_id }}"
+    when: vm_config['hostname'] in collected_proxmox_lxc
+    register: _sjobs_alias_vc_0
+    until: _sjobs_alias_vc_0.finished
+    retries: 100
+    delay: 10

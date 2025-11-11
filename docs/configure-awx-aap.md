@@ -251,7 +251,8 @@ When you create *any* template in AWX for Proxmox automation, you will need to s
 | awx-proxmox-remove-vm-disk.yml | Removes a non-OS disk (i.e. not scsi0) from a Proxmox VM |
 | awx-proxmox-remove-vm.yml | Removes a Proxmox VM |
 | awx-proxmox-resize-vm-disk.yml | Resizes a Proxmox VM disk |
-| awx-proxmox-set-ipconfig0.yml | Sets ipconfig0 for Proxmox VM and adds ssh key|
+| awx-proxmox-set-ipconfig0.yml | Sets ipconfig0 for Proxmox VM and adds ssh key |
 | awx-proxmox-start-vm.yml | Starts Proxmox VM |
 | awx-proxmox-stop-vm.yml | Stops Proxmox VM |
+| awx-proxmox-migrate-vm.yml | Migrates Proxmox VM to an alternate Proxmox node |
 

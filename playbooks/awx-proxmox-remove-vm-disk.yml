@@ -1,4 +1,4 @@
-- name: "Proxmox: resize rootfs"
+- name: "Proxmox: remove VM disk"
   connection: local
   hosts: all
   gather_facts: False
@@ -6,6 +6,8 @@
   vars:
     collected_proxmox_vm: {}
     collected_proxmox_lxc: {}
+    proxmox_node_info: {}
+    collected_proxmox_vms: []
 
   tasks:
   - name: Include Proxmox VM discovery
@@ -14,30 +16,27 @@
   - name: Include Proxmox LXC discovery
     include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
-  - name: "Grow LXC disk"
-    community.general.proxmox:
-      node: "{{ proxmox_env_info.node }}"
+  - name: Remove VM disk
+    community.proxmox.proxmox_disk:
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
       api_host: "{{ proxmox_env_info.api_host }}"
-      #hostname: "{{ vm_config['hostname'] }}"
-      vmid: "{{ collected_proxmox_lxc[vm_config['name']] | int }}"
-      disk: "{{ vm_config['storage_volume'] }}:{{ (vm_config['resize_disk_size']|int / 1024) | round | int }}"
-      state: present
-      update: true
-    when: vm_config['name'] in collected_proxmox_lxc
-    register: grow_lxc_disk_status
+      name: "{{ vm_config['name'] }}"
+      node: "{{ vm_config['node'] }}"
+      disk: "{{ vm_config['remove_disk'] }}"
+      state: absent
+    when: vm_config['name'] in collected_proxmox_vm
+    register: vm_remove_disk_job
     async: 180
     poll: 0
 
-  - name: Wait for VM settings updates processes to finish
+  - name: Wait for VM disk removal process to finish
     async_status:
-      jid: "{{ grow_lxc_disk_status.ansible_job_id }}"
-    when: vm_config['name'] in collected_proxmox_lxc
+      jid: "{{ vm_remove_disk_job.ansible_job_id }}"
+    when: vm_config['name'] in collected_proxmox_vm
     register: _ujobs_alias_vc_0
     until: _ujobs_alias_vc_0.finished
     retries: 60
     delay: 10
-
 

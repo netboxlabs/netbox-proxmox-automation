@@ -6,6 +6,8 @@
   vars:
     collected_proxmox_vm: {}
     collected_proxmox_lxc: {}
+    proxmox_node_info: {}
+    collected_proxmox_vms: []
 
   tasks:
   - name: Include Proxmox VM discovery
@@ -15,11 +17,12 @@
     include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
   - name: Add VM disk
-    community.general.proxmox_disk:
+    community.proxmox.proxmox_disk:
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
       api_host: "{{ proxmox_env_info.api_host }}"
+      node: "{{ vm_config['node'] }}"
       name: "{{ vm_config['name'] }}"
       disk: "{{ vm_config['add_disk'] }}"
       size: "{{ (vm_config['add_disk_size']|int / 1024) | round | int }}"

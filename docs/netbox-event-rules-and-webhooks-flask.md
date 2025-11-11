@@ -22,7 +22,7 @@ Regardless of whether you are using a Flask (or other) application for Proxmox a
 
 ### Flask Application
 
-As noted [here](#initial-configuration-flask-application-python), you will need to have a running Flask application *before* you can start handling events (i.e. object changes) inside of NetBox.
+You will need to have a running Flask application *before* you can start handling events (i.e. object changes) inside of NetBox.
 
 #### Automated Webhook and Event Rules Configuration
 

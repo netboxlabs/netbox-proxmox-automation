@@ -56,12 +56,15 @@ class AnsibleAutomationAWXManager(AnsibleAutomationAWX):
             raise ValueError(f"Exception occurred when creating host {host_name}: {e}")
 
 
-    def create_execution_environment(self, ee_name = None, ee_image_name = None):
+    def create_execution_environment(self, ee_name = None, ee_image_name = None, ee_image_tag = None, ee_image_pull = None):
         try:
+            ee_full_image_name = f"{ee_image_name}:{ee_image_tag}"
+
             ee_payload = {
                 'name': ee_name,
-                'image': ee_image_name,
-                'organization': self.org_id
+                'image': ee_full_image_name,
+                'organization': self.org_id,
+                'pull': ee_image_pull
             }
 
             if hasattr(self, 'ee_reg_cred_id'):
@@ -208,7 +211,7 @@ class AnsibleAutomationAWXManager(AnsibleAutomationAWX):
             self.created_job_templates = []
 
         try:
-            job_template_name = re.sub(r'^awx\-', '', playbook_name.split('.')[0])
+            job_template_name = re.sub(r'^playbooks/awx\-', '', playbook_name.split('.')[0])
 
             job_template_payload = {
                 'name': job_template_name,
@@ -268,9 +271,12 @@ class AnsibleAutomationAWXManager(AnsibleAutomationAWX):
             aa_playbooks = []
 
             for playbook_item in self.get_object_by_id('projects', self.project_id).get_related('playbooks'):
+                if not playbook_item.startswith('playbooks/'):
+                    continue
+
                 if playbook_item.endswith('.yml') or playbook_item.endswith('.yaml'):
-                    if not re.search(r'/', playbook_item):
-                        aa_playbooks.append(playbook_item)
+#                    if not re.search(r'/', playbook_item):
+                    aa_playbooks.append(playbook_item)
 
             return aa_playbooks
         except Exception as e:

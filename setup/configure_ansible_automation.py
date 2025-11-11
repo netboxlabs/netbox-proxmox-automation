@@ -40,7 +40,8 @@ def main():
     default_host_var_data = "---\nansible_connection: local\nansible_python_interpreter: '{{ ansible_playbook_python }}'"
 
     default_execution_environment = 'netbox-proxmox-exec-env'
-    default_execution_environment_image = 'localhost:5000/awx/ee/exec-env-test1:1.0.0'
+    default_execution_environment_image_tag = '1.1.0'
+    default_execution_environment_image = f'localhost:5000/awx/ee/exec-env-test1:{default_execution_environment_image_tag}'
     default_execution_environment_pull = 'Missing'
 
     default_project = 'netbox-proxmox-ee-test1'
@@ -67,6 +68,9 @@ def main():
 
 
     # Set common variables
+    if not 'node' in app_config['proxmox_api_config']:
+        raise ValueError(f"Missing node!  Please define a 'node' in the proxmox_api_config section of {app_config_file}.")
+        
     org_name = default_organization
     if 'organization' in app_config['ansible_automation']['settings']:
         org_name = app_config['ansible_automation']['settings']['organization']
@@ -87,12 +91,21 @@ def main():
 
     ee_name = default_execution_environment
     ee_image_name = default_execution_environment_image
+    ee_image_tag = default_execution_environment_image_tag
+    ee_image_pull = default_execution_environment_pull
+
     if 'execution_environment' in app_config['ansible_automation']['settings']:
         if 'name' in app_config['ansible_automation']['settings']['execution_environment']:
             ee_name = app_config['ansible_automation']['settings']['execution_environment']['name']
 
         if 'image' in app_config['ansible_automation']['settings']['execution_environment']:
             ee_image_name = app_config['ansible_automation']['settings']['execution_environment']['image']
+
+        if 'tag' in app_config['ansible_automation']['settings']['execution_environment']:
+            ee_image_tag = app_config['ansible_automation']['settings']['execution_environment']['tag']
+
+        if 'pull' in app_config['ansible_automation']['settings']['execution_environment']:
+            ee_image_pull = app_config['ansible_automation']['settings']['execution_environment']['pull']
 
     project_name = default_project
     if 'project' in app_config['ansible_automation']['settings']:
@@ -125,12 +138,12 @@ def main():
 
         aam.create_host(host_name, host_var_data)
 
-        aam.create_execution_environment(ee_name, ee_image_name)
+        aam.create_execution_environment(ee_name, ee_image_name, ee_image_tag, ee_image_pull)
 
         aam.create_project(project_name, scm_type, scm_url, scm_branch)
 
         project_playbooks = aam.get_playbooks()
-        project_playbooks = [x for x in project_playbooks if x.startswith('awx-')]
+        project_playbooks = [x for x in project_playbooks if x.startswith('playbooks/awx-')]
         #print("project playbooks", project_playbooks)
 
         if not project_playbooks:

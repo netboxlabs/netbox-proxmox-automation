@@ -6,6 +6,8 @@
   vars:
     collected_proxmox_vm: {}
     collected_proxmox_lxc: {}
+    proxmox_node_info: {}
+    collected_proxmox_vms: []
 
   tasks:
   - name: Include Proxmox VM discovery
@@ -15,8 +17,9 @@
     include_tasks: "ansible-tasks/collect-proxmox-lxc.yml"
 
   - name: Stop specified LXC
-    community.general.proxmox:
+    community.proxmox.proxmox:
       #node: "{{ proxmox_env_info.node }}"
+      node: "{{ vm_config['node'] }}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
@@ -40,8 +43,9 @@
     delay: 10
 
   - name: "Proxmox: Remove specified LXC"
-    community.general.proxmox:
-      node: "{{ proxmox_env_info.node }}"
+    community.proxmox.proxmox:
+      #node: "{{ proxmox_env_info.node }}"
+      node: "{{ vm_config['node'] }}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"

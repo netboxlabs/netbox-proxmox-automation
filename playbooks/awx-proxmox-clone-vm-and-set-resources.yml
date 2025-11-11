@@ -6,6 +6,8 @@
   vars:
     collected_proxmox_vm: {}
     collected_proxmox_lxc: {}
+    proxmox_node_info: {}
+    collected_proxmox_vms: []
 
   tasks:
   - name: Include Proxmox VM discovery
@@ -31,8 +33,9 @@
       msg: "ID of template (integer) {{ vm_config['template'] | int }}"
 
   - name: Create VM from a full clone of template
-    community.general.proxmox_kvm:
+    community.proxmox.proxmox_kvm:
       node: "{{ proxmox_env_info.node }}"
+      target: "{{ vm_config['node']}}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
@@ -62,12 +65,13 @@
     when: not vm_config['name'] in collected_proxmox_vm
 
   - name: Update Proxmox VMs resource settings
-    community.general.proxmox_kvm:
-      node: "{{ proxmox_env_info.node }}"
+    community.proxmox.proxmox_kvm:
+      node: "{{ vm_config['node'] }}"
       api_user: "{{ proxmox_env_info.api_user }}"
       api_token_id: "{{ proxmox_env_info.api_token_id }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret }}"
-      api_host: "{{ proxmox_env_info.api_host }}"
+      #api_host: "{{ proxmox_env_info.api_host }}"
+      api_host: "{{ vm_config['node'] }}"
       name: "{{ vm_config['name'] }}"
       cores: "{{ vm_config['vcpus'] | int }}"
       vcpus: "{{ vm_config['vcpus'] | int }}"
@@ -86,12 +90,13 @@
     delay: 10
 
   - name: "Discover information for newly-created Proxmox VM"
-    community.general.proxmox_vm_info:
-      api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
+    community.proxmox.proxmox_vm_info:
+      #api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
+      api_host: "{{ vm_config['node'] }}"
       api_user: "{{ proxmox_env_info.api_user | default(omit) }}"
       api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
       api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
-      node: "{{ proxmox_env_info.node }}"
+      node: "{{ vm_config['node'] }}"
       name: "{{ vm_config['name'] }}"
     register: new_proxmox_vm
 
@@ -106,7 +111,7 @@
       data:
         name: "{{ new_proxmox_vm.proxmox_vms[0].name }}"
         custom_fields:
-          proxmox_vmid: "{{ new_proxmox_vm.proxmox_vms[0].vmid }}"
+          proxmox_vmid: "{{ new_proxmox_vm.proxmox_vms[0].vmid | string }}"
       state: present
     when: new_proxmox_vm is defined and new_proxmox_vm.proxmox_vms is defined and new_proxmox_vm.proxmox_vms | length > 0 and vm_config['vmid'] is defined and vm_config['vmid'] == "None"
 

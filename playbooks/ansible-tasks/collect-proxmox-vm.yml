@@ -1,0 +1,35 @@
+  - name: List existing Proxmox VE cluster join information
+    community.proxmox.proxmox_cluster_join_info:
+      api_host: "{{ proxmox_env_info.api_host | default(omit) }}"
+      api_user: "{{ proxmox_env_info.api_user | default(omit) }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
+    register: proxmox_cluster_join
+
+  - name: Collect name/IP information about each node
+    set_fact:
+      proxmox_node_info: "{{ proxmox_node_info | combine({item.name: item.pve_addr}) }}"
+    loop: "{{ proxmox_cluster_join.cluster_join.nodelist }}"
+
+  - name: Discover all existing virtual machines on node(s)
+    community.proxmox.proxmox_vm_info:
+      api_host: "{{ item.value | default(omit) }}"
+      api_user: "{{ proxmox_env_info.api_user | default(omit) }}"
+      api_token_id: "{{ proxmox_env_info.api_token_id | default(omit) }}"
+      api_token_secret: "{{ proxmox_env_info.api_token_secret | default(omit) }}"
+      node: "{{ item.key }}"
+      type: qemu
+    with_dict: "{{ proxmox_node_info }}"
+    register: proxmox_discovered_vm
+
+  - name: Collect all discovered Proxmox VMs
+    set_fact:
+      collected_proxmox_vms: "{{ collected_proxmox_vms + item.proxmox_vms }}"
+    loop: "{{ proxmox_discovered_vm.results }}"
+
+  - name: Collect Proxmox VMs
+    set_fact:
+      collected_proxmox_vm: "{{ collected_proxmox_vm | combine({item.name: item.vmid}) }}"
+    loop: "{{ collected_proxmox_vms }}"
+    when: not item.template
+
