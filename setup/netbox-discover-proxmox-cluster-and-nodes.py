@@ -208,7 +208,7 @@ def main():
             if device_interface.name.startswith('vmbr'):
                 continue
 
-            print(f"device: {proxmox_node}, interface: {device_interface} {device_interface.type} {device_interface.mac_address}")
+            print(f"device: {proxmox_node}, interface: {device_interface.name} ({device_interface.type}) [MAC address redacted]")
 
             try:
                 NetBoxDeviceInterfaceMacAddressMapping(nb_url, app_config['netbox_api_config']['api_token'], netbox_device_id, device_interface, nb_pxmx_cluster.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'][device_interface.name])            
