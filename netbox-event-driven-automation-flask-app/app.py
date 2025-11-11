@@ -1,3 +1,4 @@
+import os
 import logging
 import json
 import yaml
@@ -128,15 +129,30 @@ class WebhookListener(Resource):
                         results = tc.proxmox_delete_vm(webhook_json_data)
                 elif webhook_json_data['event'] == 'updated':
                     if webhook_json_data['data']['status']['value'] == 'offline':
+                        if (webhook_json_data['data']['status']['value'] != webhook_json_data['snapshots']['prechange']['status']) and (webhook_json_data['data']['custom_fields']['proxmox_node'] == webhook_json_data['snapshots']['prechange']['custom_fields']['proxmox_node']):
+                            results = tc.proxmox_stop_vm(webhook_json_data)
 
-                        # if source node != target node -> migrate
+                        if webhook_json_data['data']['custom_fields']['proxmox_node'] != webhook_json_data['snapshots']['prechange']['custom_fields']['proxmox_node']:
+                            proxmox_vmid = int(webhook_json_data['data']['custom_fields']['proxmox_vmid'])
+                            source_node = webhook_json_data['snapshots']['prechange']['custom_fields']['proxmox_node']
+                            target_node = webhook_json_data['data']['custom_fields']['proxmox_node']
 
-                        results = tc.proxmox_stop_vm(webhook_json_data)
+                            pxmx_migrate = NetBoxProxmoxHelperMigrate(app_config, None, DEBUG)
+
+                            results = pxmx_migrate.migrate_vm(proxmox_vmid, source_node, target_node)                            
+
                     elif webhook_json_data['data']['status']['value'] == 'active':
+                        if (webhook_json_data['data']['status']['value'] != webhook_json_data['snapshots']['prechange']['status']) and (webhook_json_data['data']['custom_fields']['proxmox_node'] == webhook_json_data['snapshots']['prechange']['custom_fields']['proxmox_node']):
+                            results = tc.proxmox_start_vm(webhook_json_data)
 
-                        # if source node != target node -> migrate
+                        if webhook_json_data['data']['custom_fields']['proxmox_node'] != webhook_json_data['snapshots']['prechange']['custom_fields']['proxmox_node']:
+                            proxmox_vmid = int(webhook_json_data['data']['custom_fields']['proxmox_vmid'])
+                            source_node = webhook_json_data['snapshots']['prechange']['custom_fields']['proxmox_node']
+                            target_node = webhook_json_data['data']['custom_fields']['proxmox_node']
 
-                        results = tc.proxmox_start_vm(webhook_json_data)
+                            pxmx_migrate = NetBoxProxmoxHelperMigrate(app_config, None, DEBUG)
+
+                            results = pxmx_migrate.migrate_vm(proxmox_vmid, source_node, target_node)                            
                     else:
                         results = (500, {'result': f"Unknown value {webhook_json_data['data']['status']['value']}"})
                 elif webhook_json_data['event'] == 'deleted':
