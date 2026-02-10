@@ -139,24 +139,24 @@ class NetBox:
             if updated:
                 self.obj.save()
                 # TODO: error handling here
-                print(f"Object updated successfully with sanitized payload: '{self._sanitize_payload()}'.")
+                print("Object updated successfully.")
             else:
-                print(f"No changes detected for sanitized payload: '{self._sanitize_payload()}'.")
+                print("No changes detected.")
         # If the object doesn't exist then create it
         else:
             if self.hasRequired:
                 self.object_type.create(self.payload)
                 if 'name' in self.payload:
-                    print(f"Object (has required) created successfully with sanitized payload: '{self._sanitize_payload()}'.")
+                    print("Object (has required) created successfully.")
                     if hasattr(self, 'find_key_mult'):
                         self.findByMulti(self.find_key_mult)
                     else:
                         self.findBy('name')
                 elif 'model' in self.payload:
-                    print(f"Object (has required) created successfully with sanitized payload: '{self._sanitize_payload()}'.")
+                    print("Object (has required) created successfully.")
                     self.findBy('model')
                 elif 'address' in self.payload:
-                    print(f"Object (has required) created successfully with sanitized payload: '{self._sanitize_payload()}'.")
+                    print("Object (has required) created successfully.")
                     self.findBy('address')
 
 
