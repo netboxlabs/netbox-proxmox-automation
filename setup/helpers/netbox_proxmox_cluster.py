@@ -1,5 +1,4 @@
-import os
-import re
+import os, sys, re
 import getpass
 import json
 import paramiko
@@ -247,7 +246,9 @@ class NetBoxProxmoxCluster(ProxmoxAPICommon):
                 if not 'network_interfaces' in self.discovered_proxmox_nodes_information[proxmox_node]['system']:
                     self.discovered_proxmox_nodes_information[proxmox_node]['system']['network_interfaces'] = {}
 
-                print(f"PM NODE NI: {proxmox_node} ||| {self.proxmox_nodes_connection_info[proxmox_node]}")
+                if self.debug:
+                    print(f"PM NODE NI: {proxmox_node} ||| {self.proxmox_nodes_connection_info[proxmox_node]}")
+                    
                 node_network_info = self.proxmox_api.nodes(proxmox_node).network.get()
 
                 if not node_network_info:
@@ -268,7 +269,8 @@ class NetBoxProxmoxCluster(ProxmoxAPICommon):
                     output, error = self.__get_proxmox_node_info_cmd(self.proxmox_nodes_connection_info[proxmox_node], interface_mac_addr_cmd)
 
                     if error:
-                        raise ValueError(f"Unable to retrieve mac address for {ni['iface']} on {proxmox_node}: {error}")
+                        print(f"\t\tSKIPPING: Unable to retrieve mac address for {ni['iface']} on {proxmox_node}: {error}", file=sys.stderr)
+                        continue
                     
                     if self.debug:
                         print(f"Retrieved mac address for {ni['iface']} on {proxmox_node}: {output}")
