@@ -78,7 +78,14 @@ class NetBoxProxmoxCluster(ProxmoxAPICommon):
 
         if self.debug:
             print("Proxmox nodes connection info")
-            print(json.dumps(temp_nodes_cn_info, indent=4))
+            safe_temp_nodes_cn_info = {}
+            for node_name, node_info in temp_nodes_cn_info.items():
+                safe_temp_nodes_cn_info[node_name] = dict(node_info)
+                if 'pass' in safe_temp_nodes_cn_info[node_name]:
+                    safe_temp_nodes_cn_info[node_name]['pass'] = '***REDACTED***'
+                if 'sudo_pass' in safe_temp_nodes_cn_info[node_name]:
+                    safe_temp_nodes_cn_info[node_name]['sudo_pass'] = '***REDACTED***'
+            print(json.dumps(safe_temp_nodes_cn_info, indent=4))
             print()
 
         self.proxmox_nodes_connection_info = temp_nodes_cn_info
